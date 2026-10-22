@@ -1,0 +1,766 @@
+{
+  "config": {
+    "distribuir_disciplinas_na_semana": true,
+    "lambda_dias": 5,
+    "lambda_janelas": 8,
+    "lambda_lacunas_turma": 2,
+    "lambda_preferencia_dias": 7,
+    "lambda_preferencias": 3,
+    "max_aulas_disciplina_dia_turma": 2,
+    "modelo_preferencia_dias": "POR_DIA_TRABALHADO",
+    "num_threads": 4,
+    "preenchimento_integral_jornada": false,
+    "tempo_limite_segundos": 30.0
+  },
+  "professores": [
+    {
+      "id": "P01",
+      "nome": "Prof. Carlos Silva (Matemática)",
+      "preferencia_dias": {
+        "SEG": 10,
+        "TER": 7,
+        "QUA": 2,
+        "QUI": 8,
+        "SEX": 0
+      },
+      "disponibilidade": {
+        "SEG": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "TER": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "QUA": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "QUI": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "SEX": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ]
+      },
+      "carga_maxima_diaria_minutos": 0,
+      "max_aulas_por_dia": 0
+    },
+    {
+      "id": "P02",
+      "nome": "Profa. Ana Souza (Química)",
+      "preferencia_dias": {
+        "SEG": 5,
+        "TER": 10,
+        "QUA": 8,
+        "QUI": 6,
+        "SEX": 2
+      },
+      "disponibilidade": {
+        "SEG": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "TER": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "QUA": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "QUI": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "SEX": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ]
+      },
+      "carga_maxima_diaria_minutos": 0,
+      "max_aulas_por_dia": 0
+    },
+    {
+      "id": "P03",
+      "nome": "Prof. Marcos Lima (Física)",
+      "preferencia_dias": {
+        "SEG": 4,
+        "TER": 5,
+        "QUA": 10,
+        "QUI": 9,
+        "SEX": 6
+      },
+      "disponibilidade": {
+        "SEG": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "TER": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "QUA": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "QUI": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "SEX": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ]
+      },
+      "carga_maxima_diaria_minutos": 0,
+      "max_aulas_por_dia": 0
+    },
+    {
+      "id": "P04",
+      "nome": "Profa. Juliana Mendes (Humanas)",
+      "preferencia_dias": {
+        "SEG": 8,
+        "TER": 6,
+        "QUA": 5,
+        "QUI": 10,
+        "SEX": 7
+      },
+      "disponibilidade": {
+        "SEG": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "TER": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "QUA": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "QUI": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "SEX": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ]
+      },
+      "carga_maxima_diaria_minutos": 0,
+      "max_aulas_por_dia": 0
+    },
+    {
+      "id": "P05",
+      "nome": "Prof. Roberto Castro (Linguagens)",
+      "preferencia_dias": {
+        "SEG": 6,
+        "TER": 9,
+        "QUA": 7,
+        "QUI": 5,
+        "SEX": 8
+      },
+      "disponibilidade": {
+        "SEG": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "TER": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "QUA": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "QUI": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "SEX": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ]
+      },
+      "carga_maxima_diaria_minutos": 0,
+      "max_aulas_por_dia": 0
+    },
+    {
+      "id": "P06",
+      "nome": "Profa. Beatriz Costa (Biologia)",
+      "preferencia_dias": {
+        "SEG": 7,
+        "TER": 5,
+        "QUA": 8,
+        "QUI": 7,
+        "SEX": 9
+      },
+      "disponibilidade": {
+        "SEG": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "TER": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "QUA": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "QUI": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ],
+        "SEX": [
+          {
+            "inicio": "08:00",
+            "fim": "12:00"
+          }
+        ]
+      },
+      "carga_maxima_diaria_minutos": 0,
+      "max_aulas_por_dia": 0
+    }
+  ],
+  "salas": [
+    {
+      "id": "S101",
+      "nome": "Sala Teórica 101",
+      "tipo": "TEORICA",
+      "capacidade": 40,
+      "recursos": [
+        "Projetor",
+        "Ar Condicionado"
+      ]
+    },
+    {
+      "id": "S102",
+      "nome": "Sala Teórica 102",
+      "tipo": "TEORICA",
+      "capacidade": 40,
+      "recursos": [
+        "Projetor",
+        "Ar Condicionado"
+      ]
+    },
+    {
+      "id": "S201",
+      "nome": "Sala Teórica 201",
+      "tipo": "TEORICA",
+      "capacidade": 45,
+      "recursos": [
+        "Projetor",
+        "Lousa Digital"
+      ]
+    },
+    {
+      "id": "LAB01",
+      "nome": "Laboratório de Química 1",
+      "tipo": "LABORATORIO",
+      "capacidade": 35,
+      "recursos": [
+        "Capela de Exaustão",
+        "Vidraria"
+      ]
+    },
+    {
+      "id": "LAB02",
+      "nome": "Laboratório Multidisciplinar",
+      "tipo": "LABORATORIO",
+      "capacidade": 30,
+      "recursos": [
+        "Bancadas Elétricas",
+        "Microscópios"
+      ]
+    },
+    {
+      "id": "LAB_INF",
+      "nome": "Laboratório de Informática",
+      "tipo": "LABORATORIO",
+      "capacidade": 35,
+      "recursos": [
+        "Computadores Core i7",
+        "Rede Gigabit"
+      ]
+    }
+  ],
+  "turmas": [
+    {
+      "id": "T01",
+      "nome": "1º Ano A - Ensino Médio",
+      "turno": "MANHA",
+      "dias_letivos": [
+        "SEG",
+        "TER",
+        "QUA",
+        "QUI",
+        "SEX"
+      ],
+      "jornada_padrao": {
+        "inicio": "08:00",
+        "fim": "11:30",
+        "intervalos": [
+          {
+            "inicio": "08:40",
+            "fim": "08:55"
+          },
+          {
+            "inicio": "10:25",
+            "fim": "10:40"
+          }
+        ]
+      },
+      "excecoes_por_dia": {},
+      "sala_teorica_id": "S101",
+      "salas_teoricas_permitidas": [
+        "S101"
+      ]
+    },
+    {
+      "id": "T02",
+      "nome": "2º Ano A - Ensino Médio",
+      "turno": "MANHA",
+      "dias_letivos": [
+        "SEG",
+        "TER",
+        "QUA",
+        "QUI",
+        "SEX"
+      ],
+      "jornada_padrao": {
+        "inicio": "08:00",
+        "fim": "11:30",
+        "intervalos": [
+          {
+            "inicio": "08:40",
+            "fim": "08:55"
+          },
+          {
+            "inicio": "10:25",
+            "fim": "10:40"
+          }
+        ]
+      },
+      "excecoes_por_dia": {},
+      "sala_teorica_id": "S102",
+      "salas_teoricas_permitidas": [
+        "S102"
+      ]
+    },
+    {
+      "id": "T03",
+      "nome": "3º Ano A - Ensino Médio",
+      "turno": "MANHA",
+      "dias_letivos": [
+        "SEG",
+        "TER",
+        "QUA",
+        "QUI",
+        "SEX"
+      ],
+      "jornada_padrao": {
+        "inicio": "08:00",
+        "fim": "11:30",
+        "intervalos": [
+          {
+            "inicio": "08:40",
+            "fim": "08:55"
+          },
+          {
+            "inicio": "10:25",
+            "fim": "10:40"
+          }
+        ]
+      },
+      "excecoes_por_dia": {},
+      "sala_teorica_id": null,
+      "salas_teoricas_permitidas": [
+        "S201"
+      ]
+    }
+  ],
+  "disciplinas": [
+    {
+      "id": "T01_MAT",
+      "nome": "Matemática",
+      "tipo": "TEORICA",
+      "duracao_minutos": 45,
+      "aulas_semanais": 5,
+      "professores": [
+        "P01"
+      ],
+      "turmas": [
+        "T01"
+      ],
+      "turnos_permitidos": [
+        "MANHA"
+      ],
+      "salas_alternativas": []
+    },
+    {
+      "id": "T01_PORT",
+      "nome": "Português",
+      "tipo": "TEORICA",
+      "duracao_minutos": 50,
+      "aulas_semanais": 4,
+      "professores": [
+        "P05"
+      ],
+      "turmas": [
+        "T01"
+      ],
+      "turnos_permitidos": [
+        "MANHA"
+      ],
+      "salas_alternativas": []
+    },
+    {
+      "id": "T01_FIS",
+      "nome": "Física",
+      "tipo": "TEORICA",
+      "duracao_minutos": 50,
+      "aulas_semanais": 3,
+      "professores": [
+        "P03"
+      ],
+      "turmas": [
+        "T01"
+      ],
+      "turnos_permitidos": [
+        "MANHA"
+      ],
+      "salas_alternativas": []
+    },
+    {
+      "id": "T01_QUI_EXP",
+      "nome": "Química Experimental",
+      "tipo": "LABORATORIO",
+      "duracao_minutos": 50,
+      "aulas_semanais": 2,
+      "professores": [
+        "P02"
+      ],
+      "turmas": [
+        "T01"
+      ],
+      "turnos_permitidos": [
+        "MANHA"
+      ],
+      "salas_alternativas": [
+        [
+          "LAB01"
+        ],
+        [
+          "LAB02"
+        ]
+      ]
+    },
+    {
+      "id": "T01_HIST",
+      "nome": "História",
+      "tipo": "TEORICA",
+      "duracao_minutos": 45,
+      "aulas_semanais": 3,
+      "professores": [
+        "P04"
+      ],
+      "turmas": [
+        "T01"
+      ],
+      "turnos_permitidos": [
+        "MANHA"
+      ],
+      "salas_alternativas": []
+    },
+    {
+      "id": "T01_GEO",
+      "nome": "Geografia",
+      "tipo": "TEORICA",
+      "duracao_minutos": 45,
+      "aulas_semanais": 3,
+      "professores": [
+        "P04"
+      ],
+      "turmas": [
+        "T01"
+      ],
+      "turnos_permitidos": [
+        "MANHA"
+      ],
+      "salas_alternativas": []
+    },
+    {
+      "id": "T01_BIO",
+      "nome": "Biologia",
+      "tipo": "TEORICA",
+      "duracao_minutos": 45,
+      "aulas_semanais": 2,
+      "professores": [
+        "P06"
+      ],
+      "turmas": [
+        "T01"
+      ],
+      "turnos_permitidos": [
+        "MANHA"
+      ],
+      "salas_alternativas": []
+    },
+    {
+      "id": "T02_MAT",
+      "nome": "Matemática",
+      "tipo": "TEORICA",
+      "duracao_minutos": 50,
+      "aulas_semanais": 4,
+      "professores": [
+        "P01"
+      ],
+      "turmas": [
+        "T02"
+      ],
+      "turnos_permitidos": [
+        "MANHA"
+      ],
+      "salas_alternativas": []
+    },
+    {
+      "id": "T02_PORT",
+      "nome": "Português",
+      "tipo": "TEORICA",
+      "duracao_minutos": 50,
+      "aulas_semanais": 4,
+      "professores": [
+        "P05"
+      ],
+      "turmas": [
+        "T02"
+      ],
+      "turnos_permitidos": [
+        "MANHA"
+      ],
+      "salas_alternativas": []
+    },
+    {
+      "id": "T02_FIS",
+      "nome": "Física",
+      "tipo": "TEORICA",
+      "duracao_minutos": 50,
+      "aulas_semanais": 3,
+      "professores": [
+        "P03"
+      ],
+      "turmas": [
+        "T02"
+      ],
+      "turnos_permitidos": [
+        "MANHA"
+      ],
+      "salas_alternativas": []
+    },
+    {
+      "id": "T02_QUI",
+      "nome": "Química Geral",
+      "tipo": "TEORICA",
+      "duracao_minutos": 45,
+      "aulas_semanais": 3,
+      "professores": [
+        "P02"
+      ],
+      "turmas": [
+        "T02"
+      ],
+      "turnos_permitidos": [
+        "MANHA"
+      ],
+      "salas_alternativas": []
+    },
+    {
+      "id": "T02_HIST",
+      "nome": "História",
+      "tipo": "TEORICA",
+      "duracao_minutos": 45,
+      "aulas_semanais": 3,
+      "professores": [
+        "P04"
+      ],
+      "turmas": [
+        "T02"
+      ],
+      "turnos_permitidos": [
+        "MANHA"
+      ],
+      "salas_alternativas": []
+    },
+    {
+      "id": "T02_BIO",
+      "nome": "Biologia",
+      "tipo": "TEORICA",
+      "duracao_minutos": 50,
+      "aulas_semanais": 3,
+      "professores": [
+        "P06"
+      ],
+      "turmas": [
+        "T02"
+      ],
+      "turnos_permitidos": [
+        "MANHA"
+      ],
+      "salas_alternativas": []
+    },
+    {
+      "id": "T03_MAT",
+      "nome": "Matemática Avançada",
+      "tipo": "TEORICA",
+      "duracao_minutos": 50,
+      "aulas_semanais": 4,
+      "professores": [
+        "P01"
+      ],
+      "turmas": [
+        "T03"
+      ],
+      "turnos_permitidos": [
+        "MANHA"
+      ],
+      "salas_alternativas": []
+    },
+    {
+      "id": "T03_FIS",
+      "nome": "Física Moderna",
+      "tipo": "TEORICA",
+      "duracao_minutos": 50,
+      "aulas_semanais": 4,
+      "professores": [
+        "P03"
+      ],
+      "turmas": [
+        "T03"
+      ],
+      "turnos_permitidos": [
+        "MANHA"
+      ],
+      "salas_alternativas": []
+    },
+    {
+      "id": "T03_QUI_LAB",
+      "nome": "Química Orgânica (Prática)",
+      "tipo": "LABORATORIO",
+      "duracao_minutos": 50,
+      "aulas_semanais": 3,
+      "professores": [
+        "P02"
+      ],
+      "turmas": [
+        "T03"
+      ],
+      "turnos_permitidos": [
+        "MANHA"
+      ],
+      "salas_alternativas": [
+        [
+          "LAB01"
+        ],
+        [
+          "LAB02"
+        ]
+      ]
+    },
+    {
+      "id": "T03_LIT",
+      "nome": "Literatura & Redação",
+      "tipo": "TEORICA",
+      "duracao_minutos": 50,
+      "aulas_semanais": 4,
+      "professores": [
+        "P05"
+      ],
+      "turmas": [
+        "T03"
+      ],
+      "turnos_permitidos": [
+        "MANHA"
+      ],
+      "salas_alternativas": []
+    },
+    {
+      "id": "T03_BIO",
+      "nome": "Genética & Biologia",
+      "tipo": "TEORICA",
+      "duracao_minutos": 45,
+      "aulas_semanais": 3,
+      "professores": [
+        "P06"
+      ],
+      "turmas": [
+        "T03"
+      ],
+      "turnos_permitidos": [
+        "MANHA"
+      ],
+      "salas_alternativas": []
+    }
+  ]
+}

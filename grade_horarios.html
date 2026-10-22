@@ -1,0 +1,2298 @@
+<!DOCTYPE html>
+<html lang='pt-BR'>
+<head>
+  <meta charset='UTF-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <title>Relatório da Grade de Horários - CP-SAT</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-light: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #475569;
+      --accent: #38bdf8;
+      --success: #10b981;
+      --warning: #f59e0b;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 24px; line-height: 1.5; }
+    h1, h2, h3 { color: #ffffff; margin-top: 0; }
+    .header-panel { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-top: 16px; }
+    .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; text-align: center; }
+    .kpi-val { font-size: 24px; font-weight: 700; color: var(--accent); }
+    .kpi-lbl { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+    .section-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 28px; }
+    .badge-info { display: inline-block; background: var(--surface-light); color: var(--accent); padding: 4px 10px; border-radius: 6px; font-size: 13px; margin-bottom: 16px; }
+    .timetable { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .timetable th, .timetable td { border: 1px solid var(--border); padding: 10px 12px; text-align: center; font-size: 13px; }
+    .timetable th { background: #1e293b; color: var(--accent); font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
+    .time-col { font-weight: bold; color: var(--text-muted); width: 120px; background: #162032; }
+    .recess-row { background: rgba(245, 158, 11, 0.1); }
+    .recess-cell { color: var(--warning); font-weight: 600; font-size: 12px; letter-spacing: 1px; }
+    .lesson-card { background: #2a3a52; border-left: 4px solid var(--primary); border-radius: 6px; padding: 8px; text-align: left; }
+    .lesson-card.LABORATORIO { border-left-color: #ec4899; }
+    .lesson-card.ESPECIAL { border-left-color: #8b5cf6; }
+    .prof-tag { color: var(--accent); font-size: 11px; }
+    .turma-tag { color: #34d399; font-size: 11px; }
+    .room-tag { color: var(--text-muted); font-size: 11px; }
+  </style>
+</head>
+<body>
+  <div class='header-panel'>
+    <h1>Relatório Oficial da Grade de Horários</h1>
+    <p style='color:var(--text-muted); margin-bottom:0;'>Otimização com Google OR-Tools CP-SAT | Granularidade de 5 minutos</p>
+    <div class='kpi-grid'>
+      <div class='kpi-card'><div class='kpi-val'>DADOS_INVALIDOS</div><div class='kpi-lbl'>Status do Solver</div></div>
+      <div class='kpi-card'><div class='kpi-val'>0.0 ms</div><div class='kpi-lbl'>Tempo de Execução</div></div>
+      <div class='kpi-card'><div class='kpi-val'>0 / 0</div><div class='kpi-lbl'>Aulas Alocadas</div></div>
+      <div class='kpi-card'><div class='kpi-val'>0 min</div><div class='kpi-lbl'>Janelas Professores (J)</div></div>
+      <div class='kpi-card'><div class='kpi-val'>0</div><div class='kpi-lbl'>Dias Trabalhados (D)</div></div>
+      <div class='kpi-card'><div class='kpi-val'>0</div><div class='kpi-lbl'>Penalidade Preferência Dias (W)</div></div>
+    </div>
+  </div>
+<div class='section-card'>
+  <h2>Turma: EMI Mecatrônica 101 (T01)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: C19</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: EMI Mecatrônica 201 (T02)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: C20</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: EMI Mecatrônica 301 (T03)</h2>
+  <p class='badge-info'>Turno: MANHA | Sala Teórica Fixa: C18</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>10:30 - 10:30</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: EMI Mecatrônica Optativas (T04)</h2>
+  <p class='badge-info'>Turno: TARDE | Sala Teórica Fixa: </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>16:30 - 16:30</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: EMI Eletromecânica 101 (T05)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: C15</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: EMI Eletromecânica 102 (T06)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: C17</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: EMI Eletromecânica 201 (T07)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: C05</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: EMI Eletromecânica 202 (T08)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: C06</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: EMI Eletromecânica 301 (T09)</h2>
+  <p class='badge-info'>Turno: MANHA | Sala Teórica Fixa: C14</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>10:30 - 10:30</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: EMI Eletromecânica 302 (T10)</h2>
+  <p class='badge-info'>Turno: MANHA | Sala Teórica Fixa: C16</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>10:30 - 10:30</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: EMI Eletromecânica Optativas (T11)</h2>
+  <p class='badge-info'>Turno: TARDE | Sala Teórica Fixa: </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>16:30 - 16:30</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: EMI Informática 101 (T12)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: C11</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: EMI Informática 102 (T13)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: C12</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: EMI Informática 201 (T14)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: C10</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: EMI Informática 202 (T15)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: C09</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: EMI Informática 301 (T16)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: C07</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: EMI Informática 302 (T17)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: C08</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: EMI Informática Optativas (T18)</h2>
+  <p class='badge-info'>Turno: TARDE | Sala Teórica Fixa: </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>16:30 - 16:30</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: BCC 1ª Fase (T19)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: C16</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: BCC 2ª Fase (T20)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: C16</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: BCC 3ª Fase (T21)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: C18</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: BCC 4ª Fase (T22)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: C18</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: BCC 5ª Fase (T23)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: C14</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: BCC 6ª Fase (T24)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: C14</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: BCC 7ª Fase (T25)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: C08</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: BCC 8ª Fase (T26)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: C08</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Turma Extra BCC (T27)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Bach. Eng. Elétrica 1ª Fase (T28)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C11</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Bach. Eng. Elétrica 2ª Fase (T29)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C11</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Bach. Eng. Elétrica 3ª Fase (T30)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C12</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Bach. Eng. Elétrica 4ª Fase (T31)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C12</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Bach. Eng. Elétrica 5ª Fase (T32)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C05</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Bach. Eng. Elétrica 6ª Fase (T33)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C05</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Bach. Eng. Elétrica 7ª Fase (T34)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C06</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Bach. Eng. Elétrica 8ª Fase (T35)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C06</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Bach. Eng. Elétrica 9ª Fase (T36)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C09</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Bach. Eng. Elétrica 10ª Fase (T37)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C09</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Turma Extra BEE (T38)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: EJA-EPT Elet. Industrial 1ª Fase (T39)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: C15</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: EJA-EPT Elet. Industrial 2ª Fase (T40)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C15</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: EJA-EPT Elet. Industrial 3ª Fase (T41)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: C14</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: EJA-EPT Elet. Industrial 4ª Fase (T42)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C14</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Lic. Pedagogia 1ª Fase (T43)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C17</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Lic. Pedagogia 2ª Fase (T44)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C17</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Lic. Pedagogia 3ª Fase (T45)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C19</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Lic. Pedagogia 4ª Fase (T46)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C19</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Lic. Pedagogia 5ª Fase (T47)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C20</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Lic. Pedagogia 6ª Fase (T48)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C20</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Lic. Pedagogia 7ª Fase (T49)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C18</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Lic. Pedagogia 8ª Fase (T50)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C18</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Subseq. Mecânica 1ª Fase (T51)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C10</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Subseq. Mecânica 2ª Fase (T52)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C10</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Subseq. Mecânica 3ª Fase (T53)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C08</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Subseq. Mecânica 4ª Fase (T54)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: C08</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Mestrado PROF-EPT 1 (T55)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: D04</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Mestrado PROF-EPT 2 (T56)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: D04</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Atend. Educ. Esp. (T57)</h2>
+  <p class='badge-info'>Turno: INTEGRAL | Sala Teórica Fixa: D08</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>09:30 - 09:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>15:30 - 15:45</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Mestrado ProfGEO (Brusque) 1º sem (T58)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Turma: Mestrado ProfGEO (Brusque) 2º sem (T59)</h2>
+  <p class='badge-info'>Turno: NOITE | Sala Teórica Fixa: </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    <tr class='recess-row'>
+      <td class='time-col'>20:10 - 20:20</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    <tr class='recess-row'>
+      <td class='time-col'>21:10 - 21:10</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+      <td class='recess-cell'>INTERVALO (15 min)</td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Adaltro Prochnov Nunes (P01)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Adriano Pizzini (P02)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Ailson Barbizan (P03)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Alessandro Braatz (P04)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Alexandre Veloso dos Santos (P05)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Anderson Nereu Galcowski (P06)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: André Torelli Salatino (P07)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Bernadete Machado Serpe (P08)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Carlos Eduardo Bencke (P09)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Catiane Souza (P10)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Claudir Von Dentz (P11)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Cleonice Naedzold (P12)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Cláudia Zimmer de Cerqueira Cezar (P13)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Cloves (P14)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Cristiane Theiss Lopes (P15)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Cássio Espíndola Antunes (P16)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Célia Dias da Silva (P17)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Cícero José de Oliveira Lima (P18)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Cíntia Barbosa Passos (P19)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Dalton Luiz De Menezes Reis (P20)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Daniel Minuzzi de Souza (P21)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Eder Augusto Penharbel (P22)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Fabio Busnardo (P23)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Fabricio Alves Oliveira (P24)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Fani Martendal (P25)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Felipe Fernades da Silva (P26)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Franz Kafka Porto Domingos (P27)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Fábio Pra da Silva de Souza (P28)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Gicele Vergine Vieira (P29)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Guilherme Stanga (P30)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Gustavo Nuernberg (P31)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Heloize Cunha (P32)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Helvio Silvester Andrade de Sousa (P33)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Hylson Vescovi Netto (P34)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Iris Weiduschat (P35)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Jamile Delagnelo Fagundes da Silva (P36)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Jaqueline Horbach (P37)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Jeovani Schmitt (P38)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Joana Fontanela (P39)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Jomar Alberto Andreata (P40)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Jorge (P41)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Josefa Surek de Souza (P42)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Juliene Marques (P43)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Jurandir Domingues Junior (P44)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Karlan Rau (P45)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Luciana Monteiro do Nascimento (P46)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Luciano Sena (P47)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Ludmila Losada da Fonseca (P48)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Luiz Gonzaga Cechetto Júnior (P49)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Luiz Ricardo Uriarte (P50)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Marcelo Cordeiro do Nascimento (P51)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Mario Ferreira Resende (P52)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Micheli Roloff (P53)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Paulo Cesar Rodacki Gomes (P54)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Péricles Rocha da Silva (P55)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Rafael Gonçalves de Souza (P56)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Reginaldo Plácido (P57)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Riad Nassiffe (P58)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Ricardo Toledo Bergamo (P59)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Ricardo de La Rocha Ladeira (P60)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Rita de Cássia da Silveira Cordeiro (P61)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Rudimar (P62)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Sara Nunes (P63)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Suzana Back (P64)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Thiago Farias dos Santos (P65)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Vitor Moraes (P66)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Viviane G. (P67)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Professor: Viviani Teixeira (P68)</h2>
+  <p class='badge-info'>Pesos por Dia: SEG=5 TER=5 QUA=5 QUI=5 SEX=5 </p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Sala: Sala C05 (C05)</h2>
+  <p class='badge-info'>Tipo: TEORICA | Capacidade: 40 alunos</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Sala: Sala C06 (C06)</h2>
+  <p class='badge-info'>Tipo: TEORICA | Capacidade: 40 alunos</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Sala: Sala C07 (C07)</h2>
+  <p class='badge-info'>Tipo: TEORICA | Capacidade: 40 alunos</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Sala: Sala C08 (C08)</h2>
+  <p class='badge-info'>Tipo: TEORICA | Capacidade: 40 alunos</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Sala: Sala C09 (C09)</h2>
+  <p class='badge-info'>Tipo: TEORICA | Capacidade: 40 alunos</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Sala: Sala C10 (C10)</h2>
+  <p class='badge-info'>Tipo: TEORICA | Capacidade: 40 alunos</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Sala: Sala C11 (C11)</h2>
+  <p class='badge-info'>Tipo: TEORICA | Capacidade: 40 alunos</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Sala: Sala C12 (C12)</h2>
+  <p class='badge-info'>Tipo: TEORICA | Capacidade: 40 alunos</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Sala: Sala C14 (C14)</h2>
+  <p class='badge-info'>Tipo: TEORICA | Capacidade: 40 alunos</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Sala: Sala C15 (C15)</h2>
+  <p class='badge-info'>Tipo: TEORICA | Capacidade: 40 alunos</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Sala: Sala C16 (C16)</h2>
+  <p class='badge-info'>Tipo: TEORICA | Capacidade: 40 alunos</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Sala: Sala C17 (C17)</h2>
+  <p class='badge-info'>Tipo: TEORICA | Capacidade: 40 alunos</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Sala: Sala C18 (C18)</h2>
+  <p class='badge-info'>Tipo: TEORICA | Capacidade: 40 alunos</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Sala: Sala C19 (C19)</h2>
+  <p class='badge-info'>Tipo: TEORICA | Capacidade: 40 alunos</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Sala: Sala C20 (C20)</h2>
+  <p class='badge-info'>Tipo: TEORICA | Capacidade: 40 alunos</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Sala: Laboratório D04 (D04)</h2>
+  <p class='badge-info'>Tipo: LABORATORIO | Capacidade: 35 alunos</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+<div class='section-card'>
+  <h2>Sala: Laboratório D08 (D08)</h2>
+  <p class='badge-info'>Tipo: LABORATORIO | Capacidade: 35 alunos</p>
+  <table class='timetable'>
+    <thead><tr><th>Horário</th><th>Segunda-feira</th><th>Terça-feira</th><th>Quarta-feira</th><th>Quinta-feira</th><th>Sexta-feira</th></tr></thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+</body>
+</html>
