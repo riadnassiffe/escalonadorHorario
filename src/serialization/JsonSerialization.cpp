@@ -337,6 +337,7 @@ nlohmann::json JsonSerialization::configToJson(const model::OptimizationConfig& 
     j["preenchimento_integral_jornada"] = cfg.preenchimento_integral_jornada;
     j["distribuir_disciplinas_na_semana"] = cfg.distribuir_disciplinas_na_semana;
     j["max_aulas_disciplina_dia_turma"] = cfg.max_aulas_disciplina_dia_turma;
+    j["algoritmo"] = model::solverAlgorithmToString(cfg.algoritmo);
     j["tempo_limite_segundos"] = cfg.tempo_limite_segundos;
     j["num_threads"] = cfg.num_threads;
     return j;
@@ -344,6 +345,9 @@ nlohmann::json JsonSerialization::configToJson(const model::OptimizationConfig& 
 
 model::OptimizationConfig JsonSerialization::configFromJson(const nlohmann::json& j) {
     model::OptimizationConfig cfg;
+    if (j.contains("algoritmo")) {
+        cfg.algoritmo = model::stringToSolverAlgorithm(j["algoritmo"].get<std::string>());
+    }
     if (j.contains("lambda_janelas")) cfg.lambda_janelas = j["lambda_janelas"].get<int>();
     if (j.contains("lambda_dias")) cfg.lambda_dias = j["lambda_dias"].get<int>();
     if (j.contains("lambda_preferencias")) cfg.lambda_preferencias = j["lambda_preferencias"].get<int>();

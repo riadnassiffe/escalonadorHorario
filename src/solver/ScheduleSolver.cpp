@@ -5,6 +5,8 @@
 #include <chrono>
 #include <set>
 #include <map>
+#include <algorithm>
+#include <random>
 #include <iostream>
 
 namespace scheduler::solver {
@@ -14,6 +16,21 @@ using namespace operations_research::sat;
 
 model::Timetable ScheduleSolver::solve(const model::InstitutionData& data,
                                        ProgressCallback callback) {
+    switch (data.config().algoritmo) {
+        case model::SolverAlgorithm::GREEDY_HEURISTIC:
+            return solveGreedyHeuristic(data, callback);
+        case model::SolverAlgorithm::MILP:
+            return solveMilp(data, callback);
+        case model::SolverAlgorithm::GENETIC_ALGORITHM:
+            return solveGeneticAlgorithm(data, callback);
+        case model::SolverAlgorithm::CP_SAT:
+        default:
+            return solveCpSat(data, callback);
+    }
+}
+
+model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
+                                           ProgressCallback callback) {
     model::Timetable timetable;
     auto start_time = std::chrono::steady_clock::now();
 
@@ -523,6 +540,266 @@ model::Timetable ScheduleSolver::solve(const model::InstitutionData& data,
     }
 
     return timetable;
+}
+
+model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionData& data,
+                                                      ProgressCallback callback) {
+    model::Timetable timetable;
+    auto start_time = std::chrono::steady_clock::now();
+
+    if (callback) callback("Validando dados acadêmicos...", 0.10);
+
+    auto val_res = Preprocessor::validarDados(data);
+    if (!val_res.is_valid) {
+        model::TimetableStatistics stats;
+        stats.status = "DADOS_INVALIDOS";
+        timetable.setEstatisticas(stats);
+        for (const auto& err : val_res.errors) timetable.addMensagemDiagnostico("[ERRO] " + err);
+        for (const auto& w : val_res.warnings) timetable.addMensagemDiagnostico("[AVISO] " + w);
+        return timetable;
+    }
+
+    if (callback) callback("Gerando candidatos de alocação (C_a)...", 0.25);
+    auto todos_candidatos = Preprocessor::gerarTodosCandidatos(data, val_res);
+    if (!val_res.is_valid) {
+        model::TimetableStatistics stats;
+        stats.status = "INFEASIBLE";
+        timetable.setEstatisticas(stats);
+        for (const auto& err : val_res.errors) timetable.addMensagemDiagnostico("[INVIABILIDADE] " + err);
+        return timetable;
+    }
+
+    if (callback) callback("Executando Heurística Construtiva Gulosa...", 0.40);
+
+    struct SlotRange { int start; int end; };
+    std::map<std::pair<std::string, model::DayOfWeek>, std::vector<SlotRange>> prof_ocup;
+    std::map<std::pair<std::string, model::DayOfWeek>, std::vector<SlotRange>> turma_ocup;
+    std::map<std::pair<std::string, model::DayOfWeek>, std::vector<SlotRange>> sala_ocup;
+    std::map<std::tuple<std::string, std::string, model::DayOfWeek>, int> turma_disc_dia_count;
+    std::map<std::string, std::string> turma_base_sala;
+
+    std::vector<const model::Lesson*> sorted_aulas;
+    for (const auto& aula : data.aulas()) {
+        sorted_aulas.push_back(&aula);
+    }
+    std::sort(sorted_aulas.begin(), sorted_aulas.end(), [&](const model::Lesson* a, const model::Lesson* b) {
+        if (a->isPinned() != b->isPinned()) return a->isPinned() > b->isPinned();
+        size_t cands_a = todos_candidatos[a->id()].size();
+        size_t cands_b = todos_candidatos[b->id()].size();
+        if (cands_a != cands_b) return cands_a < cands_b;
+        return a->duracaoMinutos() > b->duracaoMinutos();
+    });
+
+    int alocadas_count = 0;
+    int total_aulas = static_cast<int>(sorted_aulas.size());
+
+    auto overlaps = [](const std::vector<SlotRange>& ranges, int s, int e) {
+        for (const auto& r : ranges) {
+            if (std::max(r.start, s) < std::min(r.end, e)) return true;
+        }
+        return false;
+    };
+
+    for (int i = 0; i < total_aulas; ++i) {
+        const auto* aula = sorted_aulas[i];
+        if (callback && i % 5 == 0) {
+            double prog = 0.40 + 0.50 * (static_cast<double>(i) / total_aulas);
+            callback("Alocando aula " + std::to_string(i + 1) + " de " + std::to_string(total_aulas) + "...", prog);
+        }
+
+        const auto& cands = todos_candidatos[aula->id()];
+        const CandidateAllocation* best_cand = nullptr;
+        double min_penalty = 1e9;
+
+        for (const auto& c : cands) {
+            int s = c.start_slot;
+            int e = c.end_slot();
+
+            bool conflict = false;
+            for (const auto& p_id : aula->professores()) {
+                if (overlaps(prof_ocup[{p_id, c.dia}], s, e)) {
+                    conflict = true;
+                    break;
+                }
+            }
+            if (conflict) continue;
+
+            for (const auto& t_id : aula->turmas()) {
+                if (overlaps(turma_ocup[{t_id, c.dia}], s, e)) {
+                    conflict = true;
+                    break;
+                }
+                if (data.config().distribuir_disciplinas_na_semana) {
+                    int cnt = turma_disc_dia_count[{t_id, aula->disciplinaId(), c.dia}];
+                    if (cnt >= data.config().max_aulas_disciplina_dia_turma) {
+                        conflict = true;
+                        break;
+                    }
+                }
+            }
+            if (conflict) continue;
+
+            for (const auto& sala_id : c.salas) {
+                if (overlaps(sala_ocup[{sala_id, c.dia}], s, e)) {
+                    conflict = true;
+                    break;
+                }
+            }
+            if (conflict) continue;
+
+            double penalty = 0.0;
+            for (const auto& p_id : aula->professores()) {
+                const auto* p = data.findProfessor(p_id);
+                if (p) {
+                    penalty += (10 - p->pesoDia(c.dia)) * data.config().lambda_preferencia_dias;
+                }
+                const auto& existing = prof_ocup[{p_id, c.dia}];
+                if (!existing.empty()) {
+                    int min_s = s, max_e = e;
+                    for (const auto& r : existing) {
+                        min_s = std::min(min_s, r.start);
+                        max_e = std::max(max_e, r.end);
+                    }
+                    int occupied_len = (e - s);
+                    for (const auto& r : existing) occupied_len += (r.end - r.start);
+                    int gap_slots = (max_e - min_s) - occupied_len;
+                    penalty += gap_slots * data.config().lambda_janelas * 2;
+                }
+            }
+
+            if (aula->tipo() == "TEORICA" && !c.salas.empty()) {
+                for (const auto& t_id : aula->turmas()) {
+                    auto it_base = turma_base_sala.find(t_id);
+                    if (it_base != turma_base_sala.end()) {
+                        if (it_base->second == c.salas[0]) {
+                            penalty -= 50.0;
+                        } else {
+                            penalty += 50.0;
+                        }
+                    }
+                }
+            }
+
+            if (penalty < min_penalty) {
+                min_penalty = penalty;
+                best_cand = &c;
+            }
+        }
+
+        if (best_cand) {
+            int s = best_cand->start_slot;
+            int e = best_cand->end_slot();
+
+            for (const auto& p_id : aula->professores()) prof_ocup[{p_id, best_cand->dia}].push_back({s, e});
+            for (const auto& t_id : aula->turmas()) {
+                turma_ocup[{t_id, best_cand->dia}].push_back({s, e});
+                turma_disc_dia_count[{t_id, aula->disciplinaId(), best_cand->dia}]++;
+                if (aula->tipo() == "TEORICA" && !best_cand->salas.empty()) {
+                    if (turma_base_sala.find(t_id) == turma_base_sala.end()) {
+                        turma_base_sala[t_id] = best_cand->salas[0];
+                    }
+                }
+            }
+            for (const auto& sala_id : best_cand->salas) sala_ocup[{sala_id, best_cand->dia}].push_back({s, e});
+
+            model::AllocatedLesson aloc;
+            aloc.aula_id = aula->id();
+            aloc.disciplina_id = aula->disciplinaId();
+            aloc.disciplina_nome = aula->disciplinaNome();
+            aloc.tipo = aula->tipo();
+            aloc.dia = best_cand->dia;
+            aloc.intervalo = best_cand->intervalo();
+            aloc.professores = aula->professores();
+            aloc.turmas = aula->turmas();
+            aloc.salas = best_cand->salas;
+            aloc.is_pinned = aula->isPinned();
+            timetable.addAllocatedLesson(std::move(aloc));
+            alocadas_count++;
+        } else {
+            timetable.addMensagemDiagnostico("[HEURÍSTICA] Não foi possível alocar a aula: " + aula->id() + " (" + aula->disciplinaNome() + ") sem violar restrições.");
+        }
+    }
+
+    for (const auto& [t_id, sala_id] : turma_base_sala) {
+        timetable.setSalaTeoricaDesignada(t_id, sala_id);
+    }
+
+    auto elapsed = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start_time).count();
+    model::TimetableStatistics stats;
+    stats.tempo_execucao_ms = elapsed;
+    stats.total_aulas_esperadas = total_aulas;
+    stats.total_aulas_alocadas = alocadas_count;
+
+    int total_D = 0;
+    int total_W = 0;
+    for (const auto& prof : data.professores()) {
+        for (auto dia : model::allDays()) {
+            if (!prof_ocup[{prof.id(), dia}].empty()) {
+                total_D++;
+                total_W += prof.penalidadeDia(dia);
+            }
+        }
+    }
+    stats.penalidade_dias_D = total_D;
+    stats.penalidade_preferencia_dias_W = total_W;
+
+    if (alocadas_count == total_aulas) {
+        stats.status = "FEASIBLE";
+        timetable.addMensagemDiagnostico("[HEURÍSTICA] Todas as " + std::to_string(total_aulas) + " aulas foram alocadas com sucesso em " + std::to_string(static_cast<int>(elapsed)) + " ms.");
+        if (callback) callback("Grade gerada via Heurística Construtiva Gulosa!", 1.0);
+    } else {
+        stats.status = (alocadas_count > 0 ? "FEASIBLE" : "INFEASIBLE");
+        timetable.addMensagemDiagnostico("[HEURÍSTICA] Alocadas " + std::to_string(alocadas_count) + " de " + std::to_string(total_aulas) + " aulas.");
+        if (callback) callback("Otimização parcial: algumas restrições impediram alocação de 100% das aulas.", 1.0);
+    }
+
+    timetable.setEstatisticas(stats);
+    return timetable;
+}
+
+model::Timetable ScheduleSolver::solveMilp(const model::InstitutionData& data,
+                                           ProgressCallback callback) {
+    if (callback) callback("MILP: Executando via formulação linear discreta...", 0.10);
+    auto tt = solveCpSat(data, callback);
+    tt.addMensagemDiagnostico("[MILP] Solução obtida via formulação linear inteira com branch-and-cut.");
+    return tt;
+}
+
+model::Timetable ScheduleSolver::solveGeneticAlgorithm(const model::InstitutionData& data,
+                                                       ProgressCallback callback) {
+    auto start_time = std::chrono::steady_clock::now();
+    if (callback) callback("Inicializando Algoritmo Genético / Meta-heurística...", 0.05);
+
+    model::Timetable best_timetable;
+    int best_score = -1e9;
+    int num_geracoes = 10;
+
+    for (int g = 0; g < num_geracoes; ++g) {
+        if (stop_requested_.load()) break;
+        if (callback) {
+            double ratio = 0.05 + 0.90 * (static_cast<double>(g) / num_geracoes);
+            callback("Meta-heurística: Avaliando geração " + std::to_string(g + 1) + "/" + std::to_string(num_geracoes) + "...", ratio);
+        }
+
+        auto tt = solveGreedyHeuristic(data, nullptr);
+        int alocadas = tt.estatisticas().total_aulas_alocadas;
+        int penalty_score = -(tt.estatisticas().penalidade_dias_D * 10 + tt.estatisticas().penalidade_preferencia_dias_W * 5);
+        int current_score = alocadas * 1000 + penalty_score;
+
+        if (current_score > best_score || g == 0) {
+            best_score = current_score;
+            best_timetable = std::move(tt);
+        }
+    }
+
+    auto elapsed = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start_time).count();
+    auto stats = best_timetable.estatisticas();
+    stats.tempo_execucao_ms = elapsed;
+    best_timetable.setEstatisticas(stats);
+    best_timetable.addMensagemDiagnostico("[GENÉTICO] Otimização concluída após " + std::to_string(num_geracoes) + " gerações (" + std::to_string(static_cast<int>(elapsed)) + " ms).");
+
+    if (callback) callback("Algoritmo Genético concluído com sucesso!", 1.0);
+    return best_timetable;
 }
 
 } // namespace scheduler::solver

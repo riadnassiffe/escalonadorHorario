@@ -44,6 +44,7 @@ set(SOURCES
     src/ui/ConfigWidget.cpp
     src/ui/ScheduleReportExporter.cpp
     src/ui/TableSearchSortBar.cpp
+    src/ui/OptimizeDialog.cpp
     src/ui/MainWindow.cpp
 )
 
@@ -68,6 +69,7 @@ set(HEADERS
     include/ui/TurmaEditorDialog.h
     include/ui/RoomEditorDialog.h
     include/ui/LessonEditorDialog.h
+    include/ui/OptimizeDialog.h
     include/ui/ConfigWidget.h
     include/ui/ScheduleReportExporter.h
     include/ui/MainWindow.h

@@ -105,11 +105,16 @@ bool JornadaTurma::isSlotEmIntervalo(int slot) const noexcept {
 
 Turma::Turma(std::string id, std::string nome, ShiftType turno)
     : id_(std::move(id)), nome_(std::move(nome)), turno_(turno) {
-    // Configuração padrão: 08:00 as 11:30 com 2 intervalos ativos (seção 2.4)
-    jornada_padrao_ = JornadaTurma("08:00", "12:00",
-                                   "09:30", "09:45", true,
-                                   "12:00", "13:15", true,
-                                   "15:30", "15:45", true);
+    // Configuração padrão: 08:00 as 12:30 (240 min letivos + 2 intervalos de 15 min)
+    // Bloco 1: 08:00 - 09:40 (100 min -> 2x50m)
+    // Intervalo 1: 09:40 - 09:55
+    // Bloco 2: 09:55 - 11:25 (90 min -> 2x45m)
+    // Intervalo 2: 11:25 - 11:40
+    // Bloco 3: 11:40 - 12:30 (50 min -> 1x50m)
+    jornada_padrao_ = JornadaTurma("08:00", "12:30",
+                                   "09:40", "09:55", true,
+                                   "11:25", "11:40", true,
+                                   "12:00", "12:15", false);
 }
 
 bool Turma::funcionaNoDia(DayOfWeek d) const noexcept {

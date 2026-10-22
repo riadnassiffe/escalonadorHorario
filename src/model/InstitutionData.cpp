@@ -214,7 +214,7 @@ InstitutionData InstitutionData::criarExemploPadrao() {
     p1.setPesoDia(DayOfWeek::QUI, 8);
     p1.setPesoDia(DayOfWeek::SEX, 0);  // Menos desejado (não indisponível)
     for (auto d : allDays()) {
-        p1.addIntervaloDisponivel(d, TimeInterval("08:00", "12:00"));
+        p1.addIntervaloDisponivel(d, TimeInterval("08:00", "12:30"));
     }
     data.addProfessor(p1);
 
@@ -226,7 +226,7 @@ InstitutionData InstitutionData::criarExemploPadrao() {
     p2.setPesoDia(DayOfWeek::QUI, 6);
     p2.setPesoDia(DayOfWeek::SEX, 2);
     for (auto d : allDays()) {
-        p2.addIntervaloDisponivel(d, TimeInterval("08:00", "12:00"));
+        p2.addIntervaloDisponivel(d, TimeInterval("08:00", "12:30"));
     }
     data.addProfessor(p2);
 
@@ -238,7 +238,7 @@ InstitutionData InstitutionData::criarExemploPadrao() {
     p3.setPesoDia(DayOfWeek::QUI, 9);
     p3.setPesoDia(DayOfWeek::SEX, 6);
     for (auto d : allDays()) {
-        p3.addIntervaloDisponivel(d, TimeInterval("08:00", "12:00"));
+        p3.addIntervaloDisponivel(d, TimeInterval("08:00", "12:30"));
     }
     data.addProfessor(p3);
 
@@ -250,7 +250,7 @@ InstitutionData InstitutionData::criarExemploPadrao() {
     p4.setPesoDia(DayOfWeek::QUI, 10);
     p4.setPesoDia(DayOfWeek::SEX, 7);
     for (auto d : allDays()) {
-        p4.addIntervaloDisponivel(d, TimeInterval("08:00", "12:00"));
+        p4.addIntervaloDisponivel(d, TimeInterval("08:00", "12:30"));
     }
     data.addProfessor(p4);
 
@@ -262,7 +262,7 @@ InstitutionData InstitutionData::criarExemploPadrao() {
     p5.setPesoDia(DayOfWeek::QUI, 5);
     p5.setPesoDia(DayOfWeek::SEX, 8);
     for (auto d : allDays()) {
-        p5.addIntervaloDisponivel(d, TimeInterval("08:00", "12:00"));
+        p5.addIntervaloDisponivel(d, TimeInterval("08:00", "12:30"));
     }
     data.addProfessor(p5);
 
@@ -274,7 +274,7 @@ InstitutionData InstitutionData::criarExemploPadrao() {
     p6.setPesoDia(DayOfWeek::QUI, 7);
     p6.setPesoDia(DayOfWeek::SEX, 9);
     for (auto d : allDays()) {
-        p6.addIntervaloDisponivel(d, TimeInterval("08:00", "12:00"));
+        p6.addIntervaloDisponivel(d, TimeInterval("08:00", "12:30"));
     }
     data.addProfessor(p6);
 

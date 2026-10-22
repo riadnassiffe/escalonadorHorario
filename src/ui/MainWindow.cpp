@@ -4,6 +4,7 @@
 #include "ui/TurmaEditorDialog.h"
 #include "ui/RoomEditorDialog.h"
 #include "ui/LessonEditorDialog.h"
+#include "ui/OptimizeDialog.h"
 #include "ui/ScheduleReportExporter.h"
 #include "serialization/JsonSerialization.h"
 #include <QToolBar>
@@ -26,7 +27,7 @@ MainWindow::MainWindow(QWidget* parent)
 }
 
 void MainWindow::setupUi() {
-    setWindowTitle("Escalonador Inteligente de Horários Escolares - CP-SAT");
+    setWindowTitle("Escalonador Inteligente de Horários Escolares");
     resize(1300, 850);
 
     setupToolBar();
@@ -70,7 +71,7 @@ void MainWindow::setupToolBar() {
     auto* btn_optimize = new QToolButton(toolbar);
     btn_optimize->setObjectName("btnOptimize");
     btn_optimize->setText("⚡ OTIMIZAR GRADE");
-    btn_optimize->setToolTip("Executar o Solver CP-SAT para gerar a grade ótima (Seção 4 & 7)");
+    btn_optimize->setToolTip("Selecionar algoritmo e otimizar grade horária escolar (Seção 4 & 7)");
     connect(btn_optimize, &QToolButton::clicked, this, &MainWindow::onOptimize);
     toolbar->addWidget(btn_optimize);
 
@@ -381,19 +382,32 @@ void MainWindow::onLoadDefaultExample() {
 }
 
 void MainWindow::onOptimize() {
-    data_.setConfig(config_widget_->getConfig());
+    auto current_cfg = config_widget_->getConfig();
+
+    // Apresenta a caixa para seleção do algoritmo para resolver o problema
+    OptimizeDialog dlg(current_cfg, this);
+    if (dlg.exec() != QDialog::Accepted) {
+        return; // Usuário cancelou a operação
+    }
+
+    dlg.updateConfig(current_cfg);
+    data_.setConfig(current_cfg);
+    config_widget_->loadConfig(current_cfg);
+
     data_.gerarOcorrenciasAulas(true); // Preserva aulas fixadas
 
+    std::string algo_name = model::solverAlgorithmDisplayName(current_cfg.algoritmo);
     txt_logs_->appendPlainText("--------------------------------------------------");
-    txt_logs_->appendPlainText("[OTIMIZAÇÃO] Iniciando solver CP-SAT: " + QDateTime::currentDateTime().toString("dd/MM/yyyy HH:mm:ss"));
+    txt_logs_->appendPlainText("[OTIMIZAÇÃO] Algoritmo selecionado: " + QString::fromStdString(algo_name));
+    txt_logs_->appendPlainText("[OTIMIZAÇÃO] Iniciando resolução: " + QDateTime::currentDateTime().toString("dd/MM/yyyy HH:mm:ss"));
 
     progress_bar_->setVisible(true);
     progress_bar_->setValue(10);
-    statusBar()->showMessage("Executando otimizador CP-SAT...");
+    statusBar()->showMessage("Executando " + QString::fromStdString(algo_name) + "...");
 
-    auto tt = solver_.solve(data_, [this](const std::string& msg, double ratio) {
+    auto tt = solver_.solve(data_, [this, algo_name](const std::string& msg, double ratio) {
         progress_bar_->setValue(static_cast<int>(ratio * 100));
-        statusBar()->showMessage(QString::fromStdString(msg));
+        statusBar()->showMessage(QString("[%1] %2").arg(QString::fromStdString(algo_name), QString::fromStdString(msg)));
         txt_logs_->appendPlainText("[SOLVER] " + QString::fromStdString(msg));
     });
 

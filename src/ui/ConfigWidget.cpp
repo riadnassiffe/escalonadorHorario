@@ -95,10 +95,21 @@ void ConfigWidget::setupUi() {
 
     main_layout->addWidget(grp_regras);
 
-    // 3. Parâmetros do Solver CP-SAT
-    auto* grp_solver = new QGroupBox("Configurações do Solver Google OR-Tools CP-SAT", this);
+    // 3. Parâmetros do Solver e Algoritmo
+    auto* grp_solver = new QGroupBox("Configurações do Algoritmo e Parâmetros de Execução", this);
     auto* form_solver = new QFormLayout(grp_solver);
     form_solver->setSpacing(10);
+
+    combo_algoritmo_ = new QComboBox(grp_solver);
+    combo_algoritmo_->addItem("Google OR-Tools CP-SAT (Restrições / Exato - Recomendado)",
+                              static_cast<int>(model::SolverAlgorithm::CP_SAT));
+    combo_algoritmo_->addItem("Heurística Construtiva Gulosa (Rápido / Prioridade)",
+                              static_cast<int>(model::SolverAlgorithm::GREEDY_HEURISTIC));
+    combo_algoritmo_->addItem("Programação Linear Inteira Mista (MILP)",
+                              static_cast<int>(model::SolverAlgorithm::MILP));
+    combo_algoritmo_->addItem("Algoritmo Genético (Meta-heurística)",
+                              static_cast<int>(model::SolverAlgorithm::GENETIC_ALGORITHM));
+    form_solver->addRow("Algoritmo de Otimização Padrão:", combo_algoritmo_);
 
     spin_tempo_limite_ = new QDoubleSpinBox(grp_solver);
     spin_tempo_limite_->setRange(1.0, 3600.0);
@@ -134,12 +145,15 @@ void ConfigWidget::loadConfig(const model::OptimizationConfig& cfg) {
     slider_pref_dias_->setValue(cfg.lambda_preferencia_dias);
     slider_lacunas_turma_->setValue(cfg.lambda_lacunas_turma);
 
-    int idx = combo_modelo_dias_->findData(static_cast<int>(cfg.modelo_preferencia_dias));
-    if (idx >= 0) combo_modelo_dias_->setCurrentIndex(idx);
+    int idx_dias = combo_modelo_dias_->findData(static_cast<int>(cfg.modelo_preferencia_dias));
+    if (idx_dias >= 0) combo_modelo_dias_->setCurrentIndex(idx_dias);
 
     chk_preenchimento_integral_->setChecked(cfg.preenchimento_integral_jornada);
     chk_distribuir_semana_->setChecked(cfg.distribuir_disciplinas_na_semana);
     spin_max_aulas_dia_->setValue(cfg.max_aulas_disciplina_dia_turma);
+
+    int idx_algo = combo_algoritmo_->findData(static_cast<int>(cfg.algoritmo));
+    if (idx_algo >= 0) combo_algoritmo_->setCurrentIndex(idx_algo);
 
     spin_tempo_limite_->setValue(cfg.tempo_limite_segundos);
     spin_threads_->setValue(cfg.num_threads);
@@ -162,6 +176,9 @@ model::OptimizationConfig ConfigWidget::getConfig() const {
     cfg.preenchimento_integral_jornada = chk_preenchimento_integral_->isChecked();
     cfg.distribuir_disciplinas_na_semana = chk_distribuir_semana_->isChecked();
     cfg.max_aulas_disciplina_dia_turma = spin_max_aulas_dia_->value();
+
+    cfg.algoritmo = static_cast<model::SolverAlgorithm>(
+        combo_algoritmo_->currentData().toInt());
 
     cfg.tempo_limite_segundos = spin_tempo_limite_->value();
     cfg.num_threads = spin_threads_->value();
