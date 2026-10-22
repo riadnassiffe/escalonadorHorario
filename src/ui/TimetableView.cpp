@@ -453,6 +453,34 @@ void TimetableView::onCellContextMenu(const QPoint& pos) {
         });
     }
 
+    menu.addSeparator();
+    auto* pin_all_act = menu.addAction("📌 Fixar Todas as Aulas da Grade Atual (Bloquear para Próximo Solver)");
+    connect(pin_all_act, &QAction::triggered, [this]() {
+        for (auto& aloc : data_.grade().alocacoes()) {
+            auto* a_model = data_.findAula(aloc.aula_id);
+            if (a_model) {
+                a_model->setPinned(true);
+                a_model->setPinnedDay(aloc.dia);
+                a_model->setPinnedStartSlot(aloc.intervalo.start_slot);
+                a_model->setPinnedRooms(aloc.salas);
+                aloc.is_pinned = true;
+            }
+        }
+        renderTimetable();
+    });
+
+    auto* unpin_all_act = menu.addAction("🔓 Desafixar Todas as Aulas da Grade Atual");
+    connect(unpin_all_act, &QAction::triggered, [this]() {
+        for (auto& aloc : data_.grade().alocacoes()) {
+            auto* a_model = data_.findAula(aloc.aula_id);
+            if (a_model) {
+                a_model->unpin();
+                aloc.is_pinned = false;
+            }
+        }
+        renderTimetable();
+    });
+
     menu.exec(table_->viewport()->mapToGlobal(pos));
 }
 

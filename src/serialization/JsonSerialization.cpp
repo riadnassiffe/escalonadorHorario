@@ -340,6 +340,7 @@ nlohmann::json JsonSerialization::configToJson(const model::OptimizationConfig& 
     j["algoritmo"] = model::solverAlgorithmToString(cfg.algoritmo);
     j["tempo_limite_segundos"] = cfg.tempo_limite_segundos;
     j["num_threads"] = cfg.num_threads;
+    j["usar_distribuicao_como_entrada"] = cfg.usar_distribuicao_como_entrada;
     return j;
 }
 
@@ -370,6 +371,9 @@ model::OptimizationConfig JsonSerialization::configFromJson(const nlohmann::json
     }
     if (j.contains("num_threads")) {
         cfg.num_threads = j["num_threads"].get<int>();
+    }
+    if (j.contains("usar_distribuicao_como_entrada")) {
+        cfg.usar_distribuicao_como_entrada = j["usar_distribuicao_como_entrada"].get<bool>();
     }
     return cfg;
 }

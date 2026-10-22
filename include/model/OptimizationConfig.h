@@ -74,10 +74,13 @@ struct OptimizationConfig {
     bool distribuir_disciplinas_na_semana{true}; // Seção 5
     int max_aulas_disciplina_dia_turma{2};
 
-    // Parâmetros do Solver CP-SAT
+    // Parâmetros do Solver CP-SAT e Algoritmos
     double tempo_limite_segundos{30.0};
     int num_threads{4};
     bool log_search_progress{false};
+
+    // Usar grade/distribuição atual em tela como entrada (Warm Start / Solução Inicial)
+    bool usar_distribuicao_como_entrada{true};
 };
 
 } // namespace scheduler::model

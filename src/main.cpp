@@ -50,12 +50,55 @@ int main(int argc, char* argv[]) {
         std::cout << "Disciplinas: " << data.disciplinas().size() << std::endl;
         std::cout << "Aulas a alocar: " << data.aulas().size() << std::endl;
 
+        bool warmstart_chain = false;
         for (int i = 1; i < argc; ++i) {
             std::string arg = argv[i];
-            if (arg == "--greedy") data.config().algoritmo = scheduler::model::SolverAlgorithm::GREEDY_HEURISTIC;
+            if (arg == "--warmstart-chain") warmstart_chain = true;
+            else if (arg == "--greedy") data.config().algoritmo = scheduler::model::SolverAlgorithm::GREEDY_HEURISTIC;
             else if (arg == "--genetic") data.config().algoritmo = scheduler::model::SolverAlgorithm::GENETIC_ALGORITHM;
             else if (arg == "--milp") data.config().algoritmo = scheduler::model::SolverAlgorithm::MILP;
             else if (arg == "--cpsat") data.config().algoritmo = scheduler::model::SolverAlgorithm::CP_SAT;
+        }
+
+        if (warmstart_chain) {
+            std::cout << "\n[TESTE ENCADINHAMENTO] 1. Executando Heurística Gulosa para gerar distribuição inicial..." << std::endl;
+            data.config().algoritmo = scheduler::model::SolverAlgorithm::GREEDY_HEURISTIC;
+            scheduler::solver::ScheduleSolver solver1;
+            auto tt1 = solver1.solve(data, nullptr);
+            data.setGrade(tt1);
+            std::cout << "  -> Distribuição inicial em tela: " << tt1.alocacoes().size() << " aulas." << std::endl;
+
+            std::cout << "\n[TESTE ENCADINHAMENTO] 2. Executando próximo algoritmo (CP-SAT) com a distribuição em tela como entrada..." << std::endl;
+            data.config().algoritmo = scheduler::model::SolverAlgorithm::CP_SAT;
+            data.config().usar_distribuicao_como_entrada = true;
+            data.config().tempo_limite_segundos = 20.0;
+            scheduler::solver::ScheduleSolver solver2;
+            auto tt2 = solver2.solve(data, [](const std::string& msg, double ratio) {
+                std::cout << "  [" << static_cast<int>(ratio * 100) << "%] " << msg << std::endl;
+            });
+            data.setGrade(tt2);
+
+            std::cout << "\n------------------ RESULTADOS DO ENCADINHAMENTO CP-SAT ------------------" << std::endl;
+            std::cout << "Status: " << tt2.estatisticas().status << std::endl;
+            std::cout << "Tempo: " << tt2.estatisticas().tempo_execucao_ms << " ms" << std::endl;
+            std::cout << "Aulas alocadas: " << tt2.estatisticas().total_aulas_alocadas << std::endl;
+            for (const auto& msg : tt2.mensagensDiagnostico()) {
+                std::cout << "  " << msg << std::endl;
+            }
+
+            std::cout << "\n[TESTE ENCADINHAMENTO] 3. Executando próximo algoritmo (Genético) com a distribuição em tela como entrada..." << std::endl;
+            data.config().algoritmo = scheduler::model::SolverAlgorithm::GENETIC_ALGORITHM;
+            data.config().usar_distribuicao_como_entrada = true;
+            data.setGrade(tt1); // Usa a grade da tela
+            scheduler::solver::ScheduleSolver solver3;
+            auto tt3 = solver3.solve(data, nullptr);
+            data.setGrade(tt3);
+            std::cout << "  -> Status: " << tt3.estatisticas().status << " | Aulas: " << tt3.estatisticas().total_aulas_alocadas << std::endl;
+            for (const auto& msg : tt3.mensagensDiagnostico()) {
+                std::cout << "  " << msg << std::endl;
+            }
+
+            return 0;
         }
 
         std::cout << "\nIniciando resolução com: " << scheduler::model::solverAlgorithmDisplayName(data.config().algoritmo) << "..." << std::endl;

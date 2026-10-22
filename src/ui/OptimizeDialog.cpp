@@ -8,8 +8,8 @@
 
 namespace scheduler::ui {
 
-OptimizeDialog::OptimizeDialog(const model::OptimizationConfig& current_config, QWidget* parent)
-    : QDialog(parent), initial_config_(current_config) {
+OptimizeDialog::OptimizeDialog(const model::OptimizationConfig& current_config, int num_aulas_em_tela, QWidget* parent)
+    : QDialog(parent), initial_config_(current_config), num_aulas_em_tela_(num_aulas_em_tela) {
     setupUi();
 }
 
@@ -127,6 +127,23 @@ void OptimizeDialog::setupUi() {
     chk_log_->setChecked(initial_config_.log_search_progress);
     form_params->addRow("", chk_log_);
 
+    chk_usar_grade_atual_ = new QCheckBox("Usar distribuição de disciplinas atual em tela como entrada (Warm Start)", grp_params);
+    chk_usar_grade_atual_->setChecked(initial_config_.usar_distribuicao_como_entrada && num_aulas_em_tela_ > 0);
+    chk_usar_grade_atual_->setEnabled(num_aulas_em_tela_ > 0);
+    chk_usar_grade_atual_->setStyleSheet("font-weight: bold; color: #38bdf8;");
+
+    lbl_grade_atual_info_ = new QLabel(grp_params);
+    lbl_grade_atual_info_->setWordWrap(true);
+    if (num_aulas_em_tela_ > 0) {
+        lbl_grade_atual_info_->setText(QString("💡 Grade em tela detectada com %1 aulas. O algoritmo utilizará essa distribuição como ponto de partida inicial para acelerar e guiar a busca.").arg(num_aulas_em_tela_));
+        lbl_grade_atual_info_->setStyleSheet("color: #94a3b8; font-size: 11px;");
+    } else {
+        lbl_grade_atual_info_->setText("ℹ️ Nenhuma grade alocada na tela no momento. O algoritmo iniciará uma alocação do zero.");
+        lbl_grade_atual_info_->setStyleSheet("color: #64748b; font-size: 11px;");
+    }
+    form_params->addRow("", chk_usar_grade_atual_);
+    form_params->addRow("", lbl_grade_atual_info_);
+
     main_layout->addWidget(grp_params);
 
     // 4. Botões de Ação
@@ -226,6 +243,9 @@ void OptimizeDialog::updateConfig(model::OptimizationConfig& cfg) const {
     cfg.tempo_limite_segundos = spin_time_limit_->value();
     cfg.num_threads = spin_threads_->value();
     cfg.log_search_progress = chk_log_->isChecked();
+    if (chk_usar_grade_atual_) {
+        cfg.usar_distribuicao_como_entrada = chk_usar_grade_atual_->isChecked();
+    }
 }
 
 } // namespace scheduler::ui

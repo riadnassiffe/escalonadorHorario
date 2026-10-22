@@ -258,9 +258,9 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
     // 5.7 Distribuição semanal de disciplinas (seção 5):
     // Limitar máximo de aulas da mesma disciplina por dia para cada turma
     if (data.config().distribuir_disciplinas_na_semana) {
-        int max_por_dia = data.config().max_aulas_disciplina_dia_turma;
-        if (max_por_dia > 0) {
-            for (const auto& disc : data.disciplinas()) {
+        for (const auto& disc : data.disciplinas()) {
+            int max_por_dia = disc.maxAulasPorDiaTurma() > 0 ? disc.maxAulasPorDiaTurma() : data.config().max_aulas_disciplina_dia_turma;
+            if (max_por_dia > 0) {
                 for (const auto& t_id : disc.turmas()) {
                     for (auto dia : model::allDays()) {
                         LinearExpr aulas_disc_dia;
@@ -277,6 +277,80 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
                     }
                 }
             }
+        }
+    }
+
+    // 5.8 Disciplinas com aulas consecutivas em bloco (seção 5):
+    for (const auto& disc : data.disciplinas()) {
+        if (!disc.exigirAulasConsecutivas()) continue;
+        int n_aulas = disc.aulasSemanais();
+
+        if (n_aulas == 4) {
+            // As 4 aulas devem ocorrer juntas em um único dia (bloco de 4)
+            std::vector<BoolVar> dias_ativas;
+            for (auto dia : model::allDays()) {
+                BoolVar w_d = cp_model.NewBoolVar().WithName("w_d_" + disc.id() + "_" + std::to_string(static_cast<int>(dia)));
+                dias_ativas.push_back(w_d);
+
+                LinearExpr aulas_disc_dia;
+                for (int i = 1; i <= n_aulas; ++i) {
+                    std::string aula_id = disc.id() + "_" + std::to_string(i);
+                    const auto& items = vars_por_aula[aula_id];
+                    for (const auto& item : items) {
+                        if (item.cand->dia == dia) {
+                            aulas_disc_dia += item.var;
+                        }
+                    }
+                }
+                cp_model.AddEquality(aulas_disc_dia, 4 * w_d);
+            }
+            LinearExpr sum_dias;
+            for (auto w : dias_ativas) sum_dias += w;
+            cp_model.AddEquality(sum_dias, 1);
+        } else if (n_aulas == 2) {
+            // As 2 aulas devem ocorrer juntas em um único dia (bloco de 2)
+            std::vector<BoolVar> dias_ativas;
+            for (auto dia : model::allDays()) {
+                BoolVar w_d = cp_model.NewBoolVar().WithName("w_d_" + disc.id() + "_" + std::to_string(static_cast<int>(dia)));
+                dias_ativas.push_back(w_d);
+
+                LinearExpr aulas_disc_dia;
+                for (int i = 1; i <= n_aulas; ++i) {
+                    std::string aula_id = disc.id() + "_" + std::to_string(i);
+                    const auto& items = vars_por_aula[aula_id];
+                    for (const auto& item : items) {
+                        if (item.cand->dia == dia) {
+                            aulas_disc_dia += item.var;
+                        }
+                    }
+                }
+                cp_model.AddEquality(aulas_disc_dia, 2 * w_d);
+            }
+            LinearExpr sum_dias;
+            for (auto w : dias_ativas) sum_dias += w;
+            cp_model.AddEquality(sum_dias, 1);
+        } else if (n_aulas == 8) {
+            // Deve ocorrer em 2 dias com 4 aulas cada (2 blocos de 4)
+            std::vector<BoolVar> dias_ativas;
+            for (auto dia : model::allDays()) {
+                BoolVar w_d = cp_model.NewBoolVar().WithName("w_d_" + disc.id() + "_" + std::to_string(static_cast<int>(dia)));
+                dias_ativas.push_back(w_d);
+
+                LinearExpr aulas_disc_dia;
+                for (int i = 1; i <= n_aulas; ++i) {
+                    std::string aula_id = disc.id() + "_" + std::to_string(i);
+                    const auto& items = vars_por_aula[aula_id];
+                    for (const auto& item : items) {
+                        if (item.cand->dia == dia) {
+                            aulas_disc_dia += item.var;
+                        }
+                    }
+                }
+                cp_model.AddEquality(aulas_disc_dia, 4 * w_d);
+            }
+            LinearExpr sum_dias;
+            for (auto w : dias_ativas) sum_dias += w;
+            cp_model.AddEquality(sum_dias, 2);
         }
     }
 
@@ -447,6 +521,74 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
 
     cp_model.Minimize(funcao_objetivo);
 
+    // 6.5 Inserção de Solução Inicial (Warm Start / Hint) a partir da grade atual em tela
+    if (data.config().usar_distribuicao_como_entrada && !data.grade().alocacoes().empty()) {
+        if (callback) callback("Aplicando distribuição atual em tela como solução inicial (Warm Start)...", 0.55);
+        int hints_aplicados = 0;
+
+        std::map<std::string, const model::AllocatedLesson*> aloc_map;
+        for (const auto& a : data.grade().alocacoes()) {
+            aloc_map[a.aula_id] = &a;
+        }
+
+        for (const auto& aula : data.aulas()) {
+            auto it = aloc_map.find(aula.id());
+            if (it == aloc_map.end()) continue;
+            const auto* aloc = it->second;
+
+            const auto& items = vars_por_aula[aula.id()];
+            const CandItem* matching_item = nullptr;
+
+            for (const auto& item : items) {
+                if (item.cand->dia == aloc->dia && item.cand->start_slot == aloc->intervalo.start_slot) {
+                    if (item.cand->salas == aloc->salas || matching_item == nullptr) {
+                        matching_item = &item;
+                    }
+                }
+            }
+
+            if (matching_item) {
+                cp_model.AddHint(matching_item->var, true);
+                hints_aplicados++;
+                for (const auto& item : items) {
+                    if (&item != matching_item) {
+                        cp_model.AddHint(item.var, false);
+                    }
+                }
+            }
+        }
+
+        // Hints para salas teóricas designadas
+        for (const auto& [turma_id, sala_id] : data.grade().salasTeoricasDesignadas()) {
+            auto it = z_turma_sala.find({turma_id, sala_id});
+            if (it != z_turma_sala.end()) {
+                cp_model.AddHint(it->second, true);
+            }
+        }
+
+        // Hints para dias de trabalho dos professores
+        for (const auto& prof : data.professores()) {
+            for (auto dia : model::allDays()) {
+                bool trabalha = false;
+                for (const auto& aloc : data.grade().alocacoes()) {
+                    if (aloc.dia == dia) {
+                        for (const auto& p : aloc.professores) {
+                            if (p == prof.id()) { trabalha = true; break; }
+                        }
+                    }
+                    if (trabalha) break;
+                }
+                auto it = y_prof_dia.find({prof.id(), dia});
+                if (it != y_prof_dia.end()) {
+                    cp_model.AddHint(it->second, trabalha);
+                }
+            }
+        }
+
+        timetable.addMensagemDiagnostico("[WARM-START] " + std::to_string(hints_aplicados) +
+                                         " aulas da distribuição atual em tela foram fornecidas como solução inicial (Hint).");
+    }
+
     if (callback) callback("Executando solver CP-SAT...", 0.60);
 
     // 7. Parâmetros e Resolução
@@ -532,11 +674,16 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
 
         timetable.setEstatisticas(stats);
         if (callback) callback("Grade gerada com sucesso!", 1.0);
-    } else {
+    } else if (stats.status == "INFEASIBLE") {
         timetable.setEstatisticas(stats);
         timetable.addMensagemDiagnostico("[INVIABILIDADE] O solver CP-SAT determinou que o conjunto de restrições não possui solução viável.");
         timetable.addMensagemDiagnostico("Dica: Verifique a disponibilidade dos professores, salas compatíveis, ou flexibilize a jornada e limites diários.");
         if (callback) callback("Inviável: Sem solução para as restrições informadas.", 1.0);
+    } else {
+        timetable.setEstatisticas(stats);
+        timetable.addMensagemDiagnostico("[TEMPO_LIMITE] O tempo limite de resolução foi atingido antes de encontrar uma solução viável completa.");
+        timetable.addMensagemDiagnostico("Dica: Aumente o tempo limite ou utilize a Heurística Gulosa para gerar uma solução inicial rápida.");
+        if (callback) callback("Tempo limite atingido sem encontrar solução viável.", 1.0);
     }
 
     return timetable;
@@ -600,6 +747,13 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
         return false;
     };
 
+    std::map<std::string, const model::AllocatedLesson*> aloc_em_tela;
+    if (data.config().usar_distribuicao_como_entrada) {
+        for (const auto& a : data.grade().alocacoes()) {
+            aloc_em_tela[a.aula_id] = &a;
+        }
+    }
+
     for (int i = 0; i < total_aulas; ++i) {
         const auto* aula = sorted_aulas[i];
         if (callback && i % 5 == 0) {
@@ -611,9 +765,24 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
         const CandidateAllocation* best_cand = nullptr;
         double min_penalty = 1e9;
 
+        const model::AllocatedLesson* prior_aloc = nullptr;
+        auto it_aloc = aloc_em_tela.find(aula->id());
+        if (it_aloc != aloc_em_tela.end()) {
+            prior_aloc = it_aloc->second;
+        }
+
         for (const auto& c : cands) {
             int s = c.start_slot;
             int e = c.end_slot();
+            double penalty = 0.0;
+
+            if (prior_aloc && c.dia == prior_aloc->dia && c.start_slot == prior_aloc->intervalo.start_slot) {
+                if (c.salas == prior_aloc->salas) {
+                    penalty -= 10000.0; // Bônus máximo para manter a alocação da tela
+                } else {
+                    penalty -= 5000.0;
+                }
+            }
 
             bool conflict = false;
             for (const auto& p_id : aula->professores()) {
@@ -630,14 +799,26 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
                     break;
                 }
                 if (data.config().distribuir_disciplinas_na_semana) {
+                    const auto* disc = data.findDisciplina(aula->disciplinaId());
+                    int max_lim = (disc && disc->maxAulasPorDiaTurma() > 0) ? disc->maxAulasPorDiaTurma() : data.config().max_aulas_disciplina_dia_turma;
                     int cnt = turma_disc_dia_count[{t_id, aula->disciplinaId(), c.dia}];
-                    if (cnt >= data.config().max_aulas_disciplina_dia_turma) {
+                    if (cnt >= max_lim) {
                         conflict = true;
                         break;
                     }
                 }
             }
             if (conflict) continue;
+
+            const auto* disc_ptr = data.findDisciplina(aula->disciplinaId());
+            if (disc_ptr && disc_ptr->exigirAulasConsecutivas()) {
+                for (const auto& t_id : aula->turmas()) {
+                    int cnt = turma_disc_dia_count[{t_id, aula->disciplinaId(), c.dia}];
+                    if (cnt > 0) {
+                        penalty -= 400.0; // Bônus forte para agrupar as aulas no mesmo dia
+                    }
+                }
+            }
 
             for (const auto& sala_id : c.salas) {
                 if (overlaps(sala_ocup[{sala_id, c.dia}], s, e)) {
@@ -647,7 +828,6 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
             }
             if (conflict) continue;
 
-            double penalty = 0.0;
             for (const auto& p_id : aula->professores()) {
                 const auto* p = data.findProfessor(p_id);
                 if (p) {
@@ -753,6 +933,10 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
         if (callback) callback("Otimização parcial: algumas restrições impediram alocação de 100% das aulas.", 1.0);
     }
 
+    if (data.config().usar_distribuicao_como_entrada && !data.grade().alocacoes().empty()) {
+        timetable.addMensagemDiagnostico("[WARM-START] Distribuição de disciplinas atual da tela utilizada como base de prioridade.");
+    }
+
     timetable.setEstatisticas(stats);
     return timetable;
 }
@@ -774,6 +958,16 @@ model::Timetable ScheduleSolver::solveGeneticAlgorithm(const model::InstitutionD
     int best_score = -1e9;
     int num_geracoes = 10;
 
+    // Inicializa a população com a grade atual em tela se disponível e solicitada
+    if (data.config().usar_distribuicao_como_entrada && !data.grade().alocacoes().empty()) {
+        best_timetable = data.grade();
+        const auto& s = best_timetable.estatisticas();
+        int alocadas = s.total_aulas_alocadas > 0 ? s.total_aulas_alocadas : static_cast<int>(best_timetable.alocacoes().size());
+        int penalty_score = -(s.penalidade_dias_D * 10 + s.penalidade_preferencia_dias_W * 5);
+        best_score = alocadas * 1000 + penalty_score;
+        best_timetable.addMensagemDiagnostico("[WARM-START] População inicializada com a distribuição atual em tela como indivíduo semente (Score: " + std::to_string(best_score) + ").");
+    }
+
     for (int g = 0; g < num_geracoes; ++g) {
         if (stop_requested_.load()) break;
         if (callback) {
@@ -786,7 +980,7 @@ model::Timetable ScheduleSolver::solveGeneticAlgorithm(const model::InstitutionD
         int penalty_score = -(tt.estatisticas().penalidade_dias_D * 10 + tt.estatisticas().penalidade_preferencia_dias_W * 5);
         int current_score = alocadas * 1000 + penalty_score;
 
-        if (current_score > best_score || g == 0) {
+        if (current_score > best_score || (g == 0 && best_timetable.alocacoes().empty())) {
             best_score = current_score;
             best_timetable = std::move(tt);
         }

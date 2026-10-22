@@ -126,6 +126,11 @@ void ConfigWidget::setupUi() {
     chk_log_solver_ = new QCheckBox("Habilitar log de busca em tempo real do CP-SAT", grp_solver);
     form_solver->addRow("", chk_log_solver_);
 
+    chk_usar_distribuicao_como_entrada_ = new QCheckBox("Usar distribuição de disciplinas atual em tela como entrada (Warm Start)", grp_solver);
+    chk_usar_distribuicao_como_entrada_->setToolTip("Se ativado, utiliza a distribuição de disciplinas atualmente na tela como ponto de partida (solução inicial) para o próximo algoritmo.");
+    chk_usar_distribuicao_como_entrada_->setChecked(true);
+    form_solver->addRow("", chk_usar_distribuicao_como_entrada_);
+
     main_layout->addWidget(grp_solver);
     main_layout->addStretch();
 }
@@ -158,6 +163,7 @@ void ConfigWidget::loadConfig(const model::OptimizationConfig& cfg) {
     spin_tempo_limite_->setValue(cfg.tempo_limite_segundos);
     spin_threads_->setValue(cfg.num_threads);
     chk_log_solver_->setChecked(cfg.log_search_progress);
+    chk_usar_distribuicao_como_entrada_->setChecked(cfg.usar_distribuicao_como_entrada);
 
     updateSliderLabels();
 }
@@ -183,6 +189,7 @@ model::OptimizationConfig ConfigWidget::getConfig() const {
     cfg.tempo_limite_segundos = spin_tempo_limite_->value();
     cfg.num_threads = spin_threads_->value();
     cfg.log_search_progress = chk_log_solver_->isChecked();
+    cfg.usar_distribuicao_como_entrada = chk_usar_distribuicao_como_entrada_->isChecked();
 
     return cfg;
 }

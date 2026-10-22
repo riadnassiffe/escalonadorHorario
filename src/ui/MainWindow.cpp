@@ -385,7 +385,7 @@ void MainWindow::onOptimize() {
     auto current_cfg = config_widget_->getConfig();
 
     // Apresenta a caixa para seleção do algoritmo para resolver o problema
-    OptimizeDialog dlg(current_cfg, this);
+    OptimizeDialog dlg(current_cfg, static_cast<int>(data_.grade().alocacoes().size()), this);
     if (dlg.exec() != QDialog::Accepted) {
         return; // Usuário cancelou a operação
     }
@@ -399,6 +399,10 @@ void MainWindow::onOptimize() {
     std::string algo_name = model::solverAlgorithmDisplayName(current_cfg.algoritmo);
     txt_logs_->appendPlainText("--------------------------------------------------");
     txt_logs_->appendPlainText("[OTIMIZAÇÃO] Algoritmo selecionado: " + QString::fromStdString(algo_name));
+    if (current_cfg.usar_distribuicao_como_entrada && !data_.grade().alocacoes().empty()) {
+        txt_logs_->appendPlainText(QString("[ENTRADA] Distribuição atual da tela (%1 aulas) fornecida como entrada / Warm Start.")
+            .arg(data_.grade().alocacoes().size()));
+    }
     txt_logs_->appendPlainText("[OTIMIZAÇÃO] Iniciando resolução: " + QDateTime::currentDateTime().toString("dd/MM/yyyy HH:mm:ss"));
 
     progress_bar_->setVisible(true);

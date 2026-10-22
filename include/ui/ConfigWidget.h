@@ -50,6 +50,7 @@ private:
     QDoubleSpinBox* spin_tempo_limite_{nullptr};
     QSpinBox* spin_threads_{nullptr};
     QCheckBox* chk_log_solver_{nullptr};
+    QCheckBox* chk_usar_distribuicao_como_entrada_{nullptr};
 };
 
 } // namespace scheduler::ui
