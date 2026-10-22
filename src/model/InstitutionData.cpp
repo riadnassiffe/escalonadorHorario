@@ -156,7 +156,7 @@ Lesson* InstitutionData::findAula(const std::string& id) {
     return nullptr;
 }
 
-void InstitutionData::gerarOcorrenciasAulas(bool preservar_fixadas) {
+void InstitutionData::gerarOcorrenciasAulas(bool preservar_fixadas, EscopoSemestreOtimizacao escopo) {
     std::vector<Lesson> novas_aulas;
 
     // Mapa de aulas fixadas previamente
@@ -170,13 +170,27 @@ void InstitutionData::gerarOcorrenciasAulas(bool preservar_fixadas) {
     }
 
     for (const auto& disc : disciplinas_) {
+        // Filtragem por escopo de semestre
+        if (escopo == EscopoSemestreOtimizacao::SEMESTRE_1 && !disc.atendeSemestre(SemestreLetivo::SEMESTRE_1)) {
+            continue;
+        }
+        if (escopo == EscopoSemestreOtimizacao::SEMESTRE_2 && !disc.atendeSemestre(SemestreLetivo::SEMESTRE_2)) {
+            continue;
+        }
+
         for (int i = 1; i <= disc.aulasSemanais(); ++i) {
             std::string aula_id = disc.id() + "_" + std::to_string(i);
 
             Lesson aula(aula_id, disc.id(), disc.nome(), disc.tipo(),
-                        disc.duracaoMinutos(), disc.professores(), disc.turmas());
+                        disc.duracaoMinutos(), disc.professores(), disc.turmas(),
+                        disc.regime(), disc.semestre());
             aula.setTurnosPermitidos(disc.turnosPermitidos());
             aula.setSalasAlternativas(disc.salasAlternativas());
+            if (escopo == EscopoSemestreOtimizacao::SEMESTRE_2) {
+                aula.setSemestreAtivo(2);
+            } else {
+                aula.setSemestreAtivo(1);
+            }
 
             auto it = fixadas.find(aula_id);
             if (it != fixadas.end()) {
@@ -266,8 +280,8 @@ InstitutionData InstitutionData::criarExemploPadrao() {
     }
     data.addProfessor(p5);
 
-    // P06: Profa. Beatriz Costa (Biologia)
-    Professor p6("P06", "Profa. Beatriz Costa (Biologia)");
+    // P06: Profa. Beatriz Costa (Biologia & Filosofia)
+    Professor p6("P06", "Profa. Beatriz Costa (Biológicas)");
     p6.setPesoDia(DayOfWeek::SEG, 7);
     p6.setPesoDia(DayOfWeek::TER, 5);
     p6.setPesoDia(DayOfWeek::QUA, 8);
@@ -287,7 +301,6 @@ InstitutionData InstitutionData::criarExemploPadrao() {
     data.addSala(Room("LAB_INF", "Laboratório de Informática", "LABORATORIO", 35));
 
     // 3. Turmas com jornada e dois intervalos de 15 minutos (seção 2.4)
-    // 08:00 as 11:30 com Intervalo 1 (08:40-08:55) e Intervalo 2 (10:25-10:40)
     Turma t1("T01", "1º Ano A - Ensino Médio", ShiftType::MANHA);
     t1.setSalaTeoricaId("S101");
     t1.setSalasTeoricasPermitidas({"S101"});
@@ -303,47 +316,47 @@ InstitutionData InstitutionData::criarExemploPadrao() {
     t3.setSalasTeoricasPermitidas({"S201"});
     data.addTurma(t3);
 
-    // 4. Disciplinas - com durações de 45 e 50 minutos (seção 1.1)
+    // 4. Disciplinas - com durações de 45 e 50 min e classificação Anual/Semestral
     // Turma T01
     {
-        Disciplina d("T01_MAT", "Matemática", "TEORICA", 45, 5);
+        Disciplina d("T01_MAT", "Matemática", "TEORICA", 45, 5, RegimeDisciplina::ANUAL, SemestreLetivo::AMBOS);
         d.setProfessores({"P01"});
         d.setTurmas({"T01"});
         data.addDisciplina(d);
     }
     {
-        Disciplina d("T01_PORT", "Português", "TEORICA", 50, 4);
+        Disciplina d("T01_PORT", "Português", "TEORICA", 50, 4, RegimeDisciplina::ANUAL, SemestreLetivo::AMBOS);
         d.setProfessores({"P05"});
         d.setTurmas({"T01"});
         data.addDisciplina(d);
     }
     {
-        Disciplina d("T01_FIS", "Física", "TEORICA", 50, 3);
+        Disciplina d("T01_FIS", "Física", "TEORICA", 50, 3, RegimeDisciplina::ANUAL, SemestreLetivo::AMBOS);
         d.setProfessores({"P03"});
         d.setTurmas({"T01"});
         data.addDisciplina(d);
     }
     {
-        Disciplina d("T01_QUI_EXP", "Química Experimental", "LABORATORIO", 50, 2);
+        Disciplina d("T01_QUI_EXP", "Química Experimental", "LABORATORIO", 50, 2, RegimeDisciplina::SEMESTRAL, SemestreLetivo::SEMESTRE_1);
         d.setProfessores({"P02"});
         d.setTurmas({"T01"});
         d.setSalasAlternativas({{"LAB01"}, {"LAB02"}});
         data.addDisciplina(d);
     }
     {
-        Disciplina d("T01_HIST", "História", "TEORICA", 45, 3);
+        Disciplina d("T01_HIST", "História", "TEORICA", 45, 3, RegimeDisciplina::SEMESTRAL, SemestreLetivo::SEMESTRE_1);
         d.setProfessores({"P04"});
         d.setTurmas({"T01"});
         data.addDisciplina(d);
     }
     {
-        Disciplina d("T01_GEO", "Geografia", "TEORICA", 45, 3);
+        Disciplina d("T01_GEO", "Geografia", "TEORICA", 45, 3, RegimeDisciplina::SEMESTRAL, SemestreLetivo::SEMESTRE_2);
         d.setProfessores({"P04"});
         d.setTurmas({"T01"});
         data.addDisciplina(d);
     }
     {
-        Disciplina d("T01_BIO", "Biologia", "TEORICA", 45, 2);
+        Disciplina d("T01_BIO", "Biologia", "TEORICA", 45, 2, RegimeDisciplina::ANUAL, SemestreLetivo::AMBOS);
         d.setProfessores({"P06"});
         d.setTurmas({"T01"});
         data.addDisciplina(d);
@@ -351,37 +364,37 @@ InstitutionData InstitutionData::criarExemploPadrao() {
 
     // Turma T02
     {
-        Disciplina d("T02_MAT", "Matemática", "TEORICA", 50, 4);
+        Disciplina d("T02_MAT", "Matemática", "TEORICA", 50, 4, RegimeDisciplina::ANUAL, SemestreLetivo::AMBOS);
         d.setProfessores({"P01"});
         d.setTurmas({"T02"});
         data.addDisciplina(d);
     }
     {
-        Disciplina d("T02_PORT", "Português", "TEORICA", 50, 4);
+        Disciplina d("T02_PORT", "Português", "TEORICA", 50, 4, RegimeDisciplina::ANUAL, SemestreLetivo::AMBOS);
         d.setProfessores({"P05"});
         d.setTurmas({"T02"});
         data.addDisciplina(d);
     }
     {
-        Disciplina d("T02_FIS", "Física", "TEORICA", 50, 3);
+        Disciplina d("T02_FIS", "Física", "TEORICA", 50, 3, RegimeDisciplina::ANUAL, SemestreLetivo::AMBOS);
         d.setProfessores({"P03"});
         d.setTurmas({"T02"});
         data.addDisciplina(d);
     }
     {
-        Disciplina d("T02_QUI", "Química Geral", "TEORICA", 45, 3);
+        Disciplina d("T02_QUI", "Química Geral", "TEORICA", 45, 3, RegimeDisciplina::SEMESTRAL, SemestreLetivo::SEMESTRE_1);
         d.setProfessores({"P02"});
         d.setTurmas({"T02"});
         data.addDisciplina(d);
     }
     {
-        Disciplina d("T02_HIST", "História", "TEORICA", 45, 3);
+        Disciplina d("T02_HIST", "História", "TEORICA", 45, 3, RegimeDisciplina::SEMESTRAL, SemestreLetivo::SEMESTRE_1);
         d.setProfessores({"P04"});
         d.setTurmas({"T02"});
         data.addDisciplina(d);
     }
     {
-        Disciplina d("T02_BIO", "Biologia", "TEORICA", 50, 3);
+        Disciplina d("T02_BIO", "Biologia", "TEORICA", 50, 3, RegimeDisciplina::SEMESTRAL, SemestreLetivo::SEMESTRE_2);
         d.setProfessores({"P06"});
         d.setTurmas({"T02"});
         data.addDisciplina(d);
@@ -389,39 +402,39 @@ InstitutionData InstitutionData::criarExemploPadrao() {
 
     // Turma T03
     {
-        Disciplina d("T03_MAT", "Matemática Avançada", "TEORICA", 50, 4);
+        Disciplina d("T03_MAT", "Matemática Avançada", "TEORICA", 50, 4, RegimeDisciplina::ANUAL, SemestreLetivo::AMBOS);
         d.setProfessores({"P01"});
         d.setTurmas({"T03"});
         data.addDisciplina(d);
     }
     {
-        Disciplina d("T03_FIS", "Física Moderna", "TEORICA", 50, 4);
+        Disciplina d("T03_FIS", "Física Moderna", "TEORICA", 50, 4, RegimeDisciplina::ANUAL, SemestreLetivo::AMBOS);
         d.setProfessores({"P03"});
         d.setTurmas({"T03"});
         data.addDisciplina(d);
     }
     {
-        Disciplina d("T03_QUI_LAB", "Química Orgânica (Prática)", "LABORATORIO", 50, 3);
+        Disciplina d("T03_QUI_LAB", "Química Orgânica (Prática)", "LABORATORIO", 50, 3, RegimeDisciplina::SEMESTRAL, SemestreLetivo::SEMESTRE_1);
         d.setProfessores({"P02"});
         d.setTurmas({"T03"});
         d.setSalasAlternativas({{"LAB01"}, {"LAB02"}});
         data.addDisciplina(d);
     }
     {
-        Disciplina d("T03_LIT", "Literatura & Redação", "TEORICA", 50, 4);
+        Disciplina d("T03_LIT", "Literatura & Redação", "TEORICA", 50, 4, RegimeDisciplina::ANUAL, SemestreLetivo::AMBOS);
         d.setProfessores({"P05"});
         d.setTurmas({"T03"});
         data.addDisciplina(d);
     }
     {
-        Disciplina d("T03_BIO", "Genética & Biologia", "TEORICA", 45, 3);
+        Disciplina d("T03_BIO", "Genética & Biologia", "TEORICA", 45, 3, RegimeDisciplina::SEMESTRAL, SemestreLetivo::SEMESTRE_2);
         d.setProfessores({"P06"});
         d.setTurmas({"T03"});
         data.addDisciplina(d);
     }
 
     // Gera as ocorrências das aulas
-    data.gerarOcorrenciasAulas(false);
+    data.gerarOcorrenciasAulas(false, data.config().escopo_semestre);
 
     return data;
 }

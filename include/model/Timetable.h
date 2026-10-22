@@ -1,6 +1,7 @@
 #pragma once
 
 #include "model/TimeSlot.h"
+#include "model/Lesson.h"
 #include <string>
 #include <vector>
 #include <map>
@@ -18,12 +19,21 @@ struct AllocatedLesson {
     std::vector<std::string> turmas;
     std::vector<std::string> salas;
     bool is_pinned{false};
+    RegimeDisciplina regime{RegimeDisciplina::ANUAL};
+    SemestreLetivo semestre{SemestreLetivo::AMBOS};
+    int semestre_alocado{1}; // 1 para 1º sem, 2 para 2º sem, 3 para ambos
 
     std::string horarioFormatado() const {
         return intervalo.toString();
     }
     std::string diaString() const {
         return dayToString(dia);
+    }
+    std::string regimeSemestreFormatado() const {
+        if (regime == RegimeDisciplina::ANUAL) return "Anual";
+        if (semestre == SemestreLetivo::SEMESTRE_1 || semestre_alocado == 1) return "Semestral (1º Sem)";
+        if (semestre == SemestreLetivo::SEMESTRE_2 || semestre_alocado == 2) return "Semestral (2º Sem)";
+        return "Semestral";
     }
 };
 
@@ -78,9 +88,9 @@ public:
     void addMensagemDiagnostico(std::string msg) { mensagens_diagnostico_.push_back(std::move(msg)); }
     void setMensagensDiagnostico(std::vector<std::string> msgs) { mensagens_diagnostico_ = std::move(msgs); }
 
-    std::vector<AllocatedLesson> aulasPorTurma(const std::string& turma_id, DayOfWeek d) const;
-    std::vector<AllocatedLesson> aulasPorProfessor(const std::string& prof_id, DayOfWeek d) const;
-    std::vector<AllocatedLesson> aulasPorSala(const std::string& sala_id, DayOfWeek d) const;
+    std::vector<AllocatedLesson> aulasPorTurma(const std::string& turma_id, DayOfWeek d, int semestre_filtro = 0) const;
+    std::vector<AllocatedLesson> aulasPorProfessor(const std::string& prof_id, DayOfWeek d, int semestre_filtro = 0) const;
+    std::vector<AllocatedLesson> aulasPorSala(const std::string& sala_id, DayOfWeek d, int semestre_filtro = 0) const;
 
     AllocatedLesson* findAula(const std::string& aula_id);
 

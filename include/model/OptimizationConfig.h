@@ -56,9 +56,47 @@ inline std::string solverAlgorithmDisplayName(SolverAlgorithm algo) {
     return "Google OR-Tools CP-SAT";
 }
 
+enum class EscopoSemestreOtimizacao {
+    TODAS_SEM_FILTRO,   // Todas as disciplinas cadastradas (Modo geral / legado)
+    SEMESTRE_1,         // Apenas 1º Semestre (Disciplinas Anuais + Semestrais do 1º Semestre)
+    SEMESTRE_2,         // Apenas 2º Semestre (Disciplinas Anuais + Semestrais do 2º Semestre)
+    AMBOS_INTEGRADO     // Ambos os Semestres (Otimização Integrada com sincronização de Anuais)
+};
+
+inline std::string escopoSemestreToString(EscopoSemestreOtimizacao e) {
+    switch (e) {
+        case EscopoSemestreOtimizacao::TODAS_SEM_FILTRO: return "TODAS_SEM_FILTRO";
+        case EscopoSemestreOtimizacao::SEMESTRE_1: return "SEMESTRE_1";
+        case EscopoSemestreOtimizacao::SEMESTRE_2: return "SEMESTRE_2";
+        case EscopoSemestreOtimizacao::AMBOS_INTEGRADO: return "AMBOS_INTEGRADO";
+    }
+    return "TODAS_SEM_FILTRO";
+}
+
+inline EscopoSemestreOtimizacao stringToEscopoSemestre(const std::string& str) {
+    if (str == "SEMESTRE_1" || str == "1" || str == "1º Semestre") return EscopoSemestreOtimizacao::SEMESTRE_1;
+    if (str == "SEMESTRE_2" || str == "2" || str == "2º Semestre") return EscopoSemestreOtimizacao::SEMESTRE_2;
+    if (str == "AMBOS_INTEGRADO" || str == "AMBOS" || str == "INTEGRADO") return EscopoSemestreOtimizacao::AMBOS_INTEGRADO;
+    return EscopoSemestreOtimizacao::TODAS_SEM_FILTRO;
+}
+
+inline std::string escopoSemestreDisplayName(EscopoSemestreOtimizacao e) {
+    switch (e) {
+        case EscopoSemestreOtimizacao::TODAS_SEM_FILTRO: return "Todas as Disciplinas (Geral)";
+        case EscopoSemestreOtimizacao::SEMESTRE_1: return "1º Semestre (Anuais + 1º Sem)";
+        case EscopoSemestreOtimizacao::SEMESTRE_2: return "2º Semestre (Anuais + 2º Sem)";
+        case EscopoSemestreOtimizacao::AMBOS_INTEGRADO: return "Ambos os Semestres (Multi-Semestre Integrado)";
+    }
+    return "Todas as Disciplinas (Geral)";
+}
+
 struct OptimizationConfig {
     // Algoritmo de resolução
     SolverAlgorithm algoritmo{SolverAlgorithm::CP_SAT};
+
+    // Escopo de Otimização Semestral / Anual
+    EscopoSemestreOtimizacao escopo_semestre{EscopoSemestreOtimizacao::TODAS_SEM_FILTRO};
+    bool sincronizar_anuais_entre_semestres{true}; // Garante horários idênticos para anuais no 1º e 2º sem
 
     // Pesos institucionais da otimização (seção 4 & 8)
     int lambda_janelas{8};            // Reduzir janelas entre aulas dos professores (J)

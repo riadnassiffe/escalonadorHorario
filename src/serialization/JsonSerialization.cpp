@@ -279,6 +279,8 @@ nlohmann::json JsonSerialization::disciplinaToJson(const model::Disciplina& disc
     j["tipo"] = disc.tipo();
     j["duracao_minutos"] = disc.duracaoMinutos();
     j["aulas_semanais"] = disc.aulasSemanais();
+    j["regime"] = model::regimeToString(disc.regime());
+    j["semestre"] = model::semestreToString(disc.semestre());
     j["professores"] = disc.professores();
     j["turmas"] = disc.turmas();
 
@@ -301,6 +303,12 @@ model::Disciplina JsonSerialization::disciplinaFromJson(const nlohmann::json& j)
     if (j.contains("tipo")) d.setTipo(j["tipo"].get<std::string>());
     if (j.contains("duracao_minutos")) d.setDuracaoMinutos(j["duracao_minutos"].get<int>());
     if (j.contains("aulas_semanais")) d.setAulasSemanais(j["aulas_semanais"].get<int>());
+    if (j.contains("regime")) {
+        d.setRegime(model::stringToRegime(j["regime"].get<std::string>()));
+    }
+    if (j.contains("semestre")) {
+        d.setSemestre(model::stringToSemestre(j["semestre"].get<std::string>()));
+    }
     if (j.contains("professores") && j["professores"].is_array()) {
         d.setProfessores(j["professores"].get<std::vector<std::string>>());
     }
@@ -337,6 +345,8 @@ nlohmann::json JsonSerialization::configToJson(const model::OptimizationConfig& 
     j["preenchimento_integral_jornada"] = cfg.preenchimento_integral_jornada;
     j["distribuir_disciplinas_na_semana"] = cfg.distribuir_disciplinas_na_semana;
     j["max_aulas_disciplina_dia_turma"] = cfg.max_aulas_disciplina_dia_turma;
+    j["escopo_semestre"] = model::escopoSemestreToString(cfg.escopo_semestre);
+    j["sincronizar_anuais_entre_semestres"] = cfg.sincronizar_anuais_entre_semestres;
     j["algoritmo"] = model::solverAlgorithmToString(cfg.algoritmo);
     j["tempo_limite_segundos"] = cfg.tempo_limite_segundos;
     j["num_threads"] = cfg.num_threads;
@@ -348,6 +358,12 @@ model::OptimizationConfig JsonSerialization::configFromJson(const nlohmann::json
     model::OptimizationConfig cfg;
     if (j.contains("algoritmo")) {
         cfg.algoritmo = model::stringToSolverAlgorithm(j["algoritmo"].get<std::string>());
+    }
+    if (j.contains("escopo_semestre")) {
+        cfg.escopo_semestre = model::stringToEscopoSemestre(j["escopo_semestre"].get<std::string>());
+    }
+    if (j.contains("sincronizar_anuais_entre_semestres")) {
+        cfg.sincronizar_anuais_entre_semestres = j["sincronizar_anuais_entre_semestres"].get<bool>();
     }
     if (j.contains("lambda_janelas")) cfg.lambda_janelas = j["lambda_janelas"].get<int>();
     if (j.contains("lambda_dias")) cfg.lambda_dias = j["lambda_dias"].get<int>();
@@ -393,7 +409,10 @@ nlohmann::json JsonSerialization::timetableToJson(const model::Timetable& tt) {
             {"professores", a.professores},
             {"turmas", a.turmas},
             {"salas", a.salas},
-            {"is_pinned", a.is_pinned}
+            {"is_pinned", a.is_pinned},
+            {"regime", model::regimeToString(a.regime)},
+            {"semestre", model::semestreToString(a.semestre)},
+            {"semestre_alocado", a.semestre_alocado}
         });
     }
     j["alocacoes"] = alocs;
@@ -438,6 +457,13 @@ model::Timetable JsonSerialization::timetableFromJson(const nlohmann::json& j) {
                 aloc.salas = item["salas"].get<std::vector<std::string>>();
             }
             aloc.is_pinned = item.value("is_pinned", false);
+            if (item.contains("regime")) {
+                aloc.regime = model::stringToRegime(item["regime"].get<std::string>());
+            }
+            if (item.contains("semestre")) {
+                aloc.semestre = model::stringToSemestre(item["semestre"].get<std::string>());
+            }
+            aloc.semestre_alocado = item.value("semestre_alocado", 1);
             tt.addAllocatedLesson(std::move(aloc));
         }
     }

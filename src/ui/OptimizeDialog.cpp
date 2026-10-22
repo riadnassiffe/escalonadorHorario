@@ -111,6 +111,19 @@ void OptimizeDialog::setupUi() {
     auto* form_params = new QFormLayout(grp_params);
     form_params->setSpacing(10);
 
+    combo_escopo_semestre_ = new QComboBox(grp_params);
+    combo_escopo_semestre_->addItem("Todas as Disciplinas (Geral)", static_cast<int>(model::EscopoSemestreOtimizacao::TODAS_SEM_FILTRO));
+    combo_escopo_semestre_->addItem("1º Semestre (Anuais + 1º Sem)", static_cast<int>(model::EscopoSemestreOtimizacao::SEMESTRE_1));
+    combo_escopo_semestre_->addItem("2º Semestre (Anuais + 2º Sem)", static_cast<int>(model::EscopoSemestreOtimizacao::SEMESTRE_2));
+    combo_escopo_semestre_->addItem("Ambos os Semestres (Multi-Semestre Integrado)", static_cast<int>(model::EscopoSemestreOtimizacao::AMBOS_INTEGRADO));
+    int idx_esc = combo_escopo_semestre_->findData(static_cast<int>(initial_config_.escopo_semestre));
+    if (idx_esc >= 0) combo_escopo_semestre_->setCurrentIndex(idx_esc);
+    form_params->addRow("Escopo de Semestre:", combo_escopo_semestre_);
+
+    chk_sincronizar_anuais_ = new QCheckBox("Sincronizar horários de disciplinas anuais entre semestres", grp_params);
+    chk_sincronizar_anuais_->setChecked(initial_config_.sincronizar_anuais_entre_semestres);
+    form_params->addRow("", chk_sincronizar_anuais_);
+
     spin_time_limit_ = new QDoubleSpinBox(grp_params);
     spin_time_limit_->setRange(1.0, 3600.0);
     spin_time_limit_->setValue(initial_config_.tempo_limite_segundos);
@@ -240,6 +253,12 @@ model::SolverAlgorithm OptimizeDialog::getSelectedAlgorithm() const {
 
 void OptimizeDialog::updateConfig(model::OptimizationConfig& cfg) const {
     cfg.algoritmo = getSelectedAlgorithm();
+    if (combo_escopo_semestre_) {
+        cfg.escopo_semestre = static_cast<model::EscopoSemestreOtimizacao>(combo_escopo_semestre_->currentData().toInt());
+    }
+    if (chk_sincronizar_anuais_) {
+        cfg.sincronizar_anuais_entre_semestres = chk_sincronizar_anuais_->isChecked();
+    }
     cfg.tempo_limite_segundos = spin_time_limit_->value();
     cfg.num_threads = spin_threads_->value();
     cfg.log_search_progress = chk_log_->isChecked();

@@ -111,6 +111,17 @@ void ConfigWidget::setupUi() {
                               static_cast<int>(model::SolverAlgorithm::GENETIC_ALGORITHM));
     form_solver->addRow("Algoritmo de Otimização Padrão:", combo_algoritmo_);
 
+    combo_escopo_semestre_ = new QComboBox(grp_solver);
+    combo_escopo_semestre_->addItem("Todas as Disciplinas (Geral)", static_cast<int>(model::EscopoSemestreOtimizacao::TODAS_SEM_FILTRO));
+    combo_escopo_semestre_->addItem("1º Semestre (Anuais + 1º Sem)", static_cast<int>(model::EscopoSemestreOtimizacao::SEMESTRE_1));
+    combo_escopo_semestre_->addItem("2º Semestre (Anuais + 2º Sem)", static_cast<int>(model::EscopoSemestreOtimizacao::SEMESTRE_2));
+    combo_escopo_semestre_->addItem("Ambos os Semestres (Multi-Semestre Integrado)", static_cast<int>(model::EscopoSemestreOtimizacao::AMBOS_INTEGRADO));
+    form_solver->addRow("Escopo de Semestre Padrão:", combo_escopo_semestre_);
+
+    chk_sincronizar_anuais_ = new QCheckBox("Sincronizar horários de disciplinas anuais entre semestres", grp_solver);
+    chk_sincronizar_anuais_->setChecked(true);
+    form_solver->addRow("", chk_sincronizar_anuais_);
+
     spin_tempo_limite_ = new QDoubleSpinBox(grp_solver);
     spin_tempo_limite_->setRange(1.0, 3600.0);
     spin_tempo_limite_->setValue(30.0);
@@ -160,6 +171,11 @@ void ConfigWidget::loadConfig(const model::OptimizationConfig& cfg) {
     int idx_algo = combo_algoritmo_->findData(static_cast<int>(cfg.algoritmo));
     if (idx_algo >= 0) combo_algoritmo_->setCurrentIndex(idx_algo);
 
+    int idx_esc = combo_escopo_semestre_->findData(static_cast<int>(cfg.escopo_semestre));
+    if (idx_esc >= 0) combo_escopo_semestre_->setCurrentIndex(idx_esc);
+
+    chk_sincronizar_anuais_->setChecked(cfg.sincronizar_anuais_entre_semestres);
+
     spin_tempo_limite_->setValue(cfg.tempo_limite_segundos);
     spin_threads_->setValue(cfg.num_threads);
     chk_log_solver_->setChecked(cfg.log_search_progress);
@@ -185,6 +201,10 @@ model::OptimizationConfig ConfigWidget::getConfig() const {
 
     cfg.algoritmo = static_cast<model::SolverAlgorithm>(
         combo_algoritmo_->currentData().toInt());
+
+    cfg.escopo_semestre = static_cast<model::EscopoSemestreOtimizacao>(
+        combo_escopo_semestre_->currentData().toInt());
+    cfg.sincronizar_anuais_entre_semestres = chk_sincronizar_anuais_->isChecked();
 
     cfg.tempo_limite_segundos = spin_tempo_limite_->value();
     cfg.num_threads = spin_threads_->value();

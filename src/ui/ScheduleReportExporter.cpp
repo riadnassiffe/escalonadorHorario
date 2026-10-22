@@ -16,11 +16,13 @@ bool ScheduleReportExporter::exportarCsv(const std::string& filepath,
             return false;
         }
 
-        ofs << "Aula_ID;Disciplina;Tipo;Dia;Inicio;Fim;Duracao_Min;Professores;Turmas;Salas;Fixada\n";
+        ofs << "Aula_ID;Disciplina;Tipo;Regime;Semestre;Dia;Inicio;Fim;Duracao_Min;Professores;Turmas;Salas;Fixada\n";
         for (const auto& a : data.grade().alocacoes()) {
             ofs << a.aula_id << ";"
                 << a.disciplina_nome << ";"
                 << a.tipo << ";"
+                << a.regimeSemestreFormatado() << ";"
+                << (a.semestre_alocado == 3 ? "Ano Todo" : (a.semestre_alocado == 2 ? "2º Sem" : "1º Sem")) << ";"
                 << a.diaString() << ";"
                 << a.intervalo.startString() << ";"
                 << a.intervalo.endString() << ";"
@@ -126,8 +128,11 @@ std::string ScheduleReportExporter::gerarTabelaHtmlTurma(const model::Institutio
                             sala_names += (sl ? sl->nome() : a.salas[i]);
                         }
 
+                        std::string badge_cls = (a.regime == model::RegimeDisciplina::ANUAL) ? "badge-anual" : (a.semestre_alocado == 2 ? "badge-sem2" : "badge-sem1");
+                        std::string badge_str = "<span class='badge-regime " + badge_cls + "'>" + a.regimeSemestreFormatado() + "</span>";
+
                         cell_content = "<div class='lesson-card " + a.tipo + "'>" +
-                                       "<b>" + a.disciplina_nome + "</b><br>" +
+                                       "<b>" + a.disciplina_nome + "</b> " + badge_str + "<br>" +
                                        "<span class='prof-tag'>" + prof_names + "</span><br>" +
                                        "<span class='room-tag'>Sala: " + sala_names + "</span>" +
                                        "</div>";
@@ -195,8 +200,11 @@ std::string ScheduleReportExporter::gerarTabelaHtmlProfessor(const model::Instit
                         sala_names += (sl ? sl->nome() : a.salas[i]);
                     }
 
+                    std::string badge_cls = (a.regime == model::RegimeDisciplina::ANUAL) ? "badge-anual" : (a.semestre_alocado == 2 ? "badge-sem2" : "badge-sem1");
+                    std::string badge_str = "<span class='badge-regime " + badge_cls + "'>" + a.regimeSemestreFormatado() + "</span>";
+
                     cell_content = "<div class='lesson-card " + a.tipo + "'>" +
-                                   "<b>" + a.disciplina_nome + "</b><br>" +
+                                   "<b>" + a.disciplina_nome + "</b> " + badge_str + "<br>" +
                                    "<span class='turma-tag'>Turma: " + turma_names + "</span><br>" +
                                    "<span class='room-tag'>Sala: " + sala_names + "</span>" +
                                    "</div>";
@@ -258,8 +266,11 @@ std::string ScheduleReportExporter::gerarTabelaHtmlSala(const model::Institution
                         prof_names += (p ? p->nome() : a.professores[i]);
                     }
 
+                    std::string badge_cls = (a.regime == model::RegimeDisciplina::ANUAL) ? "badge-anual" : (a.semestre_alocado == 2 ? "badge-sem2" : "badge-sem1");
+                    std::string badge_str = "<span class='badge-regime " + badge_cls + "'>" + a.regimeSemestreFormatado() + "</span>";
+
                     cell_content = "<div class='lesson-card " + a.tipo + "'>" +
-                                   "<b>" + a.disciplina_nome + "</b><br>" +
+                                   "<b>" + a.disciplina_nome + "</b> " + badge_str + "<br>" +
                                    "<span class='turma-tag'>Turma: " + turma_names + "</span><br>" +
                                    "<span class='prof-tag'>" + prof_names + "</span>" +
                                    "</div>";
@@ -323,12 +334,16 @@ bool ScheduleReportExporter::exportarHtml(const std::string& filepath,
             << "    .time-col { font-weight: bold; color: var(--text-muted); width: 120px; background: #162032; }\n"
             << "    .recess-row { background: rgba(245, 158, 11, 0.1); }\n"
             << "    .recess-cell { color: var(--warning); font-weight: 600; font-size: 12px; letter-spacing: 1px; }\n"
-            << "    .lesson-card { background: #2a3a52; border-left: 4px solid var(--primary); border-radius: 6px; padding: 8px; text-align: left; }\n"
+            << "    .lesson-card { background: #2a3a52; border-left: 4px solid var(--primary); border-radius: 6px; padding: 8px; text-align: left; position: relative; }\n"
             << "    .lesson-card.LABORATORIO { border-left-color: #ec4899; }\n"
             << "    .lesson-card.ESPECIAL { border-left-color: #8b5cf6; }\n"
             << "    .prof-tag { color: var(--accent); font-size: 11px; }\n"
             << "    .turma-tag { color: #34d399; font-size: 11px; }\n"
             << "    .room-tag { color: var(--text-muted); font-size: 11px; }\n"
+            << "    .badge-regime { display: inline-block; font-size: 10px; font-weight: bold; border-radius: 4px; padding: 1px 5px; margin-left: 4px; vertical-align: middle; }\n"
+            << "    .badge-anual { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); }\n"
+            << "    .badge-sem1 { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); }\n"
+            << "    .badge-sem2 { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); }\n"
             << "  </style>\n"
             << "</head>\n"
             << "<body>\n"

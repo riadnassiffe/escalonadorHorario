@@ -25,6 +25,7 @@ signals:
 private slots:
     void onViewTypeChanged(int index);
     void onTargetEntityChanged(int index);
+    void onSemestreFiltroChanged(int index);
     void onCellContextMenu(const QPoint& pos);
     void onSearchLessonChanged(const QString& query);
 
@@ -36,6 +37,7 @@ private:
     model::InstitutionData& data_;
     QComboBox* combo_view_type_{nullptr};
     QComboBox* combo_target_{nullptr};
+    QComboBox* combo_semestre_filtro_{nullptr};
     QLabel* lbl_info_banner_{nullptr};
     QLineEdit* search_lesson_{nullptr};
     QLabel* lbl_search_count_{nullptr};

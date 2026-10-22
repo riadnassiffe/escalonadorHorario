@@ -41,6 +41,9 @@ private:
     QSpinBox* spin_threads_{nullptr};
     QCheckBox* chk_log_{nullptr};
 
+    QComboBox* combo_escopo_semestre_{nullptr};
+    QCheckBox* chk_sincronizar_anuais_{nullptr};
+
     QCheckBox* chk_usar_grade_atual_{nullptr};
     QLabel* lbl_grade_atual_info_{nullptr};
 };

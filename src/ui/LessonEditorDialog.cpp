@@ -39,6 +39,18 @@ void LessonEditorDialog::setupUi() {
     txt_nome_->setPlaceholderText("Ex: Matemática, Física Experimental");
     form_layout->addRow("Nome da Disciplina:", txt_nome_);
 
+    combo_regime_ = new QComboBox(this);
+    combo_regime_->addItem("📅 Anual (Ano Letivo Completo)", "ANUAL");
+    combo_regime_->addItem("📆 Semestral", "SEMESTRAL");
+    form_layout->addRow("Regime:", combo_regime_);
+
+    combo_semestre_ = new QComboBox(this);
+    combo_semestre_->addItem("Ambos os Semestres (Ano Todo)", "AMBOS");
+    combo_semestre_->addItem("1º Semestre", "1");
+    combo_semestre_->addItem("2º Semestre", "2");
+    combo_semestre_->setEnabled(false); // Anual por padrão
+    form_layout->addRow("Semestre de Oferta:", combo_semestre_);
+
     combo_tipo_ = new QComboBox(this);
     combo_tipo_->addItem("Teórica (Usa a sala fixa da turma)", "TEORICA");
     combo_tipo_->addItem("Laboratório (Usa salas especiais/laboratórios)", "LABORATORIO");
@@ -115,8 +127,11 @@ void LessonEditorDialog::setupUi() {
 
     connect(combo_tipo_, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &LessonEditorDialog::onTipoChanged);
+    connect(combo_regime_, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &LessonEditorDialog::onRegimeChanged);
 
     onTipoChanged(combo_tipo_->currentIndex());
+    onRegimeChanged(combo_regime_->currentIndex());
 
     // Botões
     auto* btn_box = new QHBoxLayout();
@@ -156,10 +171,31 @@ void LessonEditorDialog::onTipoChanged(int /*index*/) {
     widget_salas_alternativas_->setVisible(!is_teorica);
 }
 
+void LessonEditorDialog::onRegimeChanged(int /*index*/) {
+    bool is_anual = (combo_regime_->currentData().toString() == "ANUAL");
+    if (is_anual) {
+        combo_semestre_->setCurrentIndex(0); // Ambos os semestres
+        combo_semestre_->setEnabled(false);
+    } else {
+        combo_semestre_->setEnabled(true);
+        if (combo_semestre_->currentIndex() == 0) {
+            combo_semestre_->setCurrentIndex(1); // 1º Semestre por padrão
+        }
+    }
+}
+
 void LessonEditorDialog::loadDisciplina(const model::Disciplina& disc) {
     txt_id_->setText(QString::fromStdString(disc.id()));
     txt_id_->setReadOnly(true);
     txt_nome_->setText(QString::fromStdString(disc.nome()));
+
+    int idx_regime = combo_regime_->findData(QString::fromStdString(model::regimeToString(disc.regime())));
+    if (idx_regime >= 0) combo_regime_->setCurrentIndex(idx_regime);
+
+    int idx_sem = combo_semestre_->findData(QString::fromStdString(model::semestreToString(disc.semestre())));
+    if (idx_sem >= 0) combo_semestre_->setCurrentIndex(idx_sem);
+
+    onRegimeChanged(combo_regime_->currentIndex());
 
     int idx_tipo = combo_tipo_->findData(QString::fromStdString(disc.tipo()));
     if (idx_tipo >= 0) combo_tipo_->setCurrentIndex(idx_tipo);
@@ -209,11 +245,15 @@ void LessonEditorDialog::loadDisciplina(const model::Disciplina& disc) {
 }
 
 model::Disciplina LessonEditorDialog::getDisciplina() const {
+    model::RegimeDisciplina regime = model::stringToRegime(combo_regime_->currentData().toString().toStdString());
+    model::SemestreLetivo semestre = model::stringToSemestre(combo_semestre_->currentData().toString().toStdString());
+
     model::Disciplina d(txt_id_->text().trimmed().toStdString(),
                         txt_nome_->text().trimmed().toStdString(),
                         combo_tipo_->currentData().toString().toStdString(),
                         combo_duracao_->currentData().toInt(),
-                        spin_aulas_semanais_->value());
+                        spin_aulas_semanais_->value(),
+                        regime, semestre);
 
     d.addProfessor(combo_prof_->currentData().toString().toStdString());
     d.addTurma(combo_turma_->currentData().toString().toStdString());

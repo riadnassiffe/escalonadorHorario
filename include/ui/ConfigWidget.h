@@ -47,6 +47,8 @@ private:
     QSpinBox* spin_max_aulas_dia_{nullptr};
 
     QComboBox* combo_algoritmo_{nullptr};
+    QComboBox* combo_escopo_semestre_{nullptr};
+    QCheckBox* chk_sincronizar_anuais_{nullptr};
     QDoubleSpinBox* spin_tempo_limite_{nullptr};
     QSpinBox* spin_threads_{nullptr};
     QCheckBox* chk_log_solver_{nullptr};

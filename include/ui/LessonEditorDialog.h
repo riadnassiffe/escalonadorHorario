@@ -28,6 +28,7 @@ public:
 
 private slots:
     void onTipoChanged(int index);
+    void onRegimeChanged(int index);
 
 private:
     void setupUi();
@@ -40,6 +41,8 @@ private:
     QLineEdit* txt_id_{nullptr};
     QLineEdit* txt_nome_{nullptr};
     QComboBox* combo_tipo_{nullptr};
+    QComboBox* combo_regime_{nullptr};
+    QComboBox* combo_semestre_{nullptr};
     QComboBox* combo_duracao_{nullptr};
     QSpinBox* spin_aulas_semanais_{nullptr};
     QComboBox* combo_prof_{nullptr};

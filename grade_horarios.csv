@@ -1,60 +1,61 @@
-Aula_ID;Disciplina;Tipo;Dia;Inicio;Fim;Duracao_Min;Professores;Turmas;Salas;Fixada
-T02_PORT_1;Português;TEORICA;TER;08:00;08:50;50;Prof. Roberto Castro (Linguagens);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
-T03_FIS_1;Física Moderna;TEORICA;QUA;08:00;08:50;50;Prof. Marcos Lima (Física);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
-T03_MAT_4;Matemática Avançada;TEORICA;SEG;08:00;08:50;50;Prof. Carlos Silva (Matemática);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
-T03_MAT_3;Matemática Avançada;TEORICA;SEG;08:50;09:40;50;Prof. Carlos Silva (Matemática);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
-T03_MAT_2;Matemática Avançada;TEORICA;QUI;08:00;08:50;50;Prof. Carlos Silva (Matemática);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
-T02_MAT_1;Matemática;TEORICA;QUI;08:50;09:40;50;Prof. Carlos Silva (Matemática);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
-T02_MAT_2;Matemática;TEORICA;TER;08:50;09:40;50;Prof. Carlos Silva (Matemática);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
-T02_MAT_3;Matemática;TEORICA;SEG;09:55;10:45;50;Prof. Carlos Silva (Matemática);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
-T02_MAT_4;Matemática;TEORICA;QUA;08:00;08:50;50;Prof. Carlos Silva (Matemática);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
-T03_FIS_2;Física Moderna;TEORICA;QUA;08:50;09:40;50;Prof. Marcos Lima (Física);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
-T02_PORT_2;Português;TEORICA;SEX;08:00;08:50;50;Prof. Roberto Castro (Linguagens);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
-T02_PORT_3;Português;TEORICA;SEX;08:50;09:40;50;Prof. Roberto Castro (Linguagens);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
-T02_PORT_4;Português;TEORICA;QUA;08:50;09:40;50;Prof. Roberto Castro (Linguagens);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
-T02_FIS_1;Física;TEORICA;QUI;08:00;08:50;50;Prof. Marcos Lima (Física);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
-T02_FIS_2;Física;TEORICA;SEX;09:55;10:45;50;Prof. Marcos Lima (Física);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
-T02_FIS_3;Física;TEORICA;TER;09:55;10:45;50;Prof. Marcos Lima (Física);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
-T03_MAT_1;Matemática Avançada;TEORICA;TER;08:00;08:50;50;Prof. Carlos Silva (Matemática);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
-T02_BIO_3;Biologia;TEORICA;SEX;11:40;12:30;50;Profa. Beatriz Costa (Biologia);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
-T03_FIS_3;Física Moderna;TEORICA;QUI;08:50;09:40;50;Prof. Marcos Lima (Física);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
-T02_BIO_1;Biologia;TEORICA;QUA;09:55;10:45;50;Profa. Beatriz Costa (Biologia);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
-T02_BIO_2;Biologia;TEORICA;SEG;08:00;08:50;50;Profa. Beatriz Costa (Biologia);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
-T03_LIT_4;Literatura & Redação;TEORICA;TER;08:50;09:40;50;Prof. Roberto Castro (Linguagens);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
-T01_PORT_1;Português;TEORICA;QUA;08:00;08:50;50;Prof. Roberto Castro (Linguagens);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
-T01_PORT_2;Português;TEORICA;SEG;08:00;08:50;50;Prof. Roberto Castro (Linguagens);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
-T01_PORT_3;Português;TEORICA;SEG;08:50;09:40;50;Prof. Roberto Castro (Linguagens);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
-T01_PORT_4;Português;TEORICA;QUI;08:00;08:50;50;Prof. Roberto Castro (Linguagens);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
-T01_FIS_1;Física;TEORICA;SEG;09:55;10:45;50;Prof. Marcos Lima (Física);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
-T01_FIS_2;Física;TEORICA;QUA;09:55;10:45;50;Prof. Marcos Lima (Física);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
-T01_FIS_3;Física;TEORICA;QUI;09:55;10:45;50;Prof. Marcos Lima (Física);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
-T03_LIT_3;Literatura & Redação;TEORICA;TER;09:55;10:45;50;Prof. Roberto Castro (Linguagens);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
-T03_LIT_2;Literatura & Redação;TEORICA;SEX;09:55;10:45;50;Prof. Roberto Castro (Linguagens);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
-T03_LIT_1;Literatura & Redação;TEORICA;QUA;09:55;10:45;50;Prof. Roberto Castro (Linguagens);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
-T03_FIS_4;Física Moderna;TEORICA;SEX;08:50;09:40;50;Prof. Marcos Lima (Física);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
-T02_HIST_3;História;TEORICA;QUI;09:55;10:40;45;Profa. Juliana Mendes (Humanas);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
-T03_BIO_3;Genética & Biologia;TEORICA;QUI;09:55;10:40;45;Profa. Beatriz Costa (Biologia);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
-T03_BIO_1;Genética & Biologia;TEORICA;QUI;10:40;11:25;45;Profa. Beatriz Costa (Biologia);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
-T03_BIO_2;Genética & Biologia;TEORICA;TER;11:40;12:25;45;Profa. Beatriz Costa (Biologia);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
-T01_MAT_1;Matemática;TEORICA;QUA;08:50;09:35;45;Prof. Carlos Silva (Matemática);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
-T01_HIST_2;História;TEORICA;SEG;11:40;12:25;45;Profa. Juliana Mendes (Humanas);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
-T01_MAT_2;Matemática;TEORICA;TER;09:55;10:40;45;Prof. Carlos Silva (Matemática);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
-T01_MAT_3;Matemática;TEORICA;TER;10:40;11:25;45;Prof. Carlos Silva (Matemática);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
-T01_MAT_4;Matemática;TEORICA;SEX;08:00;08:45;45;Prof. Carlos Silva (Matemática);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
-T01_MAT_5;Matemática;TEORICA;SEX;08:45;09:30;45;Prof. Carlos Silva (Matemática);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
-T01_HIST_1;História;TEORICA;SEX;09:55;10:40;45;Profa. Juliana Mendes (Humanas);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
-T02_HIST_2;História;TEORICA;QUI;10:40;11:25;45;Profa. Juliana Mendes (Humanas);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
-T01_HIST_3;História;TEORICA;SEX;10:40;11:25;45;Profa. Juliana Mendes (Humanas);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
-T01_GEO_1;Geografia;TEORICA;TER;08:00;08:45;45;Profa. Juliana Mendes (Humanas);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
-T01_GEO_2;Geografia;TEORICA;TER;08:45;09:30;45;Profa. Juliana Mendes (Humanas);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
-T01_GEO_3;Geografia;TEORICA;QUA;11:40;12:25;45;Profa. Juliana Mendes (Humanas);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
-T01_BIO_1;Biologia;TEORICA;QUI;08:55;09:40;45;Profa. Beatriz Costa (Biologia);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
-T01_BIO_2;Biologia;TEORICA;QUI;11:40;12:25;45;Profa. Beatriz Costa (Biologia);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
-T02_QUI_1;Química Geral;TEORICA;TER;11:40;12:25;45;Profa. Ana Souza (Química);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
-T02_QUI_2;Química Geral;TEORICA;QUA;11:40;12:25;45;Profa. Ana Souza (Química);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
-T02_QUI_3;Química Geral;TEORICA;QUI;11:40;12:25;45;Profa. Ana Souza (Química);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
-T02_HIST_1;História;TEORICA;SEG;08:55;09:40;45;Profa. Juliana Mendes (Humanas);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
-T03_QUI_LAB_1;Química Orgânica (Prática);LABORATORIO;SEG;09:55;10:45;50;Profa. Ana Souza (Química);3º Ano A - Ensino Médio;Laboratório de Química 1;NAO
-T03_QUI_LAB_2;Química Orgânica (Prática);LABORATORIO;SEX;08:00;08:50;50;Profa. Ana Souza (Química);3º Ano A - Ensino Médio;Laboratório de Química 1;NAO
-T03_QUI_LAB_3;Química Orgânica (Prática);LABORATORIO;SEG;11:40;12:30;50;Profa. Ana Souza (Química);3º Ano A - Ensino Médio;Laboratório de Química 1;NAO
-T01_QUI_EXP_2;Química Experimental;LABORATORIO;SEX;11:40;12:30;50;Profa. Ana Souza (Química);1º Ano A - Ensino Médio;Laboratório de Química 1;NAO
+Aula_ID;Disciplina;Tipo;Regime;Semestre;Dia;Inicio;Fim;Duracao_Min;Professores;Turmas;Salas;Fixada
+T01_MAT_1;Matemática;TEORICA;Anual;Ano Todo;TER;08:05;08:50;45;Prof. Carlos Silva (Matemática);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
+T01_MAT_2;Matemática;TEORICA;Anual;Ano Todo;QUA;11:40;12:25;45;Prof. Carlos Silva (Matemática);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
+T01_MAT_3;Matemática;TEORICA;Anual;Ano Todo;QUI;11:40;12:25;45;Prof. Carlos Silva (Matemática);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
+T01_MAT_4;Matemática;TEORICA;Anual;Ano Todo;QUI;08:05;08:50;45;Prof. Carlos Silva (Matemática);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
+T01_MAT_5;Matemática;TEORICA;Anual;Ano Todo;SEG;11:40;12:25;45;Prof. Carlos Silva (Matemática);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
+T01_PORT_1;Português;TEORICA;Anual;Ano Todo;SEX;10:35;11:25;50;Prof. Roberto Castro (Linguagens);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
+T01_PORT_2;Português;TEORICA;Anual;Ano Todo;TER;11:40;12:30;50;Prof. Roberto Castro (Linguagens);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
+T01_PORT_3;Português;TEORICA;Anual;Ano Todo;QUA;10:05;10:55;50;Prof. Roberto Castro (Linguagens);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
+T01_PORT_4;Português;TEORICA;Anual;Ano Todo;QUA;08:50;09:40;50;Prof. Roberto Castro (Linguagens);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
+T01_FIS_1;Física;TEORICA;Anual;Ano Todo;QUI;10:35;11:25;50;Prof. Marcos Lima (Física);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
+T01_FIS_2;Física;TEORICA;Anual;Ano Todo;QUA;08:00;08:50;50;Prof. Marcos Lima (Física);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
+T01_FIS_3;Física;TEORICA;Anual;Ano Todo;QUI;08:50;09:40;50;Prof. Marcos Lima (Física);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
+T01_QUI_EXP_1;Química Experimental;LABORATORIO;Semestral (1º Sem);1º Sem;SEG;08:00;08:50;50;Profa. Ana Souza (Química);1º Ano A - Ensino Médio;Laboratório de Química 1;NAO
+T01_QUI_EXP_2;Química Experimental;LABORATORIO;Semestral (1º Sem);1º Sem;TER;08:50;09:40;50;Profa. Ana Souza (Química);1º Ano A - Ensino Médio;Laboratório de Química 1;NAO
+T01_HIST_1;História;TEORICA;Semestral (1º Sem);1º Sem;SEX;08:10;08:55;45;Profa. Juliana Mendes (Humanas);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
+T01_HIST_2;História;TEORICA;Semestral (1º Sem);1º Sem;TER;10:40;11:25;45;Profa. Juliana Mendes (Humanas);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
+T01_HIST_3;História;TEORICA;Semestral (1º Sem);1º Sem;SEG;08:50;09:35;45;Profa. Juliana Mendes (Humanas);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
+T01_GEO_1;Geografia;TEORICA;Semestral (2º Sem);2º Sem;SEX;08:55;09:40;45;Profa. Juliana Mendes (Humanas);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
+T01_GEO_2;Geografia;TEORICA;Semestral (2º Sem);2º Sem;TER;09:55;10:40;45;Profa. Juliana Mendes (Humanas);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
+T01_GEO_3;Geografia;TEORICA;Semestral (2º Sem);2º Sem;SEG;10:40;11:25;45;Profa. Juliana Mendes (Humanas);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
+T01_BIO_1;Biologia;TEORICA;Anual;Ano Todo;SEG;09:55;10:40;45;Profa. Beatriz Costa (Biológicas);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
+T01_BIO_2;Biologia;TEORICA;Anual;Ano Todo;SEX;11:40;12:25;45;Profa. Beatriz Costa (Biológicas);1º Ano A - Ensino Médio;Sala Teórica 101;NAO
+T02_MAT_1;Matemática;TEORICA;Anual;Ano Todo;TER;08:50;09:40;50;Prof. Carlos Silva (Matemática);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
+T02_MAT_2;Matemática;TEORICA;Anual;Ano Todo;SEG;10:35;11:25;50;Prof. Carlos Silva (Matemática);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
+T02_MAT_3;Matemática;TEORICA;Anual;Ano Todo;QUI;08:50;09:40;50;Prof. Carlos Silva (Matemática);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
+T02_MAT_4;Matemática;TEORICA;Anual;Ano Todo;TER;11:40;12:30;50;Prof. Carlos Silva (Matemática);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
+T02_PORT_1;Português;TEORICA;Anual;Ano Todo;SEG;11:40;12:30;50;Prof. Roberto Castro (Linguagens);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
+T02_PORT_2;Português;TEORICA;Anual;Ano Todo;SEX;08:50;09:40;50;Prof. Roberto Castro (Linguagens);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
+T02_PORT_3;Português;TEORICA;Anual;Ano Todo;TER;08:00;08:50;50;Prof. Roberto Castro (Linguagens);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
+T02_PORT_4;Português;TEORICA;Anual;Ano Todo;QUI;11:40;12:30;50;Prof. Roberto Castro (Linguagens);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
+T02_FIS_1;Física;TEORICA;Anual;Ano Todo;QUA;08:50;09:40;50;Prof. Marcos Lima (Física);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
+T02_FIS_2;Física;TEORICA;Anual;Ano Todo;TER;10:20;11:10;50;Prof. Marcos Lima (Física);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
+T02_FIS_3;Física;TEORICA;Anual;Ano Todo;QUA;10:00;10:50;50;Prof. Marcos Lima (Física);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
+T02_QUI_1;Química Geral;TEORICA;Semestral (1º Sem);1º Sem;QUA;11:40;12:25;45;Profa. Ana Souza (Química);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
+T02_QUI_2;Química Geral;TEORICA;Semestral (1º Sem);1º Sem;QUI;08:05;08:50;45;Profa. Ana Souza (Química);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
+T02_QUI_3;Química Geral;TEORICA;Semestral (1º Sem);1º Sem;QUI;09:55;10:40;45;Profa. Ana Souza (Química);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
+T02_HIST_1;História;TEORICA;Semestral (1º Sem);1º Sem;QUI;10:40;11:25;45;Profa. Juliana Mendes (Humanas);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
+T02_HIST_2;História;TEORICA;Semestral (1º Sem);1º Sem;SEG;08:05;08:50;45;Profa. Juliana Mendes (Humanas);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
+T02_HIST_3;História;TEORICA;Semestral (1º Sem);1º Sem;QUA;08:05;08:50;45;Profa. Juliana Mendes (Humanas);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
+T02_BIO_1;Biologia;TEORICA;Semestral (2º Sem);2º Sem;SEX;08:00;08:50;50;Profa. Beatriz Costa (Biológicas);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
+T02_BIO_2;Biologia;TEORICA;Semestral (2º Sem);2º Sem;SEX;10:35;11:25;50;Profa. Beatriz Costa (Biológicas);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
+T02_BIO_3;Biologia;TEORICA;Semestral (2º Sem);2º Sem;SEG;08:50;09:40;50;Profa. Beatriz Costa (Biológicas);2º Ano A - Ensino Médio;Sala Teórica 102;NAO
+T03_MAT_1;Matemática Avançada;TEORICA;Anual;Ano Todo;TER;10:15;11:05;50;Prof. Carlos Silva (Matemática);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
+T03_MAT_2;Matemática Avançada;TEORICA;Anual;Ano Todo;QUA;10:15;11:05;50;Prof. Carlos Silva (Matemática);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
+T03_MAT_3;Matemática Avançada;TEORICA;Anual;Ano Todo;QUA;08:50;09:40;50;Prof. Carlos Silva (Matemática);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
+T03_MAT_4;Matemática Avançada;TEORICA;Anual;Ano Todo;QUI;10:35;11:25;50;Prof. Carlos Silva (Matemática);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
+T03_FIS_1;Física Moderna;TEORICA;Anual;Ano Todo;SEG;08:50;09:40;50;Prof. Marcos Lima (Física);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
+T03_FIS_2;Física Moderna;TEORICA;Anual;Ano Todo;SEX;11:40;12:30;50;Prof. Marcos Lima (Física);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
+T03_FIS_3;Física Moderna;TEORICA;Anual;Ano Todo;SEX;10:00;10:50;50;Prof. Marcos Lima (Física);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
+T03_FIS_4;Física Moderna;TEORICA;Anual;Ano Todo;SEG;08:00;08:50;50;Prof. Marcos Lima (Física);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
+T03_QUI_LAB_1;Química Orgânica (Prática);LABORATORIO;Semestral (1º Sem);1º Sem;SEX;08:50;09:40;50;Profa. Ana Souza (Química);3º Ano A - Ensino Médio;Laboratório Multidisciplinar;NAO
+T03_QUI_LAB_2;Química Orgânica (Prática);LABORATORIO;Semestral (1º Sem);1º Sem;SEX;08:00;08:50;50;Profa. Ana Souza (Química);3º Ano A - Ensino Médio;Laboratório Multidisciplinar;NAO
+T03_QUI_LAB_3;Química Orgânica (Prática);LABORATORIO;Semestral (1º Sem);1º Sem;SEG;11:40;12:30;50;Profa. Ana Souza (Química);3º Ano A - Ensino Médio;Laboratório de Química 1;NAO
+T03_LIT_1;Literatura & Redação;TEORICA;Anual;Ano Todo;SEG;10:30;11:20;50;Prof. Roberto Castro (Linguagens);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
+T03_LIT_2;Literatura & Redação;TEORICA;Anual;Ano Todo;QUI;08:00;08:50;50;Prof. Roberto Castro (Linguagens);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
+T03_LIT_3;Literatura & Redação;TEORICA;Anual;Ano Todo;QUI;08:50;09:40;50;Prof. Roberto Castro (Linguagens);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
+T03_LIT_4;Literatura & Redação;TEORICA;Anual;Ano Todo;QUA;08:00;08:50;50;Prof. Roberto Castro (Linguagens);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
+T03_BIO_1;Genética & Biologia;TEORICA;Semestral (2º Sem);2º Sem;QUI;11:40;12:25;45;Profa. Beatriz Costa (Biológicas);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
+T03_BIO_2;Genética & Biologia;TEORICA;Semestral (2º Sem);2º Sem;TER;08:10;08:55;45;Profa. Beatriz Costa (Biológicas);3º Ano A - Ensino Médio;Sala Teórica 201;NAO
+T03_BIO_3;Genética & Biologia;TEORICA;Semestral (2º Sem);2º Sem;TER;08:55;09:40;45;Profa. Beatriz Costa (Biológicas);3º Ano A - Ensino Médio;Sala Teórica 201;NAO

@@ -43,6 +43,17 @@ void TimetableView::setupUi() {
     combo_target_->setMinimumWidth(260);
     top_panel->addWidget(combo_target_);
 
+    auto* lbl_semestre = new QLabel("Semestre:", this);
+    lbl_semestre->setStyleSheet("font-weight: bold; color: #38bdf8; margin-left: 10px;");
+    top_panel->addWidget(lbl_semestre);
+
+    combo_semestre_filtro_ = new QComboBox(this);
+    combo_semestre_filtro_->addItem("Todos os Semestres (Geral)", 0);
+    combo_semestre_filtro_->addItem("1º Semestre", 1);
+    combo_semestre_filtro_->addItem("2º Semestre", 2);
+    combo_semestre_filtro_->setMinimumWidth(190);
+    top_panel->addWidget(combo_semestre_filtro_);
+
     top_panel->addStretch();
 
     lbl_info_banner_ = new QLabel(this);
@@ -87,6 +98,8 @@ void TimetableView::setupUi() {
             this, &TimetableView::onViewTypeChanged);
     connect(combo_target_, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &TimetableView::onTargetEntityChanged);
+    connect(combo_semestre_filtro_, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &TimetableView::onSemestreFiltroChanged);
     connect(table_, &QTableWidget::customContextMenuRequested,
             this, &TimetableView::onCellContextMenu);
     connect(search_lesson_, &QLineEdit::textChanged,
@@ -133,6 +146,10 @@ void TimetableView::onTargetEntityChanged(int /*index*/) {
     renderTimetable();
 }
 
+void TimetableView::onSemestreFiltroChanged(int /*index*/) {
+    renderTimetable();
+}
+
 void TimetableView::renderTimetable() {
     table_->setRowCount(0);
 
@@ -145,6 +162,18 @@ void TimetableView::renderTimetable() {
     int mode = combo_view_type_->currentData().toInt();
     std::string id_str = target_id.toStdString();
 
+    int sem_filtro = combo_semestre_filtro_ ? combo_semestre_filtro_->currentData().toInt() : 0;
+    auto match_semestre = [sem_filtro](const model::AllocatedLesson& a) {
+        if (sem_filtro <= 0) return true;
+        if (a.regime == model::RegimeDisciplina::ANUAL) return true;
+        if (sem_filtro == 1) {
+            return a.semestre == model::SemestreLetivo::SEMESTRE_1 || a.semestre_alocado == 1;
+        } else if (sem_filtro == 2) {
+            return a.semestre == model::SemestreLetivo::SEMESTRE_2 || a.semestre_alocado == 2;
+        }
+        return true;
+    };
+
     // Coletar todos os horários únicos ocupados
     std::set<std::pair<int, int>> horarios_set;
 
@@ -154,9 +183,11 @@ void TimetableView::renderTimetable() {
             std::string sala_info = turma->temSalaTeoricaPredefinida()
                 ? turma->salaTeoricaId()
                 : data_.grade().salaTeoricaTurma(turma->id());
-            lbl_info_banner_->setText(QString("Turno: %1 | Sala Teórica Fixa: %2")
+            QString sem_suffix = (sem_filtro == 1) ? " [1º Sem]" : (sem_filtro == 2 ? " [2º Sem]" : "");
+            lbl_info_banner_->setText(QString("Turno: %1 | Sala Teórica Fixa: %2%3")
                 .arg(QString::fromStdString(model::shiftToString(turma->turno())))
-                .arg(QString::fromStdString(sala_info.empty() ? "(não definida)" : sala_info)));
+                .arg(QString::fromStdString(sala_info.empty() ? "(não definida)" : sala_info))
+                .arg(sem_suffix));
 
             // Adicionar intervalos da turma
             const auto& jp = turma->jornadaPadrao();
@@ -165,7 +196,7 @@ void TimetableView::renderTimetable() {
             }
         }
         for (const auto& a : data_.grade().alocacoes()) {
-            if (std::find(a.turmas.begin(), a.turmas.end(), id_str) != a.turmas.end()) {
+            if (match_semestre(a) && std::find(a.turmas.begin(), a.turmas.end(), id_str) != a.turmas.end()) {
                 horarios_set.insert({a.intervalo.start_slot, a.intervalo.end_slot});
             }
         }
@@ -176,22 +207,27 @@ void TimetableView::renderTimetable() {
             for (auto d : model::allDays()) {
                 pref_str += QString("%1=%2 ").arg(QString::fromStdString(model::dayToString(d))).arg(prof->pesoDia(d));
             }
+            if (sem_filtro == 1) pref_str += " [1º Sem]";
+            else if (sem_filtro == 2) pref_str += " [2º Sem]";
             lbl_info_banner_->setText(pref_str);
         }
         for (const auto& a : data_.grade().alocacoes()) {
-            if (std::find(a.professores.begin(), a.professores.end(), id_str) != a.professores.end()) {
+            if (match_semestre(a) && std::find(a.professores.begin(), a.professores.end(), id_str) != a.professores.end()) {
                 horarios_set.insert({a.intervalo.start_slot, a.intervalo.end_slot});
             }
         }
     } else if (mode == 2) { // Sala
         const auto* sala = data_.findSala(id_str);
         if (sala) {
-            lbl_info_banner_->setText(QString("Tipo: %1 | Capacidade: %2 alunos")
+            QString info = QString("Tipo: %1 | Capacidade: %2 alunos")
                 .arg(QString::fromStdString(sala->tipo()))
-                .arg(sala->capacidade()));
+                .arg(sala->capacidade());
+            if (sem_filtro == 1) info += " [1º Sem]";
+            else if (sem_filtro == 2) info += " [2º Sem]";
+            lbl_info_banner_->setText(info);
         }
         for (const auto& a : data_.grade().alocacoes()) {
-            if (std::find(a.salas.begin(), a.salas.end(), id_str) != a.salas.end()) {
+            if (match_semestre(a) && std::find(a.salas.begin(), a.salas.end(), id_str) != a.salas.end()) {
                 horarios_set.insert({a.intervalo.start_slot, a.intervalo.end_slot});
             }
         }
@@ -199,7 +235,7 @@ void TimetableView::renderTimetable() {
 
     if (horarios_set.empty()) {
         table_->setRowCount(1);
-        auto* empty_item = new QTableWidgetItem("Nenhuma aula gerada ou alocada para este registro.");
+        auto* empty_item = new QTableWidgetItem("Nenhuma aula gerada ou alocada para este registro neste semestre.");
         empty_item->setTextAlignment(Qt::AlignCenter);
         empty_item->setForeground(QColor("#94a3b8"));
         table_->setItem(0, 0, empty_item);
@@ -244,90 +280,111 @@ void TimetableView::renderTimetable() {
             }
 
             // Buscar se tem aula nesse dia e horário
-            const model::AllocatedLesson* found_aula = nullptr;
+            std::vector<const model::AllocatedLesson*> found_aulas;
             for (const auto& a : data_.grade().alocacoes()) {
-                if (a.dia == dia && a.intervalo.start_slot == start_s) {
+                if (a.dia == dia && a.intervalo.start_slot == start_s && match_semestre(a)) {
                     if (mode == 0) {
                         if (std::find(a.turmas.begin(), a.turmas.end(), id_str) != a.turmas.end()) {
-                            found_aula = &a;
-                            break;
+                            found_aulas.push_back(&a);
                         }
                     } else if (mode == 1) {
                         if (std::find(a.professores.begin(), a.professores.end(), id_str) != a.professores.end()) {
-                            found_aula = &a;
-                            break;
+                            found_aulas.push_back(&a);
                         }
                     } else if (mode == 2) {
                         if (std::find(a.salas.begin(), a.salas.end(), id_str) != a.salas.end()) {
-                            found_aula = &a;
-                            break;
+                            found_aulas.push_back(&a);
                         }
                     }
                 }
             }
 
-            if (found_aula) {
-                QString title = QString::fromStdString(found_aula->disciplina_nome);
-                if (found_aula->is_pinned) {
-                    title = "📌 " + title;
+            if (!found_aulas.empty()) {
+                QStringList aula_blocks;
+                QString main_aula_id;
+                bool has_lab = false;
+                bool has_special = false;
+
+                for (const auto* aula : found_aulas) {
+                    if (main_aula_id.isEmpty()) {
+                        main_aula_id = QString::fromStdString(aula->aula_id);
+                    }
+                    if (aula->tipo == "LABORATORIO") has_lab = true;
+                    if (aula->tipo == "ESPECIAL") has_special = true;
+
+                    QString reg_tag;
+                    if (aula->regime == model::RegimeDisciplina::ANUAL) {
+                        reg_tag = "[Anual]";
+                    } else if (aula->semestre == model::SemestreLetivo::SEMESTRE_1 || aula->semestre_alocado == 1) {
+                        reg_tag = "[1º Sem]";
+                    } else {
+                        reg_tag = "[2º Sem]";
+                    }
+
+                    QString title = QString("%1 %2").arg(reg_tag, QString::fromStdString(aula->disciplina_nome));
+                    if (aula->is_pinned) {
+                        title = "📌 " + title;
+                    }
+
+                    QString line2, line3;
+                    if (mode == 0) { // Turma view -> show professor & room
+                        QString prof_names;
+                        for (size_t i = 0; i < aula->professores.size(); ++i) {
+                            if (i > 0) prof_names += ", ";
+                            const auto* p = data_.findProfessor(aula->professores[i]);
+                            prof_names += QString::fromStdString(p ? p->nome() : aula->professores[i]);
+                        }
+                        QString sala_names;
+                        for (size_t i = 0; i < aula->salas.size(); ++i) {
+                            if (i > 0) sala_names += ", ";
+                            const auto* s = data_.findSala(aula->salas[i]);
+                            sala_names += QString::fromStdString(s ? s->nome() : aula->salas[i]);
+                        }
+                        line2 = prof_names;
+                        line3 = "Sala: " + sala_names;
+                    } else if (mode == 1) { // Professor view -> show turma & room
+                        QString turma_names;
+                        for (size_t i = 0; i < aula->turmas.size(); ++i) {
+                            if (i > 0) turma_names += ", ";
+                            const auto* t = data_.findTurma(aula->turmas[i]);
+                            turma_names += QString::fromStdString(t ? t->nome() : aula->turmas[i]);
+                        }
+                        QString sala_names;
+                        for (size_t i = 0; i < aula->salas.size(); ++i) {
+                            if (i > 0) sala_names += ", ";
+                            const auto* s = data_.findSala(aula->salas[i]);
+                            sala_names += QString::fromStdString(s ? s->nome() : aula->salas[i]);
+                        }
+                        line2 = "Turma: " + turma_names;
+                        line3 = "Sala: " + sala_names;
+                    } else if (mode == 2) { // Sala view -> show turma & professor
+                        QString turma_names;
+                        for (size_t i = 0; i < aula->turmas.size(); ++i) {
+                            if (i > 0) turma_names += ", ";
+                            const auto* t = data_.findTurma(aula->turmas[i]);
+                            turma_names += QString::fromStdString(t ? t->nome() : aula->turmas[i]);
+                        }
+                        QString prof_names;
+                        for (size_t i = 0; i < aula->professores.size(); ++i) {
+                            if (i > 0) prof_names += ", ";
+                            const auto* p = data_.findProfessor(aula->professores[i]);
+                            prof_names += QString::fromStdString(p ? p->nome() : aula->professores[i]);
+                        }
+                        line2 = "Turma: " + turma_names;
+                        line3 = prof_names;
+                    }
+
+                    aula_blocks << QString("%1\n%2\n%3").arg(title, line2, line3);
                 }
 
-                QString line2, line3;
-                if (mode == 0) { // Turma view -> show professor & room
-                    QString prof_names;
-                    for (size_t i = 0; i < found_aula->professores.size(); ++i) {
-                        if (i > 0) prof_names += ", ";
-                        const auto* p = data_.findProfessor(found_aula->professores[i]);
-                        prof_names += QString::fromStdString(p ? p->nome() : found_aula->professores[i]);
-                    }
-                    QString sala_names;
-                    for (size_t i = 0; i < found_aula->salas.size(); ++i) {
-                        if (i > 0) sala_names += ", ";
-                        const auto* s = data_.findSala(found_aula->salas[i]);
-                        sala_names += QString::fromStdString(s ? s->nome() : found_aula->salas[i]);
-                    }
-                    line2 = prof_names;
-                    line3 = "Sala: " + sala_names;
-                } else if (mode == 1) { // Professor view -> show turma & room
-                    QString turma_names;
-                    for (size_t i = 0; i < found_aula->turmas.size(); ++i) {
-                        if (i > 0) turma_names += ", ";
-                        const auto* t = data_.findTurma(found_aula->turmas[i]);
-                        turma_names += QString::fromStdString(t ? t->nome() : found_aula->turmas[i]);
-                    }
-                    QString sala_names;
-                    for (size_t i = 0; i < found_aula->salas.size(); ++i) {
-                        if (i > 0) sala_names += ", ";
-                        const auto* s = data_.findSala(found_aula->salas[i]);
-                        sala_names += QString::fromStdString(s ? s->nome() : found_aula->salas[i]);
-                    }
-                    line2 = "Turma: " + turma_names;
-                    line3 = "Sala: " + sala_names;
-                } else if (mode == 2) { // Sala view -> show turma & professor
-                    QString turma_names;
-                    for (size_t i = 0; i < found_aula->turmas.size(); ++i) {
-                        if (i > 0) turma_names += ", ";
-                        const auto* t = data_.findTurma(found_aula->turmas[i]);
-                        turma_names += QString::fromStdString(t ? t->nome() : found_aula->turmas[i]);
-                    }
-                    QString prof_names;
-                    for (size_t i = 0; i < found_aula->professores.size(); ++i) {
-                        if (i > 0) prof_names += ", ";
-                        const auto* p = data_.findProfessor(found_aula->professores[i]);
-                        prof_names += QString::fromStdString(p ? p->nome() : found_aula->professores[i]);
-                    }
-                    line2 = "Turma: " + turma_names;
-                    line3 = prof_names;
-                }
-
-                QString cell_text = QString("%1\n%2\n%3").arg(title, line2, line3);
+                QString cell_text = aula_blocks.join("\n───────────────\n");
                 auto* item = new QTableWidgetItem(cell_text);
-                item->setData(Qt::UserRole, QString::fromStdString(found_aula->aula_id));
+                item->setData(Qt::UserRole, main_aula_id);
 
-                if (found_aula->tipo == "LABORATORIO") {
+                if (has_lab) {
                     item->setBackground(QColor(236, 72, 153, 35));
                     item->setForeground(QColor("#f472b6"));
-                } else if (found_aula->tipo == "ESPECIAL") {
+                } else if (has_special) {
                     item->setBackground(QColor(139, 92, 246, 35));
                     item->setForeground(QColor("#a78bfa"));
                 } else {

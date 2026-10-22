@@ -81,10 +81,34 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
     std::map<std::pair<std::string, model::DayOfWeek>, std::vector<CandItem>> vars_turma_dia;
     std::map<std::pair<std::string, model::DayOfWeek>, std::vector<CandItem>> vars_sala_dia;
 
+    // Particionamento semestral para resolução multi-semestre integrada (seção 6)
+    bool is_multi_sem = (data.config().escopo_semestre == model::EscopoSemestreOtimizacao::AMBOS_INTEGRADO);
+    std::map<std::pair<std::string, model::DayOfWeek>, std::vector<CandItem>> vars_prof_dia_s1;
+    std::map<std::pair<std::string, model::DayOfWeek>, std::vector<CandItem>> vars_prof_dia_s2;
+    std::map<std::pair<std::string, model::DayOfWeek>, std::vector<CandItem>> vars_turma_dia_s1;
+    std::map<std::pair<std::string, model::DayOfWeek>, std::vector<CandItem>> vars_turma_dia_s2;
+    std::map<std::pair<std::string, model::DayOfWeek>, std::vector<CandItem>> vars_sala_dia_s1;
+    std::map<std::pair<std::string, model::DayOfWeek>, std::vector<CandItem>> vars_sala_dia_s2;
+
     // 3. Criar variáveis de decisão x_{a,d,t,b} (seção 2.6)
     int var_idx = 0;
     for (const auto& aula : data.aulas()) {
         const auto& cands = todos_candidatos[aula.id()];
+        bool in_s1 = true;
+        bool in_s2 = false;
+        if (is_multi_sem) {
+            if (aula.isAnual() || aula.semestre() == model::SemestreLetivo::AMBOS) {
+                in_s1 = true;
+                in_s2 = true; // Disciplina anual sincronizada nos dois semestres
+            } else if (aula.semestre() == model::SemestreLetivo::SEMESTRE_2 || aula.semestreAtivo() == 2) {
+                in_s1 = false;
+                in_s2 = true;
+            } else {
+                in_s1 = true;
+                in_s2 = false;
+            }
+        }
+
         for (const auto& c : cands) {
             std::string var_name = "x_" + aula.id() + "_" + std::to_string(static_cast<int>(c.dia)) +
                                    "_" + std::to_string(c.start_slot) + "_" + std::to_string(var_idx++);
@@ -97,14 +121,20 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
             // Mapeamento por professores
             for (const auto& p_id : aula.professores()) {
                 vars_prof_dia[{p_id, c.dia}].push_back(item);
+                if (in_s1) vars_prof_dia_s1[{p_id, c.dia}].push_back(item);
+                if (in_s2) vars_prof_dia_s2[{p_id, c.dia}].push_back(item);
             }
             // Mapeamento por turmas
             for (const auto& t_id : aula.turmas()) {
                 vars_turma_dia[{t_id, c.dia}].push_back(item);
+                if (in_s1) vars_turma_dia_s1[{t_id, c.dia}].push_back(item);
+                if (in_s2) vars_turma_dia_s2[{t_id, c.dia}].push_back(item);
             }
             // Mapeamento por salas
             for (const auto& s_id : c.salas) {
                 vars_sala_dia[{s_id, c.dia}].push_back(item);
+                if (in_s1) vars_sala_dia_s1[{s_id, c.dia}].push_back(item);
+                if (in_s2) vars_sala_dia_s2[{s_id, c.dia}].push_back(item);
             }
         }
     }
@@ -157,65 +187,92 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
     }
 
     // 5.2 Não sobreposição de professores (seção 3.2)
-    // Utiliza AddNoOverlap do CP-SAT com intervalos opcionais
+    // Utiliza AddNoOverlap do CP-SAT com intervalos opcionais por semestre letivo
     int int_id = 0;
-    for (const auto& prof : data.professores()) {
-        for (auto dia : model::allDays()) {
-            const auto& items = vars_prof_dia[{prof.id(), dia}];
-            if (items.size() <= 1) continue;
+    auto add_prof_no_overlap = [&](const std::map<std::pair<std::string, model::DayOfWeek>, std::vector<CandItem>>& map_vars, const std::string& prefix) {
+        for (const auto& prof : data.professores()) {
+            for (auto dia : model::allDays()) {
+                auto it = map_vars.find({prof.id(), dia});
+                if (it == map_vars.end() || it->second.size() <= 1) continue;
 
-            std::vector<IntervalVar> intervals;
-            for (const auto& item : items) {
-                std::string name = "int_p_" + prof.id() + "_" + std::to_string(int_id++);
-                IntervalVar interval = cp_model.NewOptionalIntervalVar(
-                    item.cand->start_slot,
-                    item.cand->duration_slots,
-                    item.cand->end_slot(),
-                    item.var).WithName(name);
-                intervals.push_back(interval);
+                std::vector<IntervalVar> intervals;
+                for (const auto& item : it->second) {
+                    std::string name = prefix + "_p_" + prof.id() + "_" + std::to_string(int_id++);
+                    IntervalVar interval = cp_model.NewOptionalIntervalVar(
+                        item.cand->start_slot,
+                        item.cand->duration_slots,
+                        item.cand->end_slot(),
+                        item.var).WithName(name);
+                    intervals.push_back(interval);
+                }
+                cp_model.AddNoOverlap(intervals);
             }
-            cp_model.AddNoOverlap(intervals);
         }
+    };
+
+    if (is_multi_sem) {
+        add_prof_no_overlap(vars_prof_dia_s1, "int_s1");
+        add_prof_no_overlap(vars_prof_dia_s2, "int_s2");
+    } else {
+        add_prof_no_overlap(vars_prof_dia, "int");
     }
 
     // 5.3 Não sobreposição de salas (seção 3.3)
-    for (const auto& sala : data.salas()) {
-        for (auto dia : model::allDays()) {
-            const auto& items = vars_sala_dia[{sala.id(), dia}];
-            if (items.size() <= 1) continue;
+    auto add_sala_no_overlap = [&](const std::map<std::pair<std::string, model::DayOfWeek>, std::vector<CandItem>>& map_vars, const std::string& prefix) {
+        for (const auto& sala : data.salas()) {
+            for (auto dia : model::allDays()) {
+                auto it = map_vars.find({sala.id(), dia});
+                if (it == map_vars.end() || it->second.size() <= 1) continue;
 
-            std::vector<IntervalVar> intervals;
-            for (const auto& item : items) {
-                std::string name = "int_r_" + sala.id() + "_" + std::to_string(int_id++);
-                IntervalVar interval = cp_model.NewOptionalIntervalVar(
-                    item.cand->start_slot,
-                    item.cand->duration_slots,
-                    item.cand->end_slot(),
-                    item.var).WithName(name);
-                intervals.push_back(interval);
+                std::vector<IntervalVar> intervals;
+                for (const auto& item : it->second) {
+                    std::string name = prefix + "_r_" + sala.id() + "_" + std::to_string(int_id++);
+                    IntervalVar interval = cp_model.NewOptionalIntervalVar(
+                        item.cand->start_slot,
+                        item.cand->duration_slots,
+                        item.cand->end_slot(),
+                        item.var).WithName(name);
+                    intervals.push_back(interval);
+                }
+                cp_model.AddNoOverlap(intervals);
             }
-            cp_model.AddNoOverlap(intervals);
         }
+    };
+
+    if (is_multi_sem) {
+        add_sala_no_overlap(vars_sala_dia_s1, "int_s1");
+        add_sala_no_overlap(vars_sala_dia_s2, "int_s2");
+    } else {
+        add_sala_no_overlap(vars_sala_dia, "int");
     }
 
     // 5.4 Não sobreposição de turmas (seção 3.4)
-    for (const auto& turma : data.turmas()) {
-        for (auto dia : model::allDays()) {
-            const auto& items = vars_turma_dia[{turma.id(), dia}];
-            if (items.size() <= 1) continue;
+    auto add_turma_no_overlap = [&](const std::map<std::pair<std::string, model::DayOfWeek>, std::vector<CandItem>>& map_vars, const std::string& prefix) {
+        for (const auto& turma : data.turmas()) {
+            for (auto dia : model::allDays()) {
+                auto it = map_vars.find({turma.id(), dia});
+                if (it == map_vars.end() || it->second.size() <= 1) continue;
 
-            std::vector<IntervalVar> intervals;
-            for (const auto& item : items) {
-                std::string name = "int_t_" + turma.id() + "_" + std::to_string(int_id++);
-                IntervalVar interval = cp_model.NewOptionalIntervalVar(
-                    item.cand->start_slot,
-                    item.cand->duration_slots,
-                    item.cand->end_slot(),
-                    item.var).WithName(name);
-                intervals.push_back(interval);
+                std::vector<IntervalVar> intervals;
+                for (const auto& item : it->second) {
+                    std::string name = prefix + "_t_" + turma.id() + "_" + std::to_string(int_id++);
+                    IntervalVar interval = cp_model.NewOptionalIntervalVar(
+                        item.cand->start_slot,
+                        item.cand->duration_slots,
+                        item.cand->end_slot(),
+                        item.var).WithName(name);
+                    intervals.push_back(interval);
+                }
+                cp_model.AddNoOverlap(intervals);
             }
-            cp_model.AddNoOverlap(intervals);
         }
+    };
+
+    if (is_multi_sem) {
+        add_turma_no_overlap(vars_turma_dia_s1, "int_s1");
+        add_turma_no_overlap(vars_turma_dia_s2, "int_s2");
+    } else {
+        add_turma_no_overlap(vars_turma_dia, "int");
     }
 
     // 5.5 Carga máxima diária do professor (seção 3.9)
@@ -636,6 +693,15 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
                 aloc.turmas = aula ? aula->turmas() : std::vector<std::string>{};
                 aloc.salas = item.cand->salas;
                 aloc.is_pinned = aula ? aula->isPinned() : false;
+                if (aula) {
+                    aloc.regime = aula->regime();
+                    aloc.semestre = aula->semestre();
+                    if (aula->isAnual()) {
+                        aloc.semestre_alocado = 3; // Anual / Ambos
+                    } else {
+                        aloc.semestre_alocado = (aula->semestre() == model::SemestreLetivo::SEMESTRE_2 || aula->semestreAtivo() == 2) ? 2 : 1;
+                    }
+                }
 
                 timetable.addAllocatedLesson(std::move(aloc));
             }
@@ -893,6 +959,13 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
             aloc.turmas = aula->turmas();
             aloc.salas = best_cand->salas;
             aloc.is_pinned = aula->isPinned();
+            aloc.regime = aula->regime();
+            aloc.semestre = aula->semestre();
+            if (aula->isAnual()) {
+                aloc.semestre_alocado = 3;
+            } else {
+                aloc.semestre_alocado = (aula->semestre() == model::SemestreLetivo::SEMESTRE_2 || aula->semestreAtivo() == 2) ? 2 : 1;
+            }
             timetable.addAllocatedLesson(std::move(aloc));
             alocadas_count++;
         } else {

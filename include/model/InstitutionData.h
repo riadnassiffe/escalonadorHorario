@@ -52,7 +52,8 @@ public:
     const std::vector<Lesson>& aulas() const noexcept { return aulas_; }
     std::vector<Lesson>& aulas() noexcept { return aulas_; }
     void setAulas(std::vector<Lesson> aulas) { aulas_ = std::move(aulas); }
-    void gerarOcorrenciasAulas(bool preservar_fixadas = true);
+    void gerarOcorrenciasAulas(bool preservar_fixadas = true,
+                               EscopoSemestreOtimizacao escopo = EscopoSemestreOtimizacao::TODAS_SEM_FILTRO);
     const Lesson* findAula(const std::string& id) const;
     Lesson* findAula(const std::string& id);
 

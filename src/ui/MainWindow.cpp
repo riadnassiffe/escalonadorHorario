@@ -291,8 +291,8 @@ QWidget* MainWindow::createDisciplinasTab() {
     btn_bar->addStretch();
 
     table_disciplinas_ = new QTableWidget(widget);
-    table_disciplinas_->setColumnCount(7);
-    table_disciplinas_->setHorizontalHeaderLabels({"ID", "Nome", "Tipo", "Duração", "Aulas/Sem", "Professor", "Turma"});
+    table_disciplinas_->setColumnCount(8);
+    table_disciplinas_->setHorizontalHeaderLabels({"ID", "Nome", "Regime / Semestre", "Tipo", "Duração", "Aulas/Sem", "Professor", "Turma"});
     table_disciplinas_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     table_disciplinas_->setSelectionBehavior(QAbstractItemView::SelectRows);
     table_disciplinas_->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -394,10 +394,11 @@ void MainWindow::onOptimize() {
     data_.setConfig(current_cfg);
     config_widget_->loadConfig(current_cfg);
 
-    data_.gerarOcorrenciasAulas(true); // Preserva aulas fixadas
+    data_.gerarOcorrenciasAulas(true, current_cfg.escopo_semestre); // Preserva aulas fixadas e respeita escopo
 
     std::string algo_name = model::solverAlgorithmDisplayName(current_cfg.algoritmo);
     txt_logs_->appendPlainText("--------------------------------------------------");
+    txt_logs_->appendPlainText("[ESCOPO] Escopo de Otimização: " + QString::fromStdString(model::escopoSemestreToString(current_cfg.escopo_semestre)));
     txt_logs_->appendPlainText("[OTIMIZAÇÃO] Algoritmo selecionado: " + QString::fromStdString(algo_name));
     if (current_cfg.usar_distribuicao_como_entrada && !data_.grade().alocacoes().empty()) {
         txt_logs_->appendPlainText(QString("[ENTRADA] Distribuição atual da tela (%1 aulas) fornecida como entrada / Warm Start.")
@@ -589,9 +590,20 @@ void MainWindow::refreshDisciplinasTable() {
 
         table_disciplinas_->setItem(r, 0, new SmartTableWidgetItem(QString::fromStdString(d.id())));
         table_disciplinas_->setItem(r, 1, new SmartTableWidgetItem(QString::fromStdString(d.nome())));
-        table_disciplinas_->setItem(r, 2, new SmartTableWidgetItem(QString::fromStdString(d.tipo())));
-        table_disciplinas_->setItem(r, 3, new SmartTableWidgetItem(QString::number(d.duracaoMinutos()) + " min"));
-        table_disciplinas_->setItem(r, 4, new SmartTableWidgetItem(QString::number(d.aulasSemanais())));
+
+        auto* item_regime = new SmartTableWidgetItem(QString::fromStdString(d.regimeSemestreFormatado()));
+        if (d.regime() == model::RegimeDisciplina::ANUAL) {
+            item_regime->setForeground(QBrush(QColor(56, 189, 248))); // #38bdf8
+        } else if (d.semestre() == model::SemestreLetivo::SEMESTRE_1) {
+            item_regime->setForeground(QBrush(QColor(251, 146, 60))); // #fb923c
+        } else {
+            item_regime->setForeground(QBrush(QColor(52, 211, 153))); // #34d399
+        }
+        table_disciplinas_->setItem(r, 2, item_regime);
+
+        table_disciplinas_->setItem(r, 3, new SmartTableWidgetItem(QString::fromStdString(d.tipo())));
+        table_disciplinas_->setItem(r, 4, new SmartTableWidgetItem(QString::number(d.duracaoMinutos()) + " min"));
+        table_disciplinas_->setItem(r, 5, new SmartTableWidgetItem(QString::number(d.aulasSemanais())));
 
         QString profs;
         for (size_t i = 0; i < d.professores().size(); ++i) {
@@ -599,7 +611,7 @@ void MainWindow::refreshDisciplinasTable() {
             const auto* p = data_.findProfessor(d.professores()[i]);
             profs += QString::fromStdString(p ? p->nome() : d.professores()[i]);
         }
-        table_disciplinas_->setItem(r, 5, new SmartTableWidgetItem(profs));
+        table_disciplinas_->setItem(r, 6, new SmartTableWidgetItem(profs));
 
         QString turmas;
         for (size_t i = 0; i < d.turmas().size(); ++i) {
@@ -607,7 +619,7 @@ void MainWindow::refreshDisciplinasTable() {
             const auto* t = data_.findTurma(d.turmas()[i]);
             turmas += QString::fromStdString(t ? t->nome() : d.turmas()[i]);
         }
-        table_disciplinas_->setItem(r, 6, new SmartTableWidgetItem(turmas));
+        table_disciplinas_->setItem(r, 7, new SmartTableWidgetItem(turmas));
     }
     table_disciplinas_->setSortingEnabled(true);
     if (search_bar_disciplinas_) {
@@ -727,7 +739,7 @@ void MainWindow::onAddDisciplina() {
     LessonEditorDialog dlg(data_.professores(), data_.turmas(), data_.salas(), this, nullptr);
     if (dlg.exec() == QDialog::Accepted) {
         data_.addDisciplina(dlg.getDisciplina());
-        data_.gerarOcorrenciasAulas(true);
+        data_.gerarOcorrenciasAulas(true, data_.config().escopo_semestre);
         refreshDisciplinasTable();
     }
 }
@@ -741,7 +753,7 @@ void MainWindow::onEditDisciplina() {
         LessonEditorDialog dlg(data_.professores(), data_.turmas(), data_.salas(), this, d);
         if (dlg.exec() == QDialog::Accepted) {
             data_.addDisciplina(dlg.getDisciplina());
-            data_.gerarOcorrenciasAulas(true);
+            data_.gerarOcorrenciasAulas(true, data_.config().escopo_semestre);
             refreshDisciplinasTable();
         }
     }
@@ -754,7 +766,7 @@ void MainWindow::onRemoveDisciplina() {
     if (QMessageBox::question(this, "Remover Disciplina", "Deseja remover a disciplina " + QString::fromStdString(id) + "?",
                               QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
         data_.removeDisciplina(id);
-        data_.gerarOcorrenciasAulas(true);
+        data_.gerarOcorrenciasAulas(true, data_.config().escopo_semestre);
         refreshDisciplinasTable();
     }
 }
