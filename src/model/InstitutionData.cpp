@@ -1,6 +1,39 @@
 #include "model/InstitutionData.h"
 #include <algorithm>
 #include <sstream>
+#include <cctype>
+#include <cstdio>
+
+namespace {
+
+int extractMaxNumericSuffix(const std::vector<std::string>& ids, const std::string& prefix) {
+    int max_val = 0;
+    std::string lower_prefix = prefix;
+    std::transform(lower_prefix.begin(), lower_prefix.end(), lower_prefix.begin(), ::tolower);
+
+    for (const auto& id : ids) {
+        std::string lower_id = id;
+        std::transform(lower_id.begin(), lower_id.end(), lower_id.begin(), ::tolower);
+
+        auto pos = lower_id.find(lower_prefix);
+        if (pos != std::string::npos) {
+            size_t num_start = pos + lower_prefix.size();
+            size_t num_end = num_start;
+            while (num_end < lower_id.size() && std::isdigit(static_cast<unsigned char>(lower_id[num_end]))) {
+                num_end++;
+            }
+            if (num_end > num_start) {
+                try {
+                    int val = std::stoi(lower_id.substr(num_start, num_end - num_start));
+                    if (val > max_val) max_val = val;
+                } catch (...) {}
+            }
+        }
+    }
+    return max_val;
+}
+
+} // anonymous namespace
 
 namespace scheduler::model {
 
@@ -214,6 +247,66 @@ void InstitutionData::clear() {
     disciplinas_.clear();
     aulas_.clear();
     grade_.clear();
+}
+
+std::string InstitutionData::nextProfessorId() const {
+    std::vector<std::string> ids;
+    ids.reserve(professores_.size());
+    for (const auto& p : professores_) ids.push_back(p.id());
+
+    int n = extractMaxNumericSuffix(ids, "p") + 1;
+    while (true) {
+        char buf[32];
+        std::snprintf(buf, sizeof(buf), "P%02d", n);
+        std::string cand(buf);
+        if (!findProfessor(cand)) return cand;
+        n++;
+    }
+}
+
+std::string InstitutionData::nextTurmaId() const {
+    std::vector<std::string> ids;
+    ids.reserve(turmas_.size());
+    for (const auto& t : turmas_) ids.push_back(t.id());
+
+    int n = extractMaxNumericSuffix(ids, "t") + 1;
+    while (true) {
+        char buf[32];
+        std::snprintf(buf, sizeof(buf), "T%02d", n);
+        std::string cand(buf);
+        if (!findTurma(cand)) return cand;
+        n++;
+    }
+}
+
+std::string InstitutionData::nextSalaId() const {
+    std::vector<std::string> ids;
+    ids.reserve(salas_.size());
+    for (const auto& s : salas_) ids.push_back(s.id());
+
+    int n = extractMaxNumericSuffix(ids, "s") + 1;
+    while (true) {
+        char buf[32];
+        std::snprintf(buf, sizeof(buf), "S%02d", n);
+        std::string cand(buf);
+        if (!findSala(cand)) return cand;
+        n++;
+    }
+}
+
+std::string InstitutionData::nextDisciplinaId() const {
+    std::vector<std::string> ids;
+    ids.reserve(disciplinas_.size());
+    for (const auto& d : disciplinas_) ids.push_back(d.id());
+
+    int n = extractMaxNumericSuffix(ids, "d") + 1;
+    while (true) {
+        char buf[32];
+        std::snprintf(buf, sizeof(buf), "D%02d", n);
+        std::string cand(buf);
+        if (!findDisciplina(cand)) return cand;
+        n++;
+    }
 }
 
 InstitutionData InstitutionData::criarExemploPadrao() {

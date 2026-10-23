@@ -13,8 +13,17 @@ namespace scheduler::ui {
 
 TurmaEditorDialog::TurmaEditorDialog(const std::vector<model::Room>& salas_disponiveis,
                                      QWidget* parent,
-                                     const model::Turma* turma)
+                                     const model::Turma* turma,
+                                     const std::string& default_id)
     : QDialog(parent), salas_disponiveis_(salas_disponiveis) {
+    if (turma) {
+        id_ = turma->id();
+    } else if (!default_id.empty()) {
+        id_ = default_id;
+    } else {
+        id_ = "T01";
+    }
+
     setupUi();
     if (turma) {
         loadTurma(*turma);
@@ -44,11 +53,6 @@ void TurmaEditorDialog::setupUi() {
     form_layout->setHorizontalSpacing(14);
     form_layout->setVerticalSpacing(8);
 
-    txt_id_ = new QLineEdit(form_card);
-    txt_id_->setPlaceholderText("Ex: T01");
-    txt_id_->setMinimumWidth(110);
-    txt_id_->setMaximumWidth(150);
-
     txt_nome_ = new QLineEdit(form_card);
     txt_nome_->setPlaceholderText("Ex: 1º Ano A - Ensino Médio");
 
@@ -58,20 +62,15 @@ void TurmaEditorDialog::setupUi() {
     combo_turno_->addItem("Noite (NOITE)", static_cast<int>(model::ShiftType::NOITE));
     combo_turno_->addItem("Integral / Misto (INTEGRAL)", static_cast<int>(model::ShiftType::INTEGRAL));
 
-    auto* lbl_id = new QLabel("Código (ID):", form_card);
-    lbl_id->setStyleSheet("font-weight: 600;");
-    auto* lbl_turno = new QLabel("Turno Geral:", form_card);
-    lbl_turno->setStyleSheet("font-weight: 600;");
     auto* lbl_nome = new QLabel("Nome da Turma:", form_card);
-    lbl_nome->setStyleSheet("font-weight: 600;");
+    lbl_nome->setStyleSheet("font-weight: 600; font-size: 13px;");
+    auto* lbl_turno = new QLabel("Turno Geral:", form_card);
+    lbl_turno->setStyleSheet("font-weight: 600; font-size: 13px;");
 
-    form_layout->addWidget(lbl_id, 0, 0);
-    form_layout->addWidget(txt_id_, 0, 1);
+    form_layout->addWidget(lbl_nome, 0, 0);
+    form_layout->addWidget(txt_nome_, 0, 1);
     form_layout->addWidget(lbl_turno, 0, 2);
     form_layout->addWidget(combo_turno_, 0, 3);
-
-    form_layout->addWidget(lbl_nome, 1, 0);
-    form_layout->addWidget(txt_nome_, 1, 1, 1, 3);
 
     main_layout->addWidget(form_card);
 
@@ -173,7 +172,7 @@ void TurmaEditorDialog::setupUi() {
 
     combo_sala_fixa_ = new QComboBox(tab_sala);
     for (const auto& s : salas_disponiveis_) {
-        combo_sala_fixa_->addItem(QString::fromStdString(s.nome() + " [" + s.id() + "]"),
+        combo_sala_fixa_->addItem(QString::fromStdString(s.nome()),
                                   QString::fromStdString(s.id()));
     }
     layout_tab_sala->addWidget(combo_sala_fixa_);
@@ -197,7 +196,7 @@ void TurmaEditorDialog::setupUi() {
     list_salas_permitidas_->setSelectionMode(QAbstractItemView::MultiSelection);
     list_salas_permitidas_->setMinimumHeight(180);
     for (const auto& s : salas_disponiveis_) {
-        auto* item = new QListWidgetItem(QString::fromStdString(s.nome() + " [" + s.id() + "]"), list_salas_permitidas_);
+        auto* item = new QListWidgetItem(QString::fromStdString(s.nome()), list_salas_permitidas_);
         item->setData(Qt::UserRole, QString::fromStdString(s.id()));
     }
     layout_tab_sala->addWidget(list_salas_permitidas_);
@@ -230,8 +229,8 @@ void TurmaEditorDialog::setupUi() {
 
     connect(btn_cancel, &QPushButton::clicked, this, &QDialog::reject);
     connect(btn_save, &QPushButton::clicked, [this]() {
-        if (txt_id_->text().trimmed().isEmpty() || txt_nome_->text().trimmed().isEmpty()) {
-            QMessageBox::warning(this, "Atenção", "Preencha o Código e o Nome da Turma.");
+        if (txt_nome_->text().trimmed().isEmpty()) {
+            QMessageBox::warning(this, "Atenção", "Preencha o Nome da Turma.");
             return;
         }
 
@@ -825,8 +824,7 @@ void TurmaEditorDialog::onSalaModeChanged() {
 }
 
 void TurmaEditorDialog::loadTurma(const model::Turma& turma) {
-    txt_id_->setText(QString::fromStdString(turma.id()));
-    txt_id_->setReadOnly(true);
+    id_ = turma.id();
     txt_nome_->setText(QString::fromStdString(turma.nome()));
     combo_turno_->setCurrentIndex(combo_turno_->findData(static_cast<int>(turma.turno())));
 
@@ -859,7 +857,7 @@ void TurmaEditorDialog::loadTurma(const model::Turma& turma) {
 
 model::Turma TurmaEditorDialog::getTurma() const {
     auto shift = static_cast<model::ShiftType>(combo_turno_->currentData().toInt());
-    model::Turma t(txt_id_->text().trimmed().toStdString(),
+    model::Turma t(id_,
                    txt_nome_->text().trimmed().toStdString(),
                    shift);
 

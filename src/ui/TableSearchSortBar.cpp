@@ -78,6 +78,7 @@ void TableSearchSortBar::setupWithTable(QTableWidget* table,
     combo_sort_column_->blockSignals(true);
     combo_sort_column_->clear();
     for (int c = 0; c < table_->columnCount(); ++c) {
+        if (table_->isColumnHidden(c)) continue;
         auto* header_item = table_->horizontalHeaderItem(c);
         QString title = header_item ? header_item->text() : QString("Coluna %1").arg(c + 1);
         combo_sort_column_->addItem(title, c);
@@ -136,6 +137,7 @@ void TableSearchSortBar::applyFilter(const QString& query) {
         bool match = cleanQuery.isEmpty();
         if (!match) {
             for (int c = 0; c < table_->columnCount(); ++c) {
+                if (table_->isColumnHidden(c)) continue;
                 auto* it = table_->item(r, c);
                 if (it && removeAccents(it->text()).toLower().contains(cleanQuery)) {
                     match = true;

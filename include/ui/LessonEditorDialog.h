@@ -22,7 +22,8 @@ public:
                                 const std::vector<model::Turma>& turmas,
                                 const std::vector<model::Room>& salas,
                                 QWidget* parent = nullptr,
-                                const model::Disciplina* disc = nullptr);
+                                const model::Disciplina* disc = nullptr,
+                                const std::string& default_id = "");
 
     model::Disciplina getDisciplina() const;
 
@@ -38,7 +39,7 @@ private:
     const std::vector<model::Turma>& turmas_;
     const std::vector<model::Room>& salas_;
 
-    QLineEdit* txt_id_{nullptr};
+    std::string id_{"D01"};
     QLineEdit* txt_nome_{nullptr};
     QComboBox* combo_tipo_{nullptr};
     QComboBox* combo_regime_{nullptr};

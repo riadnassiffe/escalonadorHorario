@@ -69,6 +69,12 @@ public:
 
     void clear();
 
+    // Geração dinâmica de IDs para novas entidades
+    std::string nextProfessorId() const;
+    std::string nextTurmaId() const;
+    std::string nextSalaId() const;
+    std::string nextDisciplinaId() const;
+
     // Carrega o cenário acadêmico completo descrito nas instruções
     static InstitutionData criarExemploPadrao();
 

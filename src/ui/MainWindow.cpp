@@ -17,6 +17,8 @@
 #include <QMessageBox>
 #include <QStatusBar>
 #include <QDateTime>
+#include <QShortcut>
+#include <set>
 
 namespace scheduler::ui {
 
@@ -174,6 +176,7 @@ QWidget* MainWindow::createProfessoresTab() {
     btn_edit->setObjectName("btnSecondary");
     auto* btn_rem = new QPushButton("Remover", widget);
     btn_rem->setObjectName("btnDanger");
+    btn_rem->setToolTip("Remover professor(es) selecionado(s) em massa (Delete)");
     btn_bar->addWidget(btn_add);
     btn_bar->addWidget(btn_edit);
     btn_bar->addWidget(btn_rem);
@@ -184,7 +187,8 @@ QWidget* MainWindow::createProfessoresTab() {
     table_professores_->setHorizontalHeaderLabels({"ID", "Nome", "Pesos Semanais (SEG..SEX)", "Carga Máx. Diária", "Disponibilidade"});
     table_professores_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     table_professores_->setSelectionBehavior(QAbstractItemView::SelectRows);
-    table_professores_->setSelectionMode(QAbstractItemView::SingleSelection);
+    table_professores_->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    table_professores_->setColumnHidden(0, true);
     layout->addWidget(table_professores_);
 
     search_bar_professores_ = new TableSearchSortBar(widget);
@@ -196,6 +200,7 @@ QWidget* MainWindow::createProfessoresTab() {
     connect(btn_edit, &QPushButton::clicked, this, &MainWindow::onEditProfessor);
     connect(btn_rem, &QPushButton::clicked, this, &MainWindow::onRemoveProfessor);
     connect(table_professores_, &QTableWidget::cellDoubleClicked, this, &MainWindow::onEditProfessor);
+    connect(new QShortcut(QKeySequence::Delete, table_professores_), &QShortcut::activated, this, &MainWindow::onRemoveProfessor);
 
     return widget;
 }
@@ -211,6 +216,7 @@ QWidget* MainWindow::createTurmasTab() {
     btn_edit->setObjectName("btnSecondary");
     auto* btn_rem = new QPushButton("Remover", widget);
     btn_rem->setObjectName("btnDanger");
+    btn_rem->setToolTip("Remover turma(s) selecionada(s) em massa (Delete)");
     btn_bar->addWidget(btn_add);
     btn_bar->addWidget(btn_edit);
     btn_bar->addWidget(btn_rem);
@@ -221,7 +227,8 @@ QWidget* MainWindow::createTurmasTab() {
     table_turmas_->setHorizontalHeaderLabels({"ID", "Nome", "Turno", "Jornada", "Intervalos Obrigatórios (2)", "Sala Teórica"});
     table_turmas_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     table_turmas_->setSelectionBehavior(QAbstractItemView::SelectRows);
-    table_turmas_->setSelectionMode(QAbstractItemView::SingleSelection);
+    table_turmas_->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    table_turmas_->setColumnHidden(0, true);
     layout->addWidget(table_turmas_);
 
     search_bar_turmas_ = new TableSearchSortBar(widget);
@@ -233,6 +240,7 @@ QWidget* MainWindow::createTurmasTab() {
     connect(btn_edit, &QPushButton::clicked, this, &MainWindow::onEditTurma);
     connect(btn_rem, &QPushButton::clicked, this, &MainWindow::onRemoveTurma);
     connect(table_turmas_, &QTableWidget::cellDoubleClicked, this, &MainWindow::onEditTurma);
+    connect(new QShortcut(QKeySequence::Delete, table_turmas_), &QShortcut::activated, this, &MainWindow::onRemoveTurma);
 
     return widget;
 }
@@ -248,6 +256,7 @@ QWidget* MainWindow::createSalasTab() {
     btn_edit->setObjectName("btnSecondary");
     auto* btn_rem = new QPushButton("Remover", widget);
     btn_rem->setObjectName("btnDanger");
+    btn_rem->setToolTip("Remover sala(s) selecionada(s) em massa (Delete)");
     btn_bar->addWidget(btn_add);
     btn_bar->addWidget(btn_edit);
     btn_bar->addWidget(btn_rem);
@@ -258,7 +267,8 @@ QWidget* MainWindow::createSalasTab() {
     table_salas_->setHorizontalHeaderLabels({"ID", "Nome", "Tipo", "Capacidade", "Recursos"});
     table_salas_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     table_salas_->setSelectionBehavior(QAbstractItemView::SelectRows);
-    table_salas_->setSelectionMode(QAbstractItemView::SingleSelection);
+    table_salas_->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    table_salas_->setColumnHidden(0, true);
     layout->addWidget(table_salas_);
 
     search_bar_salas_ = new TableSearchSortBar(widget);
@@ -270,6 +280,7 @@ QWidget* MainWindow::createSalasTab() {
     connect(btn_edit, &QPushButton::clicked, this, &MainWindow::onEditSala);
     connect(btn_rem, &QPushButton::clicked, this, &MainWindow::onRemoveSala);
     connect(table_salas_, &QTableWidget::cellDoubleClicked, this, &MainWindow::onEditSala);
+    connect(new QShortcut(QKeySequence::Delete, table_salas_), &QShortcut::activated, this, &MainWindow::onRemoveSala);
 
     return widget;
 }
@@ -285,6 +296,7 @@ QWidget* MainWindow::createDisciplinasTab() {
     btn_edit->setObjectName("btnSecondary");
     auto* btn_rem = new QPushButton("Remover", widget);
     btn_rem->setObjectName("btnDanger");
+    btn_rem->setToolTip("Remover disciplina(s) selecionada(s) em massa (Delete)");
     btn_bar->addWidget(btn_add);
     btn_bar->addWidget(btn_edit);
     btn_bar->addWidget(btn_rem);
@@ -295,7 +307,8 @@ QWidget* MainWindow::createDisciplinasTab() {
     table_disciplinas_->setHorizontalHeaderLabels({"ID", "Nome", "Regime / Semestre", "Tipo", "Duração", "Aulas/Sem", "Professor", "Turma"});
     table_disciplinas_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     table_disciplinas_->setSelectionBehavior(QAbstractItemView::SelectRows);
-    table_disciplinas_->setSelectionMode(QAbstractItemView::SingleSelection);
+    table_disciplinas_->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    table_disciplinas_->setColumnHidden(0, true);
     layout->addWidget(table_disciplinas_);
 
     search_bar_disciplinas_ = new TableSearchSortBar(widget);
@@ -307,6 +320,7 @@ QWidget* MainWindow::createDisciplinasTab() {
     connect(btn_edit, &QPushButton::clicked, this, &MainWindow::onEditDisciplina);
     connect(btn_rem, &QPushButton::clicked, this, &MainWindow::onRemoveDisciplina);
     connect(table_disciplinas_, &QTableWidget::cellDoubleClicked, this, &MainWindow::onEditDisciplina);
+    connect(new QShortcut(QKeySequence::Delete, table_disciplinas_), &QShortcut::activated, this, &MainWindow::onRemoveDisciplina);
 
     return widget;
 }
@@ -660,7 +674,7 @@ void MainWindow::refreshDisciplinasTable() {
 }
 
 void MainWindow::onAddProfessor() {
-    ProfessorEditorDialog dlg(this, nullptr);
+    ProfessorEditorDialog dlg(this, nullptr, data_.nextProfessorId());
     if (dlg.exec() == QDialog::Accepted) {
         data_.addProfessor(dlg.getProfessor());
         refreshProfessoresTable();
@@ -684,19 +698,63 @@ void MainWindow::onEditProfessor() {
 }
 
 void MainWindow::onRemoveProfessor() {
-    int r = table_professores_->currentRow();
-    if (r < 0 || !table_professores_->item(r, 0)) return;
-    std::string id = table_professores_->item(r, 0)->text().toStdString();
-    if (QMessageBox::question(this, "Remover Professor", "Deseja remover o professor " + QString::fromStdString(id) + "?",
+    auto selected_rows = table_professores_->selectionModel()->selectedRows();
+    if (selected_rows.isEmpty()) {
+        int r = table_professores_->currentRow();
+        if (r >= 0) {
+            selected_rows.append(table_professores_->model()->index(r, 0));
+        }
+    }
+    if (selected_rows.isEmpty()) {
+        QMessageBox::information(this, "Remover Professor", "Nenhum professor selecionado para remoção.");
+        return;
+    }
+
+    std::vector<std::string> ids_to_remove;
+    QStringList names_to_remove;
+    std::set<std::string> seen_ids;
+    for (const auto& idx : selected_rows) {
+        int r = idx.row();
+        auto* item_id = table_professores_->item(r, 0);
+        auto* item_nome = table_professores_->item(r, 1);
+        if (item_id) {
+            std::string id = item_id->text().toStdString();
+            if (seen_ids.insert(id).second) {
+                ids_to_remove.push_back(id);
+                names_to_remove.append(item_nome ? item_nome->text() : QString::fromStdString(id));
+            }
+        }
+    }
+
+    if (ids_to_remove.empty()) return;
+
+    QString msg;
+    if (ids_to_remove.size() == 1) {
+        msg = QString("Deseja realmente remover o professor \"%1\"?").arg(names_to_remove.first());
+    } else {
+        msg = QString("Deseja realmente remover os %1 professores selecionados em massa?\n\nItens:\n")
+                  .arg(ids_to_remove.size());
+        for (int i = 0; i < std::min<int>(names_to_remove.size(), 8); ++i) {
+            msg += QString("• %1\n").arg(names_to_remove[i]);
+        }
+        if (names_to_remove.size() > 8) {
+            msg += QString("... e mais %1 outro(s).").arg(names_to_remove.size() - 8);
+        }
+    }
+
+    if (QMessageBox::question(this, "Confirmar Remoção", msg,
                               QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
-        data_.removeProfessor(id);
+        for (const auto& id : ids_to_remove) {
+            data_.removeProfessor(id);
+        }
         refreshProfessoresTable();
+        refreshDisciplinasTable();
         timetable_view_->refreshView();
     }
 }
 
 void MainWindow::onAddTurma() {
-    TurmaEditorDialog dlg(data_.salas(), this, nullptr);
+    TurmaEditorDialog dlg(data_.salas(), this, nullptr, data_.nextTurmaId());
     if (dlg.exec() == QDialog::Accepted) {
         data_.addTurma(dlg.getTurma());
         refreshTurmasTable();
@@ -720,19 +778,63 @@ void MainWindow::onEditTurma() {
 }
 
 void MainWindow::onRemoveTurma() {
-    int r = table_turmas_->currentRow();
-    if (r < 0 || !table_turmas_->item(r, 0)) return;
-    std::string id = table_turmas_->item(r, 0)->text().toStdString();
-    if (QMessageBox::question(this, "Remover Turma", "Deseja remover a turma " + QString::fromStdString(id) + "?",
+    auto selected_rows = table_turmas_->selectionModel()->selectedRows();
+    if (selected_rows.isEmpty()) {
+        int r = table_turmas_->currentRow();
+        if (r >= 0) {
+            selected_rows.append(table_turmas_->model()->index(r, 0));
+        }
+    }
+    if (selected_rows.isEmpty()) {
+        QMessageBox::information(this, "Remover Turma", "Nenhuma turma selecionada para remoção.");
+        return;
+    }
+
+    std::vector<std::string> ids_to_remove;
+    QStringList names_to_remove;
+    std::set<std::string> seen_ids;
+    for (const auto& idx : selected_rows) {
+        int r = idx.row();
+        auto* item_id = table_turmas_->item(r, 0);
+        auto* item_nome = table_turmas_->item(r, 1);
+        if (item_id) {
+            std::string id = item_id->text().toStdString();
+            if (seen_ids.insert(id).second) {
+                ids_to_remove.push_back(id);
+                names_to_remove.append(item_nome ? item_nome->text() : QString::fromStdString(id));
+            }
+        }
+    }
+
+    if (ids_to_remove.empty()) return;
+
+    QString msg;
+    if (ids_to_remove.size() == 1) {
+        msg = QString("Deseja realmente remover a turma \"%1\"?").arg(names_to_remove.first());
+    } else {
+        msg = QString("Deseja realmente remover as %1 turmas selecionadas em massa?\n\nItens:\n")
+                  .arg(ids_to_remove.size());
+        for (int i = 0; i < std::min<int>(names_to_remove.size(), 8); ++i) {
+            msg += QString("• %1\n").arg(names_to_remove[i]);
+        }
+        if (names_to_remove.size() > 8) {
+            msg += QString("... e mais %1 outra(s).").arg(names_to_remove.size() - 8);
+        }
+    }
+
+    if (QMessageBox::question(this, "Confirmar Remoção", msg,
                               QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
-        data_.removeTurma(id);
+        for (const auto& id : ids_to_remove) {
+            data_.removeTurma(id);
+        }
         refreshTurmasTable();
+        refreshDisciplinasTable();
         timetable_view_->refreshView();
     }
 }
 
 void MainWindow::onAddSala() {
-    RoomEditorDialog dlg(this, nullptr);
+    RoomEditorDialog dlg(this, nullptr, data_.nextSalaId());
     if (dlg.exec() == QDialog::Accepted) {
         data_.addSala(dlg.getRoom());
         refreshSalasTable();
@@ -756,19 +858,63 @@ void MainWindow::onEditSala() {
 }
 
 void MainWindow::onRemoveSala() {
-    int r = table_salas_->currentRow();
-    if (r < 0 || !table_salas_->item(r, 0)) return;
-    std::string id = table_salas_->item(r, 0)->text().toStdString();
-    if (QMessageBox::question(this, "Remover Sala", "Deseja remover a sala " + QString::fromStdString(id) + "?",
+    auto selected_rows = table_salas_->selectionModel()->selectedRows();
+    if (selected_rows.isEmpty()) {
+        int r = table_salas_->currentRow();
+        if (r >= 0) {
+            selected_rows.append(table_salas_->model()->index(r, 0));
+        }
+    }
+    if (selected_rows.isEmpty()) {
+        QMessageBox::information(this, "Remover Sala", "Nenhuma sala selecionada para remoção.");
+        return;
+    }
+
+    std::vector<std::string> ids_to_remove;
+    QStringList names_to_remove;
+    std::set<std::string> seen_ids;
+    for (const auto& idx : selected_rows) {
+        int r = idx.row();
+        auto* item_id = table_salas_->item(r, 0);
+        auto* item_nome = table_salas_->item(r, 1);
+        if (item_id) {
+            std::string id = item_id->text().toStdString();
+            if (seen_ids.insert(id).second) {
+                ids_to_remove.push_back(id);
+                names_to_remove.append(item_nome ? item_nome->text() : QString::fromStdString(id));
+            }
+        }
+    }
+
+    if (ids_to_remove.empty()) return;
+
+    QString msg;
+    if (ids_to_remove.size() == 1) {
+        msg = QString("Deseja realmente remover a sala \"%1\"?").arg(names_to_remove.first());
+    } else {
+        msg = QString("Deseja realmente remover as %1 salas selecionadas em massa?\n\nItens:\n")
+                  .arg(ids_to_remove.size());
+        for (int i = 0; i < std::min<int>(names_to_remove.size(), 8); ++i) {
+            msg += QString("• %1\n").arg(names_to_remove[i]);
+        }
+        if (names_to_remove.size() > 8) {
+            msg += QString("... e mais %1 outra(s).").arg(names_to_remove.size() - 8);
+        }
+    }
+
+    if (QMessageBox::question(this, "Confirmar Remoção", msg,
                               QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
-        data_.removeSala(id);
+        for (const auto& id : ids_to_remove) {
+            data_.removeSala(id);
+        }
         refreshSalasTable();
+        refreshDisciplinasTable();
         timetable_view_->refreshView();
     }
 }
 
 void MainWindow::onAddDisciplina() {
-    LessonEditorDialog dlg(data_.professores(), data_.turmas(), data_.salas(), this, nullptr);
+    LessonEditorDialog dlg(data_.professores(), data_.turmas(), data_.salas(), this, nullptr, data_.nextDisciplinaId());
     if (dlg.exec() == QDialog::Accepted) {
         data_.addDisciplina(dlg.getDisciplina());
         data_.gerarOcorrenciasAulas(true, data_.config().escopo_semestre);
@@ -792,14 +938,58 @@ void MainWindow::onEditDisciplina() {
 }
 
 void MainWindow::onRemoveDisciplina() {
-    int r = table_disciplinas_->currentRow();
-    if (r < 0 || !table_disciplinas_->item(r, 0)) return;
-    std::string id = table_disciplinas_->item(r, 0)->text().toStdString();
-    if (QMessageBox::question(this, "Remover Disciplina", "Deseja remover a disciplina " + QString::fromStdString(id) + "?",
+    auto selected_rows = table_disciplinas_->selectionModel()->selectedRows();
+    if (selected_rows.isEmpty()) {
+        int r = table_disciplinas_->currentRow();
+        if (r >= 0) {
+            selected_rows.append(table_disciplinas_->model()->index(r, 0));
+        }
+    }
+    if (selected_rows.isEmpty()) {
+        QMessageBox::information(this, "Remover Disciplina", "Nenhuma disciplina selecionada para remoção.");
+        return;
+    }
+
+    std::vector<std::string> ids_to_remove;
+    QStringList names_to_remove;
+    std::set<std::string> seen_ids;
+    for (const auto& idx : selected_rows) {
+        int r = idx.row();
+        auto* item_id = table_disciplinas_->item(r, 0);
+        auto* item_nome = table_disciplinas_->item(r, 1);
+        if (item_id) {
+            std::string id = item_id->text().toStdString();
+            if (seen_ids.insert(id).second) {
+                ids_to_remove.push_back(id);
+                names_to_remove.append(item_nome ? item_nome->text() : QString::fromStdString(id));
+            }
+        }
+    }
+
+    if (ids_to_remove.empty()) return;
+
+    QString msg;
+    if (ids_to_remove.size() == 1) {
+        msg = QString("Deseja realmente remover a disciplina \"%1\"?").arg(names_to_remove.first());
+    } else {
+        msg = QString("Deseja realmente remover as %1 disciplinas selecionadas em massa?\n\nItens:\n")
+                  .arg(ids_to_remove.size());
+        for (int i = 0; i < std::min<int>(names_to_remove.size(), 8); ++i) {
+            msg += QString("• %1\n").arg(names_to_remove[i]);
+        }
+        if (names_to_remove.size() > 8) {
+            msg += QString("... e mais %1 outra(s).").arg(names_to_remove.size() - 8);
+        }
+    }
+
+    if (QMessageBox::question(this, "Confirmar Remoção", msg,
                               QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
-        data_.removeDisciplina(id);
+        for (const auto& id : ids_to_remove) {
+            data_.removeDisciplina(id);
+        }
         data_.gerarOcorrenciasAulas(true, data_.config().escopo_semestre);
         refreshDisciplinasTable();
+        timetable_view_->refreshView();
     }
 }
 

@@ -14,8 +14,16 @@
 
 namespace scheduler::ui {
 
-ProfessorEditorDialog::ProfessorEditorDialog(QWidget* parent, const model::Professor* prof)
+ProfessorEditorDialog::ProfessorEditorDialog(QWidget* parent, const model::Professor* prof, const std::string& default_id)
     : QDialog(parent) {
+    if (prof) {
+        id_ = prof->id();
+    } else if (!default_id.empty()) {
+        id_ = default_id;
+    } else {
+        id_ = "P01";
+    }
+
     setupUi();
     if (prof) {
         loadProfessor(*prof);
@@ -42,11 +50,6 @@ void ProfessorEditorDialog::setupUi() {
     form_layout->setHorizontalSpacing(14);
     form_layout->setVerticalSpacing(8);
 
-    txt_id_ = new QLineEdit(form_card);
-    txt_id_->setPlaceholderText("Ex: P01");
-    txt_id_->setMinimumWidth(110);
-    txt_id_->setMaximumWidth(150);
-
     txt_nome_ = new QLineEdit(form_card);
     txt_nome_->setPlaceholderText("Ex: Prof. Carlos Silva (Matemática)");
 
@@ -55,20 +58,15 @@ void ProfessorEditorDialog::setupUi() {
     spin_carga_max_->setSingleStep(30);
     spin_carga_max_->setSuffix(" minutos (0 = sem limite)");
 
-    auto* lbl_id = new QLabel("Código (ID):", form_card);
-    lbl_id->setStyleSheet("font-weight: 600;");
+    auto* lbl_nome = new QLabel("Nome do Professor:", form_card);
+    lbl_nome->setStyleSheet("font-weight: 600; font-size: 13px;");
     auto* lbl_carga = new QLabel("Carga Máx. Diária:", form_card);
-    lbl_carga->setStyleSheet("font-weight: 600;");
-    auto* lbl_nome = new QLabel("Nome Completo:", form_card);
-    lbl_nome->setStyleSheet("font-weight: 600;");
+    lbl_carga->setStyleSheet("font-weight: 600; font-size: 13px;");
 
-    form_layout->addWidget(lbl_id, 0, 0);
-    form_layout->addWidget(txt_id_, 0, 1);
+    form_layout->addWidget(lbl_nome, 0, 0);
+    form_layout->addWidget(txt_nome_, 0, 1);
     form_layout->addWidget(lbl_carga, 0, 2);
     form_layout->addWidget(spin_carga_max_, 0, 3);
-
-    form_layout->addWidget(lbl_nome, 1, 0);
-    form_layout->addWidget(txt_nome_, 1, 1, 1, 3);
 
     root_layout->addWidget(form_card);
 
@@ -341,8 +339,8 @@ void ProfessorEditorDialog::setupUi() {
 
     connect(btn_cancel, &QPushButton::clicked, this, &QDialog::reject);
     connect(btn_save, &QPushButton::clicked, [this]() {
-        if (txt_id_->text().trimmed().isEmpty() || txt_nome_->text().trimmed().isEmpty()) {
-            QMessageBox::warning(this, "Atenção", "Preencha o Código e o Nome do Professor.");
+        if (txt_nome_->text().trimmed().isEmpty()) {
+            QMessageBox::warning(this, "Atenção", "Preencha o Nome do Professor.");
             return;
         }
         accept();
@@ -580,8 +578,7 @@ void ProfessorEditorDialog::onSetDefaultWholeDay() {
 }
 
 void ProfessorEditorDialog::loadProfessor(const model::Professor& prof) {
-    txt_id_->setText(QString::fromStdString(prof.id()));
-    txt_id_->setReadOnly(true); // Manter ID estável na edição
+    id_ = prof.id();
     txt_nome_->setText(QString::fromStdString(prof.nome()));
     spin_carga_max_->setValue(prof.cargaMaximaDiariaMinutos());
 
@@ -631,7 +628,7 @@ void ProfessorEditorDialog::loadProfessor(const model::Professor& prof) {
 }
 
 model::Professor ProfessorEditorDialog::getProfessor() const {
-    model::Professor prof(txt_id_->text().trimmed().toStdString(),
+    model::Professor prof(id_,
                           txt_nome_->text().trimmed().toStdString());
     prof.setCargaMaximaDiariaMinutos(spin_carga_max_->value());
     prof.setPesoJanela(slider_peso_janela_->value());

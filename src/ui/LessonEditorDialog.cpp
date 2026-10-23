@@ -13,8 +13,17 @@ LessonEditorDialog::LessonEditorDialog(const std::vector<model::Professor>& prof
                                        const std::vector<model::Turma>& turmas,
                                        const std::vector<model::Room>& salas,
                                        QWidget* parent,
-                                       const model::Disciplina* disc)
+                                       const model::Disciplina* disc,
+                                       const std::string& default_id)
     : QDialog(parent), profs_(profs), turmas_(turmas), salas_(salas) {
+    if (disc) {
+        id_ = disc->id();
+    } else if (!default_id.empty()) {
+        id_ = default_id;
+    } else {
+        id_ = "D01";
+    }
+
     setupUi();
     if (disc) {
         loadDisciplina(*disc);
@@ -30,10 +39,6 @@ void LessonEditorDialog::setupUi() {
     main_layout->setSpacing(14);
 
     auto* form_layout = new QFormLayout();
-
-    txt_id_ = new QLineEdit(this);
-    txt_id_->setPlaceholderText("Ex: MAT_01, FIS_01");
-    form_layout->addRow("Código (ID):", txt_id_);
 
     txt_nome_ = new QLineEdit(this);
     txt_nome_->setPlaceholderText("Ex: Matemática, Física Experimental");
@@ -73,14 +78,14 @@ void LessonEditorDialog::setupUi() {
 
     combo_prof_ = new QComboBox(this);
     for (const auto& p : profs_) {
-        combo_prof_->addItem(QString::fromStdString(p.nome() + " [" + p.id() + "]"),
+        combo_prof_->addItem(QString::fromStdString(p.nome()),
                              QString::fromStdString(p.id()));
     }
     form_layout->addRow("Professor Responsável:", combo_prof_);
 
     combo_turma_ = new QComboBox(this);
     for (const auto& t : turmas_) {
-        combo_turma_->addItem(QString::fromStdString(t.nome() + " [" + t.id() + "]"),
+        combo_turma_->addItem(QString::fromStdString(t.nome()),
                               QString::fromStdString(t.id()));
     }
     form_layout->addRow("Turma:", combo_turma_);
@@ -153,7 +158,7 @@ void LessonEditorDialog::setupUi() {
     list_salas_alternativas_->setSelectionMode(QAbstractItemView::MultiSelection);
     list_salas_alternativas_->setMaximumHeight(90);
     for (const auto& s : salas_) {
-        auto* item = new QListWidgetItem(QString::fromStdString(s.nome() + " [" + s.id() + "] (" + s.tipo() + ")"), list_salas_alternativas_);
+        auto* item = new QListWidgetItem(QString::fromStdString(s.nome() + " (" + s.tipo() + ")"), list_salas_alternativas_);
         item->setData(Qt::UserRole, QString::fromStdString(s.id()));
     }
     lay_alt->addWidget(list_salas_alternativas_);
@@ -179,8 +184,8 @@ void LessonEditorDialog::setupUi() {
 
     connect(btn_cancel, &QPushButton::clicked, this, &QDialog::reject);
     connect(btn_save, &QPushButton::clicked, [this]() {
-        if (txt_id_->text().trimmed().isEmpty() || txt_nome_->text().trimmed().isEmpty()) {
-            QMessageBox::warning(this, "Atenção", "Preencha o Código e o Nome da Disciplina.");
+        if (txt_nome_->text().trimmed().isEmpty()) {
+            QMessageBox::warning(this, "Atenção", "Preencha o Nome da Disciplina.");
             return;
         }
         if (combo_prof_->currentIndex() < 0) {
@@ -219,8 +224,7 @@ void LessonEditorDialog::onRegimeChanged(int /*index*/) {
 }
 
 void LessonEditorDialog::loadDisciplina(const model::Disciplina& disc) {
-    txt_id_->setText(QString::fromStdString(disc.id()));
-    txt_id_->setReadOnly(true);
+    id_ = disc.id();
     txt_nome_->setText(QString::fromStdString(disc.nome()));
 
     int idx_regime = combo_regime_->findData(QString::fromStdString(model::regimeToString(disc.regime())));
@@ -282,7 +286,7 @@ model::Disciplina LessonEditorDialog::getDisciplina() const {
     model::RegimeDisciplina regime = model::stringToRegime(combo_regime_->currentData().toString().toStdString());
     model::SemestreLetivo semestre = model::stringToSemestre(combo_semestre_->currentData().toString().toStdString());
 
-    model::Disciplina d(txt_id_->text().trimmed().toStdString(),
+    model::Disciplina d(id_,
                         txt_nome_->text().trimmed().toStdString(),
                         combo_tipo_->currentData().toString().toStdString(),
                         combo_duracao_->currentData().toInt(),

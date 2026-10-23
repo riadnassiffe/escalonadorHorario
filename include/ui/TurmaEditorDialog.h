@@ -39,7 +39,8 @@ class TurmaEditorDialog : public QDialog {
 public:
     explicit TurmaEditorDialog(const std::vector<model::Room>& salas_disponiveis,
                                QWidget* parent = nullptr,
-                               const model::Turma* turma = nullptr);
+                               const model::Turma* turma = nullptr,
+                               const std::string& default_id = "");
 
     model::Turma getTurma() const;
 
@@ -60,7 +61,7 @@ private:
 
     const std::vector<model::Room>& salas_disponiveis_;
 
-    QLineEdit* txt_id_{nullptr};
+    std::string id_{"T01"};
     QLineEdit* txt_nome_{nullptr};
     QComboBox* combo_turno_{nullptr};
 

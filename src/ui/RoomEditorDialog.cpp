@@ -8,8 +8,16 @@
 
 namespace scheduler::ui {
 
-RoomEditorDialog::RoomEditorDialog(QWidget* parent, const model::Room* room)
+RoomEditorDialog::RoomEditorDialog(QWidget* parent, const model::Room* room, const std::string& default_id)
     : QDialog(parent) {
+    if (room) {
+        id_ = room->id();
+    } else if (!default_id.empty()) {
+        id_ = default_id;
+    } else {
+        id_ = "S01";
+    }
+
     setupUi();
     if (room) {
         loadRoom(*room);
@@ -25,9 +33,6 @@ void RoomEditorDialog::setupUi() {
     main_layout->setSpacing(14);
 
     auto* form_layout = new QFormLayout();
-    txt_id_ = new QLineEdit(this);
-    txt_id_->setPlaceholderText("Ex: S101, LAB01");
-    form_layout->addRow("Código (ID):", txt_id_);
 
     txt_nome_ = new QLineEdit(this);
     txt_nome_->setPlaceholderText("Ex: Sala Teórica 101");
@@ -62,8 +67,8 @@ void RoomEditorDialog::setupUi() {
 
     connect(btn_cancel, &QPushButton::clicked, this, &QDialog::reject);
     connect(btn_save, &QPushButton::clicked, [this]() {
-        if (txt_id_->text().trimmed().isEmpty() || txt_nome_->text().trimmed().isEmpty()) {
-            QMessageBox::warning(this, "Atenção", "Preencha o Código e o Nome da Sala.");
+        if (txt_nome_->text().trimmed().isEmpty()) {
+            QMessageBox::warning(this, "Atenção", "Preencha o Nome da Sala.");
             return;
         }
         accept();
@@ -71,8 +76,7 @@ void RoomEditorDialog::setupUi() {
 }
 
 void RoomEditorDialog::loadRoom(const model::Room& room) {
-    txt_id_->setText(QString::fromStdString(room.id()));
-    txt_id_->setReadOnly(true);
+    id_ = room.id();
     txt_nome_->setText(QString::fromStdString(room.nome()));
 
     int idx = combo_tipo_->findData(QString::fromStdString(room.tipo()));
@@ -89,7 +93,7 @@ void RoomEditorDialog::loadRoom(const model::Room& room) {
 }
 
 model::Room RoomEditorDialog::getRoom() const {
-    model::Room r(txt_id_->text().trimmed().toStdString(),
+    model::Room r(id_,
                   txt_nome_->text().trimmed().toStdString(),
                   combo_tipo_->currentData().toString().toStdString(),
                   spin_capacidade_->value());

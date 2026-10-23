@@ -12,7 +12,9 @@ class RoomEditorDialog : public QDialog {
     Q_OBJECT
 
 public:
-    explicit RoomEditorDialog(QWidget* parent = nullptr, const model::Room* room = nullptr);
+    explicit RoomEditorDialog(QWidget* parent = nullptr,
+                              const model::Room* room = nullptr,
+                              const std::string& default_id = "");
 
     model::Room getRoom() const;
 
@@ -20,7 +22,7 @@ private:
     void setupUi();
     void loadRoom(const model::Room& room);
 
-    QLineEdit* txt_id_{nullptr};
+    std::string id_{"S01"};
     QLineEdit* txt_nome_{nullptr};
     QComboBox* combo_tipo_{nullptr};
     QSpinBox* spin_capacidade_{nullptr};

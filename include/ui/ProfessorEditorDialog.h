@@ -17,7 +17,8 @@ class ProfessorEditorDialog : public QDialog {
 
 public:
     explicit ProfessorEditorDialog(QWidget* parent = nullptr,
-                                  const model::Professor* prof = nullptr);
+                                   const model::Professor* prof = nullptr,
+                                   const std::string& default_id = "");
 
     model::Professor getProfessor() const;
 
@@ -40,7 +41,7 @@ private:
     void setupUi();
     void loadProfessor(const model::Professor& prof);
 
-    QLineEdit* txt_id_{nullptr};
+    std::string id_{"P01"};
     QLineEdit* txt_nome_{nullptr};
     std::array<QSlider*, 5> sliders_dias_{};
     std::array<QLabel*, 5> lbls_valores_dias_{};

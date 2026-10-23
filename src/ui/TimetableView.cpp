@@ -115,17 +115,17 @@ void TimetableView::populateTargetCombo() {
     int mode = combo_view_type_->currentData().toInt();
     if (mode == 0) { // Por Turma
         for (const auto& t : data_.turmas()) {
-            QString label = QString::fromStdString(t.nome() + " [" + t.id() + "]");
+            QString label = QString::fromStdString(t.nome());
             combo_target_->addItem(label, QString::fromStdString(t.id()));
         }
     } else if (mode == 1) { // Por Professor
         for (const auto& p : data_.professores()) {
-            QString label = QString::fromStdString(p.nome() + " [" + p.id() + "]");
+            QString label = QString::fromStdString(p.nome());
             combo_target_->addItem(label, QString::fromStdString(p.id()));
         }
     } else if (mode == 2) { // Por Sala
         for (const auto& s : data_.salas()) {
-            QString label = QString::fromStdString(s.nome() + " [" + s.id() + "]");
+            QString label = QString::fromStdString(s.nome());
             combo_target_->addItem(label, QString::fromStdString(s.id()));
         }
     }
