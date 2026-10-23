@@ -154,20 +154,17 @@ bool Preprocessor::shiftAcomodaAula(model::ShiftType shift, int start_slot, int 
     int end_slot = start_slot + duration_slots;
     switch (shift) {
         case model::ShiftType::MANHA:
-            // 08:00 (slot 84) a 12:30 (slot 150)
-            return start_slot >= model::TimeInterval::timeStringToSlot("08:00") &&
-                   end_slot <= model::TimeInterval::timeStringToSlot("12:30");
+            return start_slot >= model::TimeInterval::timeStringToSlot("07:00") &&
+                   end_slot <= model::TimeInterval::timeStringToSlot("13:00");
         case model::ShiftType::TARDE:
-            // 13:00 (slot 156) a 18:30 (slot 222)
-            return start_slot >= model::TimeInterval::timeStringToSlot("13:00") &&
-                   end_slot <= model::TimeInterval::timeStringToSlot("18:30");
+            return start_slot >= model::TimeInterval::timeStringToSlot("12:00") &&
+                   end_slot <= model::TimeInterval::timeStringToSlot("19:00");
         case model::ShiftType::NOITE:
-            // 18:00 a 22:00
             return start_slot >= model::TimeInterval::timeStringToSlot("18:00") &&
-                   end_slot <= model::TimeInterval::timeStringToSlot("22:00");
+                   end_slot <= model::TimeInterval::timeStringToSlot("23:00");
         case model::ShiftType::INTEGRAL:
-            return start_slot >= model::TimeInterval::timeStringToSlot("08:00") &&
-                   end_slot <= model::TimeInterval::timeStringToSlot("22:00");
+            return start_slot >= model::TimeInterval::timeStringToSlot("07:00") &&
+                   end_slot <= model::TimeInterval::timeStringToSlot("23:00");
     }
     return true;
 }
@@ -282,7 +279,7 @@ std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
                 if (!todas_turmas_acomodam) continue;
 
                 // 2. Verificar turno permitido
-                bool turno_ok = false;
+                bool turno_ok = aula.turnosPermitidos().empty();
                 for (auto turno_perm : aula.turnosPermitidos()) {
                     if (shiftAcomodaAula(turno_perm, t, L_a)) {
                         turno_ok = true;

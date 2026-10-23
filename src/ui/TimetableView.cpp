@@ -189,10 +189,12 @@ void TimetableView::renderTimetable() {
                 .arg(QString::fromStdString(sala_info.empty() ? "(não definida)" : sala_info))
                 .arg(sem_suffix));
 
-            // Adicionar intervalos da turma
-            const auto& jp = turma->jornadaPadrao();
-            for (const auto& inter : jp.intervalosAtivos()) {
-                horarios_set.insert({inter.start_slot, inter.end_slot});
+            // Adicionar intervalos da turma para todos os dias letivos
+            for (auto d : turma->diasLetivos()) {
+                auto j_dia = turma->jornadaParaDia(d);
+                for (const auto& inter : j_dia.intervalosAtivos()) {
+                    horarios_set.insert({inter.start_slot, inter.end_slot});
+                }
             }
         }
         for (const auto& a : data_.grade().alocacoes()) {
@@ -251,30 +253,62 @@ void TimetableView::renderTimetable() {
         model::TimeInterval row_inter(start_s, end_s);
         vertical_headers << QString::fromStdString(row_inter.toString());
 
-        bool is_recess_row = false;
-        if (mode == 0) {
-            const auto* turma = data_.findTurma(id_str);
-            if (turma) {
-                const auto& jp = turma->jornadaPadrao();
-                for (const auto& inter : jp.intervalosAtivos()) {
-                    if (start_s == inter.start_slot && end_s == inter.end_slot) {
-                        is_recess_row = true;
-                        break;
-                    }
-                }
-            }
-        }
-
         for (int col = 0; col < 5; ++col) {
             auto dia = static_cast<model::DayOfWeek>(col);
 
-            if (is_recess_row) {
+            bool is_recess_for_day = false;
+            bool is_outside_day_jornada = false;
+            bool is_day_off = false;
+
+            if (mode == 0) {
+                const auto* turma = data_.findTurma(id_str);
+                if (turma) {
+                    if (!turma->funcionaNoDia(dia)) {
+                        is_day_off = true;
+                    } else {
+                        auto j_dia = turma->jornadaParaDia(dia);
+                        for (const auto& inter : j_dia.intervalosAtivos()) {
+                            if (start_s == inter.start_slot && end_s == inter.end_slot) {
+                                is_recess_for_day = true;
+                                break;
+                            }
+                        }
+                        if (!is_recess_for_day) {
+                            if (start_s < j_dia.jornada_total.start_slot || end_s > j_dia.jornada_total.end_slot) {
+                                is_outside_day_jornada = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (is_recess_for_day) {
                 int dur = (end_s - start_s) * model::SLOT_MINUTES;
                 auto* item = new QTableWidgetItem(QString("☕ INTERVALO (%1 min)").arg(dur));
                 item->setTextAlignment(Qt::AlignCenter);
                 item->setBackground(QColor(245, 158, 11, 40));
                 item->setForeground(QColor("#f59e0b"));
                 item->setFont(QFont("Segoe UI", 10, QFont::Bold));
+                table_->setItem(row, col, item);
+                continue;
+            }
+
+            if (is_day_off) {
+                auto* item = new QTableWidgetItem("—");
+                item->setToolTip("Dia não letivo para a turma");
+                item->setTextAlignment(Qt::AlignCenter);
+                item->setForeground(QColor("#475569"));
+                item->setBackground(QColor(15, 23, 42, 60));
+                table_->setItem(row, col, item);
+                continue;
+            }
+
+            if (is_outside_day_jornada) {
+                auto* item = new QTableWidgetItem("—");
+                item->setToolTip("Fora da jornada letiva da turma neste dia");
+                item->setTextAlignment(Qt::AlignCenter);
+                item->setForeground(QColor("#475569"));
+                item->setBackground(QColor(15, 23, 42, 60));
                 table_->setItem(row, col, item);
                 continue;
             }

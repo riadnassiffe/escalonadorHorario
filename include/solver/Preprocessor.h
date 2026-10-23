@@ -35,7 +35,6 @@ public:
         const model::InstitutionData& data,
         ValidationResult& resultado);
 
-private:
     static bool turmaAcomodaAula(const model::Turma& turma, model::DayOfWeek dia,
                                  int start_slot, int duration_slots);
     static bool shiftAcomodaAula(model::ShiftType shift, int start_slot, int duration_slots);

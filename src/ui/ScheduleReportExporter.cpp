@@ -87,29 +87,35 @@ std::string ScheduleReportExporter::gerarTabelaHtmlTurma(const model::Institutio
         }
     }
 
-    // Incluir intervalos de descanso
-    const auto& jp = turma.jornadaPadrao();
-    for (const auto& inter : jp.intervalosAtivos()) {
-        horarios_set.insert({inter.start_slot, inter.end_slot});
+    // Incluir intervalos de descanso de todos os dias letivos
+    for (auto d : turma.diasLetivos()) {
+        auto j_dia = turma.jornadaParaDia(d);
+        for (const auto& inter : j_dia.intervalosAtivos()) {
+            horarios_set.insert({inter.start_slot, inter.end_slot});
+        }
     }
 
     for (const auto& [s, e] : horarios_set) {
         model::TimeInterval row_inter(s, e);
-        bool is_recess = false;
-        for (const auto& inter : jp.intervalosAtivos()) {
-            if (s == inter.start_slot && e == inter.end_slot) {
-                is_recess = true;
-                break;
-            }
-        }
 
-        ss << "    <tr" << (is_recess ? " class='recess-row'" : "") << ">\n";
+        ss << "    <tr>\n";
         ss << "      <td class='time-col'>" << row_inter.toString() << "</td>\n";
 
         for (auto d : model::allDays()) {
+            auto j_dia = turma.jornadaParaDia(d);
+            bool is_recess = false;
+            for (const auto& inter : j_dia.intervalosAtivos()) {
+                if (s == inter.start_slot && e == inter.end_slot) {
+                    is_recess = true;
+                    break;
+                }
+            }
+
             if (is_recess) {
                 int dur = (e - s) * model::SLOT_MINUTES;
                 ss << "      <td class='recess-cell'>INTERVALO (" << dur << " min)</td>\n";
+            } else if (!turma.funcionaNoDia(d) || s < j_dia.jornada_total.start_slot || e > j_dia.jornada_total.end_slot) {
+                ss << "      <td class='off-cell' style='background:#f1f5f9; color:#94a3b8; text-align:center;'>—</td>\n";
             } else {
                 auto aulas = data.grade().aulasPorTurma(turma.id(), d);
                 std::string cell_content = "-";

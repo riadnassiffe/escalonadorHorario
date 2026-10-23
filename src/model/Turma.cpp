@@ -3,15 +3,28 @@
 
 namespace scheduler::model {
 
+static TimeInterval makeSafeInterval(const std::string& ini, const std::string& fim) {
+    try {
+        int s = TimeInterval::timeStringToSlot(ini);
+        int e = TimeInterval::timeStringToSlot(fim);
+        TimeInterval ti;
+        ti.start_slot = s;
+        ti.end_slot = e;
+        return ti;
+    } catch (...) {
+        return TimeInterval();
+    }
+}
+
 JornadaTurma::JornadaTurma(const std::string& ini, const std::string& fim,
                            const std::string& int1_ini, const std::string& int1_fim,
                            const std::string& int2_ini, const std::string& int2_fim)
-    : jornada_total(ini, fim),
-      intervalo_1(int1_ini, int1_fim),
+    : jornada_total(makeSafeInterval(ini, fim)),
+      intervalo_1(makeSafeInterval(int1_ini, int1_fim)),
       int1_ativo(true),
-      intervalo_2(int2_ini, int2_fim),
+      intervalo_2(makeSafeInterval(int2_ini, int2_fim)),
       int2_ativo(true),
-      intervalo_3("11:00", "11:15"),
+      intervalo_3(makeSafeInterval("11:00", "11:15")),
       int3_ativo(false) {
 }
 
@@ -19,12 +32,12 @@ JornadaTurma::JornadaTurma(const std::string& ini, const std::string& fim,
                            const std::string& int1_ini, const std::string& int1_fim, bool a1,
                            const std::string& int2_ini, const std::string& int2_fim, bool a2,
                            const std::string& int3_ini, const std::string& int3_fim, bool a3)
-    : jornada_total(ini, fim),
-      intervalo_1(int1_ini, int1_fim),
+    : jornada_total(makeSafeInterval(ini, fim)),
+      intervalo_1(makeSafeInterval(int1_ini, int1_fim)),
       int1_ativo(a1),
-      intervalo_2(int2_ini, int2_fim),
+      intervalo_2(makeSafeInterval(int2_ini, int2_fim)),
       int2_ativo(a2),
-      intervalo_3(int3_ini, int3_fim),
+      intervalo_3(makeSafeInterval(int3_ini, int3_fim)),
       int3_ativo(a3) {
 }
 
@@ -101,6 +114,29 @@ bool JornadaTurma::isSlotEmIntervalo(int slot) const noexcept {
     if (int2_ativo && intervalo_2.contains(slot)) return true;
     if (int3_ativo && intervalo_3.contains(slot)) return true;
     return false;
+}
+
+bool JornadaTurma::operator==(const JornadaTurma& o) const noexcept {
+    if (jornada_total.start_slot != o.jornada_total.start_slot ||
+        jornada_total.end_slot != o.jornada_total.end_slot) {
+        return false;
+    }
+    if (int1_ativo != o.int1_ativo) return false;
+    if (int1_ativo && (intervalo_1.start_slot != o.intervalo_1.start_slot ||
+                       intervalo_1.end_slot != o.intervalo_1.end_slot)) {
+        return false;
+    }
+    if (int2_ativo != o.int2_ativo) return false;
+    if (int2_ativo && (intervalo_2.start_slot != o.intervalo_2.start_slot ||
+                       intervalo_2.end_slot != o.intervalo_2.end_slot)) {
+        return false;
+    }
+    if (int3_ativo != o.int3_ativo) return false;
+    if (int3_ativo && (intervalo_3.start_slot != o.intervalo_3.start_slot ||
+                       intervalo_3.end_slot != o.intervalo_3.end_slot)) {
+        return false;
+    }
+    return true;
 }
 
 Turma::Turma(std::string id, std::string nome, ShiftType turno)

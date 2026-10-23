@@ -98,6 +98,40 @@ void LessonEditorDialog::setupUi() {
     check_turnos_ = {chk_manha, chk_tarde, chk_noite};
     form_layout->addRow("Turnos Permitidos:", turnos_layout);
 
+    auto updateTurnosForTurma = [this](int idx) {
+        if (idx < 0 || idx >= static_cast<int>(turmas_.size())) return;
+        const auto& t = turmas_[idx];
+        bool tem_manha = false;
+        bool tem_tarde = false;
+        bool tem_noite = false;
+
+        for (auto d : t.diasLetivos()) {
+            auto j = t.jornadaParaDia(d);
+            int start_min = j.jornada_total.start_slot * model::SLOT_MINUTES;
+            int end_min = j.jornada_total.end_slot * model::SLOT_MINUTES;
+            if (start_min < 12 * 60 + 30) tem_manha = true;
+            if (end_min > 12 * 60 + 30 && start_min < 18 * 60) tem_tarde = true;
+            if (end_min > 18 * 60) tem_noite = true;
+        }
+        if (t.turno() == model::ShiftType::INTEGRAL) {
+            tem_manha = true;
+            tem_tarde = true;
+        } else if (t.turno() == model::ShiftType::TARDE) {
+            tem_tarde = true;
+        } else if (t.turno() == model::ShiftType::NOITE) {
+            tem_noite = true;
+        }
+
+        check_turnos_[0]->setChecked(tem_manha);
+        check_turnos_[1]->setChecked(tem_tarde);
+        check_turnos_[2]->setChecked(tem_noite);
+    };
+
+    connect(combo_turma_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, updateTurnosForTurma);
+    if (!turmas_.empty()) {
+        updateTurnosForTurma(0);
+    }
+
     spin_max_dia_ = new QSpinBox(this);
     spin_max_dia_->setRange(1, 10);
     spin_max_dia_->setValue(2);

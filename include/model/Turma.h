@@ -30,6 +30,9 @@ struct JornadaTurma {
     std::vector<TimeInterval> blocosLetivos() const;
     std::vector<TimeInterval> intervalosAtivos() const;
     bool isSlotEmIntervalo(int slot) const noexcept;
+
+    bool operator==(const JornadaTurma& o) const noexcept;
+    bool operator!=(const JornadaTurma& o) const noexcept { return !(*this == o); }
 };
 
 class Turma {
@@ -54,8 +57,11 @@ public:
     void setJornadaPadrao(JornadaTurma jornada) { jornada_padrao_ = std::move(jornada); }
 
     const std::map<DayOfWeek, JornadaTurma>& excecoesPorDia() const noexcept { return excecoes_por_dia_; }
+    void setExcecoesPorDia(std::map<DayOfWeek, JornadaTurma> exc) { excecoes_por_dia_ = std::move(exc); }
     void setExcecaoDia(DayOfWeek d, JornadaTurma jornada) { excecoes_por_dia_[d] = std::move(jornada); }
     void removeExcecaoDia(DayOfWeek d) { excecoes_por_dia_.erase(d); }
+    void clearExcecoes() { excecoes_por_dia_.clear(); }
+    bool temExcecoes() const noexcept { return !excecoes_por_dia_.empty(); }
 
     JornadaTurma jornadaParaDia(DayOfWeek d) const;
 

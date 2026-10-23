@@ -529,21 +529,53 @@ void MainWindow::refreshTurmasTable() {
         table_turmas_->setItem(r, 1, new SmartTableWidgetItem(QString::fromStdString(t.nome())));
         table_turmas_->setItem(r, 2, new SmartTableWidgetItem(QString::fromStdString(model::shiftToString(t.turno()))));
 
-        const auto& jp = t.jornadaPadrao();
-        table_turmas_->setItem(r, 3, new SmartTableWidgetItem(QString::fromStdString(jp.jornada_total.toString())));
+        QString jornada_str;
+        QString intervals_str;
+        QString tooltip_str = "<b>Horários e Intervalos da Turma:</b><br>";
 
-        QStringList int_strs;
-        if (jp.int1_ativo) {
-            int_strs << QString("Int1: %1").arg(QString::fromStdString(jp.intervalo_1.toString()));
+        for (auto d : model::allDays()) {
+            if (!t.funcionaNoDia(d)) {
+                tooltip_str += QString("• <b>%1</b>: Sem aula (não letivo)<br>").arg(QString::fromStdString(model::dayToString(d)));
+                continue;
+            }
+            auto jd = t.jornadaParaDia(d);
+            QStringList ints;
+            for (const auto& inter : jd.intervalosAtivos()) {
+                ints << QString::fromStdString(inter.toString());
+            }
+            tooltip_str += QString("• <b>%1</b>: %2 [Intervalos: %3]<br>")
+                .arg(QString::fromStdString(model::dayToString(d)))
+                .arg(QString::fromStdString(jd.jornada_total.toString()))
+                .arg(ints.isEmpty() ? "Nenhum" : ints.join(", "));
         }
-        if (jp.int2_ativo) {
-            int_strs << QString("Int2: %1").arg(QString::fromStdString(jp.intervalo_2.toString()));
+
+        if (t.temExcecoes()) {
+            QStringList diff_parts;
+            for (const auto& [d, exc] : t.excecoesPorDia()) {
+                diff_parts << QString("%1: %2").arg(QString::fromStdString(model::dayToString(d)),
+                                                     QString::fromStdString(exc.jornada_total.toString()));
+            }
+            jornada_str = QString("%1 (%2)")
+                .arg(QString::fromStdString(t.jornadaPadrao().jornada_total.toString()),
+                     diff_parts.join("; "));
+            intervals_str = "Personalizado por dia (passe o mouse)";
+        } else {
+            const auto& jp = t.jornadaPadrao();
+            jornada_str = QString::fromStdString(jp.jornada_total.toString());
+            QStringList int_strs;
+            if (jp.int1_ativo) int_strs << QString("Int1: %1").arg(QString::fromStdString(jp.intervalo_1.toString()));
+            if (jp.int2_ativo) int_strs << QString("Int2: %1").arg(QString::fromStdString(jp.intervalo_2.toString()));
+            if (jp.int3_ativo) int_strs << QString("Int3: %1").arg(QString::fromStdString(jp.intervalo_3.toString()));
+            intervals_str = int_strs.isEmpty() ? "Nenhum" : int_strs.join(" | ");
         }
-        if (jp.int3_ativo) {
-            int_strs << QString("Int3: %1").arg(QString::fromStdString(jp.intervalo_3.toString()));
-        }
-        QString intervals = int_strs.isEmpty() ? "Nenhum" : int_strs.join(" | ");
-        table_turmas_->setItem(r, 4, new SmartTableWidgetItem(intervals));
+
+        auto* item_jornada = new SmartTableWidgetItem(jornada_str);
+        item_jornada->setToolTip(tooltip_str);
+        table_turmas_->setItem(r, 3, item_jornada);
+
+        auto* item_int = new SmartTableWidgetItem(intervals_str);
+        item_int->setToolTip(tooltip_str);
+        table_turmas_->setItem(r, 4, item_int);
 
         QString sala = t.temSalaTeoricaPredefinida()
             ? QString::fromStdString(t.salaTeoricaId() + " (Fixa)")
