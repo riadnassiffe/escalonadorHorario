@@ -61,6 +61,10 @@ void ConfigWidget::setupUi() {
                                          "Considera as notas de 0 a 10 atribuídas pelos professores aos dias da semana.",
                                          slider_pref_dias_, lbl_val_pref_dias_, 7));
 
+    lay_pesos->addLayout(make_slider_row("Priorizar turnos pretendidos dos professores (λ6):",
+                                         "Penaliza quando um professor é alocado em turno não pretendido no dia.",
+                                         slider_pref_turnos_, lbl_val_pref_turnos_, 8));
+
     lay_pesos->addLayout(make_slider_row("Reduzir lacunas na grade das turmas (λ4):",
                                          "Compacta os horários das turmas eliminando aulas vagas intermediárias.",
                                          slider_lacunas_turma_, lbl_val_lacunas_turma_, 2));
@@ -151,6 +155,7 @@ void ConfigWidget::updateSliderLabels() {
     lbl_val_dias_->setText(QString::number(slider_dias_->value()));
     lbl_val_pref_horarios_->setText(QString::number(slider_pref_horarios_->value()));
     lbl_val_pref_dias_->setText(QString::number(slider_pref_dias_->value()));
+    lbl_val_pref_turnos_->setText(QString::number(slider_pref_turnos_->value()));
     lbl_val_lacunas_turma_->setText(QString::number(slider_lacunas_turma_->value()));
 }
 
@@ -159,6 +164,7 @@ void ConfigWidget::loadConfig(const model::OptimizationConfig& cfg) {
     slider_dias_->setValue(cfg.lambda_dias);
     slider_pref_horarios_->setValue(cfg.lambda_preferencias);
     slider_pref_dias_->setValue(cfg.lambda_preferencia_dias);
+    slider_pref_turnos_->setValue(cfg.lambda_preferencia_turnos);
     slider_lacunas_turma_->setValue(cfg.lambda_lacunas_turma);
 
     int idx_dias = combo_modelo_dias_->findData(static_cast<int>(cfg.modelo_preferencia_dias));
@@ -190,6 +196,7 @@ model::OptimizationConfig ConfigWidget::getConfig() const {
     cfg.lambda_dias = slider_dias_->value();
     cfg.lambda_preferencias = slider_pref_horarios_->value();
     cfg.lambda_preferencia_dias = slider_pref_dias_->value();
+    cfg.lambda_preferencia_turnos = slider_pref_turnos_->value();
     cfg.lambda_lacunas_turma = slider_lacunas_turma_->value();
 
     cfg.modelo_preferencia_dias = static_cast<model::ModeloPreferenciaDias>(

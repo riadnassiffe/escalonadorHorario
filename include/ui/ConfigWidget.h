@@ -38,6 +38,9 @@ private:
     QSlider* slider_pref_dias_{nullptr};
     QLabel* lbl_val_pref_dias_{nullptr};
 
+    QSlider* slider_pref_turnos_{nullptr};
+    QLabel* lbl_val_pref_turnos_{nullptr};
+
     QSlider* slider_lacunas_turma_{nullptr};
     QLabel* lbl_val_lacunas_turma_{nullptr};
 

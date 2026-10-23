@@ -32,6 +32,8 @@ enum class ShiftType {
 
 std::string shiftToString(ShiftType shift);
 ShiftType stringToShift(const std::string& str);
+const std::vector<ShiftType>& allWorkShifts();
+ShiftType slotToShift(int slot);
 
 struct TimeInterval {
     int start_slot{0}; // 0-indexed 5-minute interval [start_slot, end_slot)

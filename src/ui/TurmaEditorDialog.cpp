@@ -29,50 +29,84 @@ TurmaEditorDialog::TurmaEditorDialog(const std::vector<model::Room>& salas_dispo
 }
 
 void TurmaEditorDialog::setupUi() {
-    setMinimumWidth(780);
-    setMinimumHeight(720);
-    resize(820, 750);
+    setMinimumWidth(750);
+    setMinimumHeight(580);
+    resize(790, 630);
 
     auto* main_layout = new QVBoxLayout(this);
-    main_layout->setSpacing(12);
+    main_layout->setContentsMargins(12, 12, 12, 12);
+    main_layout->setSpacing(10);
 
     // 1. Identificação Básica
-    auto* form_layout = new QFormLayout();
-    txt_id_ = new QLineEdit(this);
+    auto* form_card = new QWidget(this);
+    auto* form_layout = new QGridLayout(form_card);
+    form_layout->setContentsMargins(0, 0, 0, 4);
+    form_layout->setHorizontalSpacing(14);
+    form_layout->setVerticalSpacing(8);
+
+    txt_id_ = new QLineEdit(form_card);
     txt_id_->setPlaceholderText("Ex: T01");
-    form_layout->addRow("Código (ID):", txt_id_);
+    txt_id_->setMinimumWidth(110);
+    txt_id_->setMaximumWidth(150);
 
-    txt_nome_ = new QLineEdit(this);
+    txt_nome_ = new QLineEdit(form_card);
     txt_nome_->setPlaceholderText("Ex: 1º Ano A - Ensino Médio");
-    form_layout->addRow("Nome da Turma:", txt_nome_);
 
-    combo_turno_ = new QComboBox(this);
+    combo_turno_ = new QComboBox(form_card);
     combo_turno_->addItem("Manhã (MANHA)", static_cast<int>(model::ShiftType::MANHA));
     combo_turno_->addItem("Tarde (TARDE)", static_cast<int>(model::ShiftType::TARDE));
     combo_turno_->addItem("Noite (NOITE)", static_cast<int>(model::ShiftType::NOITE));
     combo_turno_->addItem("Integral / Misto (INTEGRAL)", static_cast<int>(model::ShiftType::INTEGRAL));
-    form_layout->addRow("Turno Geral da Turma:", combo_turno_);
 
-    main_layout->addLayout(form_layout);
+    auto* lbl_id = new QLabel("Código (ID):", form_card);
+    lbl_id->setStyleSheet("font-weight: 600;");
+    auto* lbl_turno = new QLabel("Turno Geral:", form_card);
+    lbl_turno->setStyleSheet("font-weight: 600;");
+    auto* lbl_nome = new QLabel("Nome da Turma:", form_card);
+    lbl_nome->setStyleSheet("font-weight: 600;");
 
-    // 2. Grupo: Jornadas e Horários da Turma por Dia da Semana (Seção 2.4)
-    auto* grp_jornadas = new QGroupBox("📅 Horários e Jornadas por Dia da Semana (Seção 2.4)", this);
-    auto* layout_grp_j = new QVBoxLayout(grp_jornadas);
-    layout_grp_j->setSpacing(8);
+    form_layout->addWidget(lbl_id, 0, 0);
+    form_layout->addWidget(txt_id_, 0, 1);
+    form_layout->addWidget(lbl_turno, 0, 2);
+    form_layout->addWidget(combo_turno_, 0, 3);
+
+    form_layout->addWidget(lbl_nome, 1, 0);
+    form_layout->addWidget(txt_nome_, 1, 1, 1, 3);
+
+    main_layout->addWidget(form_card);
+
+    // 2. Abas Principais
+    auto* main_tabs = new QTabWidget(this);
+
+    // =========================================================================
+    // ABA 1: JORNADAS E HORÁRIOS POR DIA DA SEMANA
+    // =========================================================================
+    auto* tab_jornadas = new QWidget(main_tabs);
+    auto* layout_tab_j = new QVBoxLayout(tab_jornadas);
+    layout_tab_j->setContentsMargins(10, 12, 10, 10);
+    layout_tab_j->setSpacing(8);
 
     // Barra de Ações Rápidas para toda a semana
     auto* bar_semana = new QHBoxLayout();
-    auto* lbl_rapido = new QLabel("⚡ Aplicar em toda a semana:", grp_jornadas);
+    bar_semana->setSpacing(6);
+    auto* lbl_rapido = new QLabel("⚡ Aplicar em toda a semana:", tab_jornadas);
     lbl_rapido->setStyleSheet("font-weight: bold; color: #38bdf8;");
     bar_semana->addWidget(lbl_rapido);
 
-    auto* btn_all_manha = new QPushButton("🌅 Toda Manhã", grp_jornadas);
+    auto* btn_all_manha = new QPushButton("🌅 Toda Manhã", tab_jornadas);
+    btn_all_manha->setObjectName("btnSecondary");
     btn_all_manha->setToolTip("Aplica horário matutino (07:30 - 11:45) para todos os dias");
-    auto* btn_all_tarde = new QPushButton("☀️ Toda Tarde", grp_jornadas);
+
+    auto* btn_all_tarde = new QPushButton("☀️ Toda Tarde", tab_jornadas);
+    btn_all_tarde->setObjectName("btnSecondary");
     btn_all_tarde->setToolTip("Aplica horário vespertino (13:15 - 17:30) para todos os dias");
-    auto* btn_all_integral = new QPushButton("🌅+☀️ Toda Integral", grp_jornadas);
+
+    auto* btn_all_integral = new QPushButton("🌅+☀️ Toda Integral", tab_jornadas);
+    btn_all_integral->setObjectName("btnSecondary");
     btn_all_integral->setToolTip("Aplica horário de manhã e tarde com almoço (07:30 - 17:30) para todos os dias");
-    auto* btn_all_noite = new QPushButton("🌙 Toda Noite", grp_jornadas);
+
+    auto* btn_all_noite = new QPushButton("🌙 Toda Noite", tab_jornadas);
+    btn_all_noite->setObjectName("btnSecondary");
     btn_all_noite->setToolTip("Aplica horário noturno (18:30 - 22:30) para todos os dias");
 
     bar_semana->addWidget(btn_all_manha);
@@ -80,7 +114,7 @@ void TurmaEditorDialog::setupUi() {
     bar_semana->addWidget(btn_all_integral);
     bar_semana->addWidget(btn_all_noite);
     bar_semana->addStretch();
-    layout_grp_j->addLayout(bar_semana);
+    layout_tab_j->addLayout(bar_semana);
 
     connect(btn_all_manha, &QPushButton::clicked, this, [this]() {
         applyPresetToAllDays(model::ShiftType::MANHA);
@@ -100,54 +134,89 @@ void TurmaEditorDialog::setupUi() {
     });
 
     // Abas de cada dia da semana (Segunda a Sexta)
-    tab_dias_ = new QTabWidget(grp_jornadas);
+    tab_dias_ = new QTabWidget(tab_jornadas);
     for (int i = 0; i < 5; ++i) {
         auto d = static_cast<model::DayOfWeek>(i);
-        QString tab_title = QString::fromStdString(model::dayToLongString(d));
+        QString tab_title = QString::fromStdString(model::dayToString(d));
         tab_dias_->addTab(createDayTab(i), tab_title);
     }
-    layout_grp_j->addWidget(tab_dias_);
+    layout_tab_j->addWidget(tab_dias_);
 
     // Resumo semanal
-    lbl_resumo_semanal_ = new QLabel(grp_jornadas);
+    lbl_resumo_semanal_ = new QLabel(tab_jornadas);
     lbl_resumo_semanal_->setStyleSheet("font-size: 11px; padding: 6px; background-color: rgba(30, 41, 59, 0.7); "
                                        "border: 1px solid #334155; border-radius: 4px; color: #cbd5e1;");
     lbl_resumo_semanal_->setWordWrap(true);
-    layout_grp_j->addWidget(lbl_resumo_semanal_);
+    layout_tab_j->addWidget(lbl_resumo_semanal_);
 
-    main_layout->addWidget(grp_jornadas);
+    main_tabs->addTab(tab_jornadas, "📅 Horários && Jornadas por Dia");
 
-    // 3. Grupo: Sala Teórica Permanente (Seção 3.6)
-    auto* grp_sala = new QGroupBox("🏛️ Sala Teórica Permanente Durante a Semana (Seção 3.6)", this);
-    auto* layout_s = new QVBoxLayout(grp_sala);
+    // =========================================================================
+    // ABA 2: SALA TEÓRICA PERMANENTE (SEÇÃO 3.6)
+    // =========================================================================
+    auto* tab_sala = new QWidget(main_tabs);
+    auto* layout_tab_sala = new QVBoxLayout(tab_sala);
+    layout_tab_sala->setContentsMargins(12, 14, 12, 12);
+    layout_tab_sala->setSpacing(12);
 
-    rad_sala_fixa_ = new QRadioButton("Sala Teórica Pré-definida no cadastro:", grp_sala);
+    auto* lbl_sala_info = new QLabel(
+        "A Seção 3.6 do modelo acadêmico define a política de sala permanente para aulas teóricas da turma durante a semana.<br>"
+        "Você pode definir uma sala fixa específica no cadastro ou permitir que o otimizador escolha a melhor sala fixa permanente.", tab_sala);
+    lbl_sala_info->setStyleSheet("color: #94a3b8; font-size: 11px;");
+    lbl_sala_info->setWordWrap(true);
+    layout_tab_sala->addWidget(lbl_sala_info);
+
+    rad_sala_fixa_ = new QRadioButton("🏛️ Sala Teórica Pré-definida no cadastro:", tab_sala);
+    rad_sala_fixa_->setStyleSheet("font-weight: bold; font-size: 13px;");
     rad_sala_fixa_->setChecked(true);
-    layout_s->addWidget(rad_sala_fixa_);
+    layout_tab_sala->addWidget(rad_sala_fixa_);
 
-    combo_sala_fixa_ = new QComboBox(grp_sala);
+    combo_sala_fixa_ = new QComboBox(tab_sala);
     for (const auto& s : salas_disponiveis_) {
         combo_sala_fixa_->addItem(QString::fromStdString(s.nome() + " [" + s.id() + "]"),
                                   QString::fromStdString(s.id()));
     }
-    layout_s->addWidget(combo_sala_fixa_);
+    layout_tab_sala->addWidget(combo_sala_fixa_);
 
-    rad_sala_opt_ = new QRadioButton("Otimizador seleciona uma sala fixa permanente dentre as permitidas:", grp_sala);
-    layout_s->addWidget(rad_sala_opt_);
+    rad_sala_opt_ = new QRadioButton("🎯 Otimizador seleciona uma sala fixa permanente dentre as permitidas:", tab_sala);
+    rad_sala_opt_->setStyleSheet("font-weight: bold; font-size: 13px;");
+    layout_tab_sala->addWidget(rad_sala_opt_);
 
-    list_salas_permitidas_ = new QListWidget(grp_sala);
+    auto* bar_sel_salas = new QHBoxLayout();
+    auto* btn_sel_all = new QPushButton("Selecionar Todas", tab_sala);
+    btn_sel_all->setObjectName("btnSecondary");
+    auto* btn_desel_all = new QPushButton("Desmarcar Todas", tab_sala);
+    btn_desel_all->setObjectName("btnSecondary");
+    bar_sel_salas->addWidget(new QLabel("Salas permitidas para escolha:", tab_sala));
+    bar_sel_salas->addStretch();
+    bar_sel_salas->addWidget(btn_sel_all);
+    bar_sel_salas->addWidget(btn_desel_all);
+    layout_tab_sala->addLayout(bar_sel_salas);
+
+    list_salas_permitidas_ = new QListWidget(tab_sala);
     list_salas_permitidas_->setSelectionMode(QAbstractItemView::MultiSelection);
-    list_salas_permitidas_->setMaximumHeight(85);
+    list_salas_permitidas_->setMinimumHeight(180);
     for (const auto& s : salas_disponiveis_) {
         auto* item = new QListWidgetItem(QString::fromStdString(s.nome() + " [" + s.id() + "]"), list_salas_permitidas_);
         item->setData(Qt::UserRole, QString::fromStdString(s.id()));
     }
-    layout_s->addWidget(list_salas_permitidas_);
+    layout_tab_sala->addWidget(list_salas_permitidas_);
+
+    connect(btn_sel_all, &QPushButton::clicked, this, [this]() {
+        list_salas_permitidas_->selectAll();
+    });
+    connect(btn_desel_all, &QPushButton::clicked, this, [this]() {
+        list_salas_permitidas_->clearSelection();
+    });
 
     connect(rad_sala_fixa_, &QRadioButton::toggled, this, &TurmaEditorDialog::onSalaModeChanged);
     connect(rad_sala_opt_, &QRadioButton::toggled, this, &TurmaEditorDialog::onSalaModeChanged);
 
-    main_layout->addWidget(grp_sala);
+    layout_tab_sala->addStretch();
+
+    main_tabs->addTab(tab_sala, "🏛️ Sala Teórica Permanente");
+
+    main_layout->addWidget(main_tabs);
 
     // 4. Botões de Ação
     auto* btn_box = new QHBoxLayout();
@@ -202,7 +271,7 @@ void TurmaEditorDialog::setupUi() {
 QWidget* TurmaEditorDialog::createDayTab(int day_idx) {
     auto* tab_page = new QWidget(this);
     auto* tab_layout = new QVBoxLayout(tab_page);
-    tab_layout->setSpacing(10);
+    tab_layout->setSpacing(8);
     tab_layout->setContentsMargins(10, 10, 10, 10);
 
     auto& w = days_widgets_[day_idx];
@@ -217,6 +286,7 @@ QWidget* TurmaEditorDialog::createDayTab(int day_idx) {
     top_row->addStretch();
 
     auto* btn_copy = new QPushButton(QString("📋 Copiar para outros dias..."), tab_page);
+    btn_copy->setObjectName("btnSecondary");
     btn_copy->setToolTip(QString("Copia o horário e intervalos configurados para %1 para outros dias da semana")
                          .arg(QString::fromStdString(model::dayToLongString(d))));
     top_row->addWidget(btn_copy);
@@ -234,12 +304,25 @@ QWidget* TurmaEditorDialog::createDayTab(int day_idx) {
 
     // Barra de Presets do Dia
     auto* presets_row = new QHBoxLayout();
-    presets_row->addWidget(new QLabel("Predefinir este dia:"));
+    auto* lbl_pre_dia = new QLabel("Predefinir este dia:", w.content_panel);
+    lbl_pre_dia->setStyleSheet("color: #94a3b8;");
+    presets_row->addWidget(lbl_pre_dia);
+
     auto* btn_p_manha = new QPushButton("🌅 Manhã", w.content_panel);
+    btn_p_manha->setObjectName("btnSecondary");
+    btn_p_manha->setMinimumHeight(28);
+
     auto* btn_p_tarde = new QPushButton("☀️ Tarde", w.content_panel);
+    btn_p_tarde->setObjectName("btnSecondary");
+    btn_p_tarde->setMinimumHeight(28);
+
     auto* btn_p_integral = new QPushButton("🌅+☀️ Manhã e Tarde (Integral)", w.content_panel);
     btn_p_integral->setStyleSheet("font-weight: bold; color: #38bdf8;");
+    btn_p_integral->setMinimumHeight(28);
+
     auto* btn_p_noite = new QPushButton("🌙 Noite", w.content_panel);
+    btn_p_noite->setObjectName("btnSecondary");
+    btn_p_noite->setMinimumHeight(28);
 
     presets_row->addWidget(btn_p_manha);
     presets_row->addWidget(btn_p_tarde);
@@ -265,13 +348,21 @@ QWidget* TurmaEditorDialog::createDayTab(int day_idx) {
     auto* row_jornada = new QHBoxLayout();
     w.time_inicio = new QTimeEdit(QTime(7, 30), w.content_panel);
     w.time_inicio->setDisplayFormat("HH:mm");
+    w.time_inicio->setMinimumHeight(28);
+
     w.time_fim = new QTimeEdit(QTime(11, 45), w.content_panel);
     w.time_fim->setDisplayFormat("HH:mm");
+    w.time_fim->setMinimumHeight(28);
 
-    row_jornada->addWidget(new QLabel("⏰ Início da Jornada:"));
+    auto* lbl_j_ini = new QLabel("⏰ Início da Jornada:", w.content_panel);
+    lbl_j_ini->setStyleSheet("font-weight: 600;");
+    auto* lbl_j_fim = new QLabel("⏰ Fim da Jornada:", w.content_panel);
+    lbl_j_fim->setStyleSheet("font-weight: 600;");
+
+    row_jornada->addWidget(lbl_j_ini);
     row_jornada->addWidget(w.time_inicio);
     row_jornada->addSpacing(20);
-    row_jornada->addWidget(new QLabel("⏰ Fim da Jornada:"));
+    row_jornada->addWidget(lbl_j_fim);
     row_jornada->addWidget(w.time_fim);
     row_jornada->addStretch();
     panel_layout->addLayout(row_jornada);
@@ -283,8 +374,10 @@ QWidget* TurmaEditorDialog::createDayTab(int day_idx) {
     w.chk_int1->setStyleSheet("font-weight: bold;");
     w.time_int1_ini = new QTimeEdit(QTime(9, 40), w.content_panel);
     w.time_int1_ini->setDisplayFormat("HH:mm");
+    w.time_int1_ini->setMinimumHeight(28);
     w.time_int1_fim = new QTimeEdit(QTime(9, 55), w.content_panel);
     w.time_int1_fim->setDisplayFormat("HH:mm");
+    w.time_int1_fim->setMinimumHeight(28);
 
     row_int1->addWidget(w.chk_int1);
     row_int1->addSpacing(15);
@@ -303,9 +396,11 @@ QWidget* TurmaEditorDialog::createDayTab(int day_idx) {
     w.chk_int2->setStyleSheet("font-weight: bold;");
     w.time_int2_ini = new QTimeEdit(QTime(10, 30), w.content_panel);
     w.time_int2_ini->setDisplayFormat("HH:mm");
+    w.time_int2_ini->setMinimumHeight(28);
     w.time_int2_ini->setEnabled(false);
     w.time_int2_fim = new QTimeEdit(QTime(10, 45), w.content_panel);
     w.time_int2_fim->setDisplayFormat("HH:mm");
+    w.time_int2_fim->setMinimumHeight(28);
     w.time_int2_fim->setEnabled(false);
 
     row_int2->addWidget(w.chk_int2);
@@ -325,9 +420,11 @@ QWidget* TurmaEditorDialog::createDayTab(int day_idx) {
     w.chk_int3->setStyleSheet("font-weight: bold;");
     w.time_int3_ini = new QTimeEdit(QTime(11, 0), w.content_panel);
     w.time_int3_ini->setDisplayFormat("HH:mm");
+    w.time_int3_ini->setMinimumHeight(28);
     w.time_int3_ini->setEnabled(false);
     w.time_int3_fim = new QTimeEdit(QTime(11, 15), w.content_panel);
     w.time_int3_fim->setDisplayFormat("HH:mm");
+    w.time_int3_fim->setMinimumHeight(28);
     w.time_int3_fim->setEnabled(false);
 
     row_int3->addWidget(w.chk_int3);
@@ -343,8 +440,10 @@ QWidget* TurmaEditorDialog::createDayTab(int day_idx) {
     // Status da jornada do dia
     w.lbl_status = new QLabel(w.content_panel);
     w.lbl_status->setStyleSheet("font-size: 12px; font-weight: bold;");
+    w.lbl_status->setWordWrap(true);
     panel_layout->addWidget(w.lbl_status);
 
+    w.content_panel->setMinimumHeight(230);
     tab_layout->addWidget(w.content_panel);
     tab_layout->addStretch();
 
@@ -638,7 +737,8 @@ void TurmaEditorDialog::validateAllDays() {
         QString day_abbr = QString::fromStdString(model::dayToString(d));
 
         if (!w.chk_dia_ativo->isChecked()) {
-            tab_dias_->setTabText(i, QString("%1 (⏸️)").arg(day_abbr));
+            tab_dias_->setTabText(i, QString("%1 ⚪").arg(day_abbr));
+            tab_dias_->setTabToolTip(i, QString("%1: Sem aulas (dia não letivo)").arg(QString::fromStdString(model::dayToLongString(d))));
             w.lbl_status->setText("⚠️ Turma não tem aula neste dia (dia não letivo).");
             w.lbl_status->setStyleSheet("color: #94a3b8; font-style: italic;");
             resumo_partes << QString("<b>%1</b>: Folga").arg(day_abbr);
@@ -665,31 +765,38 @@ void TurmaEditorDialog::validateAllDays() {
             int ini_min = j.jornada_total.start_slot * model::SLOT_MINUTES;
             int fim_min = j.jornada_total.end_slot * model::SLOT_MINUTES;
             QString badge;
+            QString icon_badge;
             if (ini_min < 12 * 60 + 30 && fim_min > 13 * 60) {
-                badge = "🌅+☀️ Integral";
+                badge = "Integral";
+                icon_badge = "🌅+☀️";
                 has_morning = true;
                 has_afternoon = true;
             } else if (fim_min <= 13 * 60) {
-                badge = "🌅 Manhã";
+                badge = "Manhã";
+                icon_badge = "🌅";
                 has_morning = true;
             } else if (ini_min >= 12 * 60 && fim_min <= 18 * 60 + 30) {
-                badge = "☀️ Tarde";
+                badge = "Tarde";
+                icon_badge = "☀️";
                 has_afternoon = true;
             } else {
-                badge = "🌙 Noite";
+                badge = "Noite";
+                icon_badge = "🌙";
                 has_night = true;
             }
 
-            tab_dias_->setTabText(i, QString("%1 (%2)").arg(day_abbr, badge));
+            tab_dias_->setTabText(i, QString("%1 %2").arg(day_abbr, icon_badge));
+            tab_dias_->setTabToolTip(i, QString("%1 - %2: %3 min letivos").arg(QString::fromStdString(model::dayToLongString(d)), badge, QString::number(dia_min)));
             w.lbl_status->setText(QString("✅ Jornada Válida | %1 Bloco(s) Letivo(s): %2 (%3 min totais)")
                                   .arg(blocos.size())
                                   .arg(blocos_desc.join(", "))
                                   .arg(dia_min));
             w.lbl_status->setStyleSheet("color: #10b981; font-weight: bold;");
 
-            resumo_partes << QString("<b>%1</b>: %2 (%3m)").arg(day_abbr, badge, QString::number(dia_min));
+            resumo_partes << QString("<b>%1</b>: %2 %3 (%4m)").arg(day_abbr, icon_badge, badge, QString::number(dia_min));
         } else {
-            tab_dias_->setTabText(i, QString("%1 (❌ Inválido)").arg(day_abbr));
+            tab_dias_->setTabText(i, QString("%1 ❌").arg(day_abbr));
+            tab_dias_->setTabToolTip(i, QString("%1: Horário inconsistente").arg(QString::fromStdString(model::dayToLongString(d))));
             w.lbl_status->setText("❌ Inconsistência: Início < Intervalos ativos em ordem e sem sobreposição < Fim.");
             w.lbl_status->setStyleSheet("color: #ef4444; font-weight: bold;");
             resumo_partes << QString("<b>%1</b>: ❌ Inválido").arg(day_abbr);

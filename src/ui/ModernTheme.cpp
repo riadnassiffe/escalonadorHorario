@@ -156,7 +156,8 @@ QString ModernTheme::getStyleSheet() {
             color: #f8fafc;
             border: 1px solid #475569;
             border-radius: 6px;
-            padding: 6px 10px;
+            padding: 5px 8px;
+            min-height: 20px;
         }
 
         QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus, QTimeEdit:focus {
@@ -165,8 +166,75 @@ QString ModernTheme::getStyleSheet() {
         }
 
         QComboBox::drop-down {
-            border: none;
-            width: 24px;
+            subcontrol-origin: padding;
+            subcontrol-position: top right;
+            width: 26px;
+            border-left: 1px solid #334155;
+            background-color: #1e293b;
+            border-top-right-radius: 5px;
+            border-bottom-right-radius: 5px;
+        }
+
+        QComboBox::down-arrow {
+            width: 0;
+            height: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 5px solid #94a3b8;
+            margin: auto;
+        }
+
+        QComboBox::down-arrow:hover {
+            border-top-color: #38bdf8;
+        }
+
+        QComboBox QAbstractItemView {
+            background-color: #1e293b;
+            color: #f8fafc;
+            selection-background-color: #2563eb;
+            selection-color: #ffffff;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            padding: 4px;
+            outline: none;
+        }
+
+        QComboBox QAbstractItemView::item {
+            padding: 6px 10px;
+            border-radius: 4px;
+            min-height: 24px;
+        }
+
+        QComboBox QAbstractItemView::item:hover {
+            background-color: #334155;
+        }
+
+        QComboBox QAbstractItemView::item:selected {
+            background-color: #2563eb;
+        }
+
+        QSpinBox::up-button, QDoubleSpinBox::up-button, QTimeEdit::up-button {
+            subcontrol-origin: border;
+            subcontrol-position: top right;
+            width: 18px;
+            border-left: 1px solid #334155;
+            border-bottom: 1px solid #334155;
+            background-color: #1e293b;
+            border-top-right-radius: 5px;
+        }
+
+        QSpinBox::down-button, QDoubleSpinBox::down-button, QTimeEdit::down-button {
+            subcontrol-origin: border;
+            subcontrol-position: bottom right;
+            width: 18px;
+            border-left: 1px solid #334155;
+            background-color: #1e293b;
+            border-bottom-right-radius: 5px;
+        }
+
+        QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover, QTimeEdit::up-button:hover,
+        QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover, QTimeEdit::down-button:hover {
+            background-color: #334155;
         }
 
         QGroupBox {
@@ -207,21 +275,40 @@ QString ModernTheme::getStyleSheet() {
 
         QScrollBar:vertical {
             background: #0f172a;
-            width: 10px;
+            width: 12px;
             margin: 0;
+            border-radius: 6px;
         }
 
         QScrollBar::handle:vertical {
-            background: #334155;
-            min-height: 20px;
-            border-radius: 5px;
+            background: #475569;
+            min-height: 25px;
+            border-radius: 6px;
         }
 
         QScrollBar::handle:vertical:hover {
-            background: #475569;
+            background: #64748b;
         }
 
-        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+        QScrollBar:horizontal {
+            background: #0f172a;
+            height: 12px;
+            margin: 0;
+            border-radius: 6px;
+        }
+
+        QScrollBar::handle:horizontal {
+            background: #475569;
+            min-width: 25px;
+            border-radius: 6px;
+        }
+
+        QScrollBar::handle:horizontal:hover {
+            background: #64748b;
+        }
+
+        QScrollBar::add-line, QScrollBar::sub-line {
+            width: 0;
             height: 0;
         }
 

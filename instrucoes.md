@@ -568,13 +568,13 @@ $$
 
 As variáveis $u$ e $v$ são vinculadas às alocações para representar as condições descritas.
 
-O tempo ocioso é:
+O tempo ocioso é calculado de forma segmentada por turno ($s \in \{\text{MANHA}, \text{TARDE}, \text{NOITE}\}$), impedindo que intervalos entre turnos distintos (como almoço ou a transição manhã-noite) sejam computados como janelas indesejadas:
 
 $$
-J=5\sum_{p,d,k}g_{p,d,k}
+J = \sum_{p} \alpha_p \sum_{d,s,k} g_{p,d,s,k}
 $$
 
-Os intervalos institucionais que não devem ser penalizados, como almoço obrigatório, podem ser excluídos dessa soma.
+onde $\alpha_p \in [0, 10]$ representa o peso de aversão individual do professor $p$ a janelas (0 = tolerante/indiferente, 10 = aversão máxima). Além disso, cada professor pode indicar os turnos pretendidos por dia de trabalho, penalizando alocações em turnos desmarcados.
 
 ### 4.2. Minimizar dias de trabalho
 

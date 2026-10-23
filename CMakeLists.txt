@@ -86,3 +86,4 @@ target_link_libraries(EscalonadorGemini PRIVATE
     Qt6::Gui
     Qt6::Widgets
 )
+

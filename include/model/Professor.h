@@ -11,16 +11,12 @@ namespace scheduler::model {
 class Professor {
 public:
     Professor() {
-        for (size_t i = 0; i < 5; ++i) {
-            peso_dias_[i] = 5; // Valor neutro padrão (seção 2.3)
-        }
+        initDefaults();
     }
 
     Professor(std::string id, std::string nome)
         : id_(std::move(id)), nome_(std::move(nome)) {
-        for (size_t i = 0; i < 5; ++i) {
-            peso_dias_[i] = 5;
-        }
+        initDefaults();
     }
 
     const std::string& id() const noexcept { return id_; }
@@ -79,11 +75,33 @@ public:
     int maxAulasPorDia() const noexcept { return max_aulas_por_dia_; }
     void setMaxAulasPorDia(int max_aulas) noexcept { max_aulas_por_dia_ = max_aulas; }
 
+    // Aversão a janelas entre aulas (0 = indiferente/aceita janelas, 10 = máxima aversão)
+    int pesoJanela() const noexcept { return peso_janela_; }
+    void setPesoJanela(int peso) noexcept {
+        if (peso < 0) peso = 0;
+        if (peso > 10) peso = 10;
+        peso_janela_ = peso;
+    }
+
+    // Turnos que o professor pretende trabalhar por dia da semana
+    const std::vector<ShiftType>& turnosPretendidos(DayOfWeek d) const;
+    bool pretendeTurno(DayOfWeek d, ShiftType shift) const;
+    void setTurnosPretendidos(DayOfWeek d, std::vector<ShiftType> turnos);
+    void addTurnoPretendido(DayOfWeek d, ShiftType shift);
+    void clearTurnosPretendidos(DayOfWeek d);
+    const std::map<DayOfWeek, std::vector<ShiftType>>& todasPreferenciasTurnos() const noexcept {
+        return turnos_pretendidos_;
+    }
+
 private:
+    void initDefaults();
+
     std::string id_;
     std::string nome_;
     std::array<int, 5> peso_dias_{5, 5, 5, 5, 5};
+    int peso_janela_{8}; // Aversão a janelas individual do professor
     std::map<DayOfWeek, std::vector<TimeInterval>> disponibilidade_;
+    std::map<DayOfWeek, std::vector<ShiftType>> turnos_pretendidos_;
     int carga_maxima_diaria_minutos_{0}; // 0 = sem limite
     int max_aulas_por_dia_{0};           // 0 = sem limite
 };

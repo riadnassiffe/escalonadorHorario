@@ -65,6 +65,23 @@ ShiftType stringToShift(const std::string& str) {
     return ShiftType::MANHA;
 }
 
+const std::vector<ShiftType>& allWorkShifts() {
+    static const std::vector<ShiftType> shifts = {
+        ShiftType::MANHA,
+        ShiftType::TARDE,
+        ShiftType::NOITE
+    };
+    return shifts;
+}
+
+ShiftType slotToShift(int slot) {
+    constexpr int SLOT_12_30 = 150; // 12h30 = 750min / 5
+    constexpr int SLOT_18_00 = 216; // 18h00 = 1080min / 5
+    if (slot < SLOT_12_30) return ShiftType::MANHA;
+    if (slot < SLOT_18_00) return ShiftType::TARDE;
+    return ShiftType::NOITE;
+}
+
 TimeInterval::TimeInterval(const std::string& start_str, const std::string& end_str)
     : start_slot(timeStringToSlot(start_str)), end_slot(timeStringToSlot(end_str)) {
     if (start_slot > end_slot) {

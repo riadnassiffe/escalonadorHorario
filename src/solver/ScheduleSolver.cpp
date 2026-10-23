@@ -419,7 +419,8 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
     LinearExpr expr_D;   // Dias de trabalho
     LinearExpr expr_W;   // Penalidades de dias menos preferidos
     LinearExpr expr_P;   // Preferências de horários
-    LinearExpr expr_J;   // Janelas de professores
+    LinearExpr expr_J;   // Janelas de professores (calculadas por turno e ponderadas pelo peso do professor)
+    LinearExpr expr_T;   // Penalidades por turnos não pretendidos pelos professores
     LinearExpr expr_JG;  // Lacunas de turmas
 
     // 6.1 Variáveis y_{p,d}: indica se professor p trabalha no dia d (seção 4.2 & 4.4)
@@ -466,58 +467,82 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
         }
     }
 
-    // 6.3 Termo J: Minimizar janelas entre aulas dos professores (seção 4.1)
-    // Modelo linear exato: g_{p,d,k} >= u_{p,d,k} + v_{p,d,k} - 1 - w_{p,d,k}
+    // 6.3 Termo J: Minimizar janelas entre aulas dos professores (quebrado por turno e ponderado pelo peso do professor)
+    //     e Termo T: Penalizar alocações em turnos não pretendidos
     int gap_var_idx = 0;
+    int shift_var_idx = 0;
+
     for (const auto& prof : data.professores()) {
         for (auto dia : model::allDays()) {
-            const auto& items = vars_prof_dia[{prof.id(), dia}];
-            if (items.size() <= 1) continue;
+            const auto& items_dia = vars_prof_dia[{prof.id(), dia}];
+            if (items_dia.empty()) continue;
 
-            // Encontrar menor e maior slot possível
-            int min_s = 288, max_e = 0;
-            for (const auto& item : items) {
-                min_s = std::min(min_s, item.cand->start_slot);
-                max_e = std::max(max_e, item.cand->end_slot());
-            }
-
-            // Para cada slot k intermediário
-            for (int k = min_s; k < max_e; ++k) {
-                // Verificar se existem aulas que podem começar antes/em k e aulas depois/em k
-                std::vector<BoolVar> cands_before;
-                std::vector<BoolVar> cands_after;
-                LinearExpr w_k;
-
-                for (const auto& item : items) {
-                    if (item.cand->start_slot <= k && k < item.cand->end_slot()) {
-                        w_k += item.var;
-                    }
-                    if (item.cand->end_slot() <= k) {
-                        cands_before.push_back(item.var);
-                    }
-                    if (item.cand->start_slot > k) {
-                        cands_after.push_back(item.var);
+            for (auto shift : model::allWorkShifts()) {
+                std::vector<CandItem> items_shift;
+                for (const auto& item : items_dia) {
+                    if (model::slotToShift(item.cand->start_slot) == shift) {
+                        items_shift.push_back(item);
                     }
                 }
 
-                if (!cands_before.empty() && !cands_after.empty()) {
-                    BoolVar u = cp_model.NewBoolVar().WithName("u_" + std::to_string(gap_var_idx));
-                    BoolVar v = cp_model.NewBoolVar().WithName("v_" + std::to_string(gap_var_idx));
-                    BoolVar g = cp_model.NewBoolVar().WithName("g_" + std::to_string(gap_var_idx++));
+                if (items_shift.empty()) continue;
 
-                    // u = 1 se alguma aula já terminou antes de k
-                    for (const auto& b : cands_before) {
-                        cp_model.AddLessOrEqual(b, u);
+                // Penalidade para turno não pretendido no dia (Termo T)
+                if (!prof.pretendeTurno(dia, shift)) {
+                    BoolVar y_shift = cp_model.NewBoolVar().WithName(
+                        "y_shift_" + prof.id() + "_" + std::to_string(static_cast<int>(dia)) + "_" +
+                        std::to_string(static_cast<int>(shift)) + "_" + std::to_string(shift_var_idx++));
+
+                    LinearExpr sum_shift;
+                    for (const auto& item : items_shift) {
+                        cp_model.AddLessOrEqual(item.var, y_shift);
+                        sum_shift += item.var;
                     }
-                    // v = 1 se alguma aula ainda vai começar depois de k
-                    for (const auto& a : cands_after) {
-                        cp_model.AddLessOrEqual(a, v);
+                    cp_model.AddLessOrEqual(y_shift, sum_shift);
+
+                    expr_T += y_shift;
+                }
+
+                // Cálculo de janelas quebrado dentro deste turno (Termo J)
+                // Ponderado pela vontade individual do professor (prof.pesoJanela())
+                if (prof.pesoJanela() <= 0 || items_shift.size() <= 1) continue;
+
+                int min_s = 288, max_e = 0;
+                for (const auto& item : items_shift) {
+                    min_s = std::min(min_s, item.cand->start_slot);
+                    max_e = std::max(max_e, item.cand->end_slot());
+                }
+
+                for (int k = min_s; k < max_e; ++k) {
+                    std::vector<BoolVar> cands_before;
+                    std::vector<BoolVar> cands_after;
+                    LinearExpr w_k;
+
+                    for (const auto& item : items_shift) {
+                        if (item.cand->start_slot <= k && k < item.cand->end_slot()) {
+                            w_k += item.var;
+                        }
+                        if (item.cand->end_slot() <= k) {
+                            cands_before.push_back(item.var);
+                        }
+                        if (item.cand->start_slot > k) {
+                            cands_after.push_back(item.var);
+                        }
                     }
 
-                    // g >= u + v - 1 - w_k
-                    cp_model.AddGreaterOrEqual(g, u + v - 1 - w_k);
+                    if (!cands_before.empty() && !cands_after.empty()) {
+                        BoolVar u = cp_model.NewBoolVar().WithName("u_" + std::to_string(gap_var_idx));
+                        BoolVar v = cp_model.NewBoolVar().WithName("v_" + std::to_string(gap_var_idx));
+                        BoolVar g = cp_model.NewBoolVar().WithName("g_" + std::to_string(gap_var_idx++));
 
-                    expr_J += g; // Cada slot g representa 5 minutos
+                        for (const auto& b : cands_before) cp_model.AddLessOrEqual(b, u);
+                        for (const auto& a : cands_after) cp_model.AddLessOrEqual(a, v);
+
+                        cp_model.AddGreaterOrEqual(g, u + v - 1 - w_k);
+
+                        // Pondera cada slot de janela de acordo com a vontade do professor (pesoJanela: 0 a 10)
+                        expr_J += prof.pesoJanela() * g;
+                    }
                 }
             }
         }
@@ -570,10 +595,11 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
 
     // Função Objetivo Global Ponderada
     LinearExpr funcao_objetivo;
-    funcao_objetivo += data.config().lambda_janelas * (5 * expr_J);
+    funcao_objetivo += data.config().lambda_janelas * expr_J;
     funcao_objetivo += data.config().lambda_dias * expr_D;
     funcao_objetivo += data.config().lambda_preferencias * expr_P;
     funcao_objetivo += data.config().lambda_preferencia_dias * expr_W;
+    funcao_objetivo += data.config().lambda_preferencia_turnos * 10 * expr_T;
     funcao_objetivo += data.config().lambda_lacunas_turma * (5 * expr_JG);
 
     cp_model.Minimize(funcao_objetivo);
@@ -896,20 +922,34 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
 
             for (const auto& p_id : aula->professores()) {
                 const auto* p = data.findProfessor(p_id);
+                auto c_shift = model::slotToShift(c.start_slot);
                 if (p) {
                     penalty += (10 - p->pesoDia(c.dia)) * data.config().lambda_preferencia_dias;
+                    if (!p->pretendeTurno(c.dia, c_shift)) {
+                        penalty += 10.0 * data.config().lambda_preferencia_turnos;
+                    }
                 }
                 const auto& existing = prof_ocup[{p_id, c.dia}];
-                if (!existing.empty()) {
-                    int min_s = s, max_e = e;
+                if (!existing.empty() && p && p->pesoJanela() > 0) {
+                    std::vector<SlotRange> existing_shift;
                     for (const auto& r : existing) {
-                        min_s = std::min(min_s, r.start);
-                        max_e = std::max(max_e, r.end);
+                        if (model::slotToShift(r.start) == c_shift) {
+                            existing_shift.push_back(r);
+                        }
                     }
-                    int occupied_len = (e - s);
-                    for (const auto& r : existing) occupied_len += (r.end - r.start);
-                    int gap_slots = (max_e - min_s) - occupied_len;
-                    penalty += gap_slots * data.config().lambda_janelas * 2;
+                    if (!existing_shift.empty()) {
+                        int min_s = s, max_e = e;
+                        for (const auto& r : existing_shift) {
+                            min_s = std::min(min_s, r.start);
+                            max_e = std::max(max_e, r.end);
+                        }
+                        int occupied_len = (e - s);
+                        for (const auto& r : existing_shift) occupied_len += (r.end - r.start);
+                        int gap_slots = (max_e - min_s) - occupied_len;
+                        if (gap_slots > 0) {
+                            penalty += gap_slots * data.config().lambda_janelas * (p->pesoJanela() / 5.0);
+                        }
+                    }
                 }
             }
 

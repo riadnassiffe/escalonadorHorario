@@ -30,6 +30,18 @@ nlohmann::json JsonSerialization::professorToJson(const model::Professor& prof) 
 
     j["carga_maxima_diaria_minutos"] = prof.cargaMaximaDiariaMinutos();
     j["max_aulas_por_dia"] = prof.maxAulasPorDia();
+    j["peso_janela"] = prof.pesoJanela();
+
+    nlohmann::json turnos_json;
+    for (auto d : model::allDays()) {
+        nlohmann::json arr = nlohmann::json::array();
+        for (auto s : prof.turnosPretendidos(d)) {
+            arr.push_back(model::shiftToString(s));
+        }
+        turnos_json[model::dayToString(d)] = arr;
+    }
+    j["turnos_pretendidos"] = turnos_json;
+
     return j;
 }
 
@@ -38,11 +50,28 @@ model::Professor JsonSerialization::professorFromJson(const nlohmann::json& j) {
     if (j.contains("id")) prof.setId(j["id"].get<std::string>());
     if (j.contains("nome")) prof.setNome(j["nome"].get<std::string>());
 
+    if (j.contains("peso_janela")) {
+        prof.setPesoJanela(j["peso_janela"].get<int>());
+    }
+
     if (j.contains("preferencia_dias") && j["preferencia_dias"].is_object()) {
         for (auto d : model::allDays()) {
             std::string d_str = model::dayToString(d);
             if (j["preferencia_dias"].contains(d_str)) {
                 prof.setPesoDia(d, j["preferencia_dias"][d_str].get<int>());
+            }
+        }
+    }
+
+    if (j.contains("turnos_pretendidos") && j["turnos_pretendidos"].is_object()) {
+        for (auto d : model::allDays()) {
+            std::string d_str = model::dayToString(d);
+            if (j["turnos_pretendidos"].contains(d_str) && j["turnos_pretendidos"][d_str].is_array()) {
+                std::vector<model::ShiftType> turnos;
+                for (const auto& item : j["turnos_pretendidos"][d_str]) {
+                    turnos.push_back(model::stringToShift(item.get<std::string>()));
+                }
+                prof.setTurnosPretendidos(d, std::move(turnos));
             }
         }
     }
@@ -341,6 +370,7 @@ nlohmann::json JsonSerialization::configToJson(const model::OptimizationConfig& 
     j["lambda_preferencias"] = cfg.lambda_preferencias;
     j["lambda_lacunas_turma"] = cfg.lambda_lacunas_turma;
     j["lambda_preferencia_dias"] = cfg.lambda_preferencia_dias;
+    j["lambda_preferencia_turnos"] = cfg.lambda_preferencia_turnos;
     j["modelo_preferencia_dias"] = model::modeloPreferenciaDiasToString(cfg.modelo_preferencia_dias);
     j["preenchimento_integral_jornada"] = cfg.preenchimento_integral_jornada;
     j["distribuir_disciplinas_na_semana"] = cfg.distribuir_disciplinas_na_semana;
@@ -370,6 +400,7 @@ model::OptimizationConfig JsonSerialization::configFromJson(const nlohmann::json
     if (j.contains("lambda_preferencias")) cfg.lambda_preferencias = j["lambda_preferencias"].get<int>();
     if (j.contains("lambda_lacunas_turma")) cfg.lambda_lacunas_turma = j["lambda_lacunas_turma"].get<int>();
     if (j.contains("lambda_preferencia_dias")) cfg.lambda_preferencia_dias = j["lambda_preferencia_dias"].get<int>();
+    if (j.contains("lambda_preferencia_turnos")) cfg.lambda_preferencia_turnos = j["lambda_preferencia_turnos"].get<int>();
     if (j.contains("modelo_preferencia_dias")) {
         cfg.modelo_preferencia_dias = model::stringToModeloPreferenciaDias(j["modelo_preferencia_dias"].get<std::string>());
     }

@@ -103,6 +103,7 @@ struct OptimizationConfig {
     int lambda_dias{5};               // Concentrar aulas em menos dias (D)
     int lambda_preferencias{3};       // Respeitar preferências de horários (P)
     int lambda_preferencia_dias{7};   // Priorizar dias preferidos dos professores (W)
+    int lambda_preferencia_turnos{8}; // Priorizar turnos pretendidos dos professores (T)
     int lambda_lacunas_turma{2};      // Reduzir lacunas na grade das turmas (JG)
 
     ModeloPreferenciaDias modelo_preferencia_dias{ModeloPreferenciaDias::POR_DIA_TRABALHADO};

@@ -206,21 +206,32 @@ $$\sum_{a \in A_k} \sum_{(d, b, r) \in C_a} x_{a, d, b, r} \le M_{\text{diário}
 
 A função objetivo minimiza uma soma ponderada de critérios de qualidade pedagógica e conforto docente:
 
-$$\min Z = \lambda_1 \cdot J_{\text{prof}} + \lambda_2 \cdot D_{\text{prof}} + \lambda_3 \cdot P_{\text{prof}} + \lambda_4 \cdot J_{\text{turma}} + \lambda_5 \cdot W_{\text{warm\_start}} + \lambda_6 \cdot C_{\text{salas}}$$
+$$\min Z = \lambda_1 \cdot J_{\text{prof}} + \lambda_2 \cdot D_{\text{prof}} + \lambda_3 \cdot P_{\text{prof}} + \lambda_4 \cdot J_{\text{turma}} + \lambda_5 \cdot W_{\text{prof\_dias}} + \lambda_6 \cdot T_{\text{prof\_turnos}} + \dots$$
 
 onde os parâmetros de peso $\lambda_i \ge 0$ são customizados pelo usuário na tela de configuração.
 
 ---
 
-### 8.1. Minimização de Janelas de Professores ($J_{\text{prof}}$)
-Janelas são intervalos de tempo livres indesejados entre duas aulas lecionadas pelo mesmo professor no mesmo dia:
+### 8.1. Minimização de Janelas de Professores ($J_{\text{prof}}$) Quebrada por Turno e Ponderada pelo Professor
+A minimização de janelas é calculada separadamente para cada professor $p \in P$, dia $d \in D$ e turno $s \in \{\text{MANHA}, \text{TARDE}, \text{NOITE}\}$. Isso assegura que pausas normais entre turnos diferentes (como o intervalo entre o período matutino e o noturno) não sejam indevidamente penalizadas como janelas.
 
-$$J_{\text{prof}} = \sum_{p \in P} \sum_{d \in D} \operatorname{gap}_{p, d} = \sum_{p \in P} \sum_{d \in D} (\operatorname{span}_{p, d} - \operatorname{worked\_slots}_{p, d})$$
+Além disso, a penalidade é proporcional ao peso individual de aversão a janelas informado pelo próprio docente ($\alpha_p \in [0, 10]$):
+- Se $\alpha_p = 0$, o docente é indiferente a janelas (custo zero na função objetivo);
+- Se $\alpha_p = 10$, a aversão a janelas é máxima.
 
-O CP-SAT lineariza eficientemente essa relação utilizando restrições de envoltória sobre as variáveis de intervalo do professor $p$ no dia $d$:
-$$\operatorname{start}_{p, d} \le b + M(1 - x_{a, d, b, r}), \quad \operatorname{end}_{p, d} \ge (b + d_a) \cdot x_{a, d, b, r}$$
+$$J_{\text{prof}} = \sum_{p \in P} \alpha_p \sum_{d \in D} \sum_{s \in S} \operatorname{gap}_{p, d, s}$$
 
-### 8.2. Minimização de Dias Trabalhados e Agrupamento da Jornada Docente ($D_{\text{prof}}$)
+O CP-SAT lineariza eficientemente essa relação dentro de cada turno utilizando as variáveis de precedência e sucessão $u, v$ e presença $w_k$:
+$$g_{p, d, s, k} \ge u_{p, d, s, k} + v_{p, d, s, k} - 1 - w_{p, d, s, k}$$
+
+### 8.2. Respeito aos Turnos Pretendidos pelo Professor ($T_{\text{prof\_turnos}}$)
+Cada professor pode indicar, para cada dia da semana, quais turnos pretende trabalhar. Caso o solver necessite alocar o professor em um turno que ele não pretendeu naquele dia, uma penalidade é aplicada na função objetivo:
+
+$$T_{\text{prof\_turnos}} = \sum_{p \in P} \sum_{d \in D} \sum_{\substack{s \in S \\ s \notin \text{pretendidos}(p, d)}} y_{p, d, s}$$
+
+onde $y_{p, d, s} \in \{0, 1\}$ indica se o professor $p$ leciona no turno $s$ do dia $d$.
+
+### 8.3. Minimização de Dias Trabalhados e Agrupamento da Jornada Docente ($D_{\text{prof}}$)
 Evita que um professor tenha que comparecer à instituição por apenas um horário esporádico em um dia, compactando sua carga horária no menor número de dias possível:
 
 $$D_{\text{prof}} = \sum_{p \in P} \sum_{d \in D} u_{p, d}$$
@@ -228,24 +239,24 @@ $$D_{\text{prof}} = \sum_{p \in P} \sum_{d \in D} u_{p, d}$$
 sujeito a:
 $$u_{p, d} \ge x_{a, d, b, r}, \quad \forall a \in A, \, p \in P_a, \, (d, b, r) \in C_a$$
 
-### 8.3. Respeito às Preferências de Dias da Semana dos Docentes ($P_{\text{prof}}$)
+### 8.4. Respeito às Preferências de Dias da Semana dos Docentes ($W_{\text{prof\_dias}}$)
 Cada professor pode declarar notas de 0 a 10 para cada dia da semana. Dias com peso baixo acarretam penalidade na função objetivo:
 
-$$P_{\text{prof}} = \sum_{p \in P} \sum_{d \in D} (10 - w_{p, d}) \cdot u_{p, d}$$
+$$W_{\text{prof\_dias}} = \sum_{p \in P} \sum_{d \in D} (10 - w_{p, d}) \cdot u_{p, d}$$
 
-### 8.4. Minimização de Janelas e Buracos nas Turmas ($J_{\text{turma}}$)
+### 8.5. Minimização de Janelas e Buracos nas Turmas ($J_{\text{turma}}$)
 Garante que a grade das turmas seja compacta, sem aulas "vagas" entre aulas regulares:
 
 $$J_{\text{turma}} = \sum_{t \in T} \sum_{d \in D} (\operatorname{span}_{t, d} - \operatorname{worked\_slots}_{t, d} - \operatorname{recesso\_slots}_{t, d})$$
 
-### 8.5. Estabilidade e Proximidade à Grade Atual / Warm Start ($W_{\text{warm\_start}}$)
+### 8.6. Estabilidade e Proximidade à Grade Atual / Warm Start ($W_{\text{warm\_start}}$)
 Quando o usuário aciona o modo de re-otimização a partir da grade atual, o solver penaliza alterações em relação às aulas já posicionadas na tela $(\bar{d}_a, \bar{b}_a, \bar{r}_a)$:
 
 $$W_{\text{warm\_start}} = \sum_{a \in A_{\text{existente}}} \sum_{\substack{(d, b, r) \in C_a \\ (d, b, r) \neq (\bar{d}_a, \bar{b}_a, \bar{r}_a)}} x_{a, d, b, r}$$
 
 Isso assegura que pequenos ajustes manuais não destruam a estrutura do restante da grade.
 
-### 8.6. Minimização de Troca de Salas e Uso de Salas Secundárias ($C_{\text{salas}}$)
+### 8.7. Minimização de Troca de Salas e Uso de Salas Secundárias ($C_{\text{salas}}$)
 Penaliza o uso de salas reservas ou alternativas quando a sala ideal de menor custo está disponível:
 
 $$C_{\text{salas}} = \sum_{a \in A} \sum_{(d, b, r) \in C_a} \operatorname{custo}(r) \cdot x_{a, d, b, r}$$
