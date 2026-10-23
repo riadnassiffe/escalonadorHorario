@@ -51,6 +51,11 @@ void MainWindow::setupUi() {
     tab_widget_ = new QTabWidget(this);
 
     timetable_view_ = new TimetableView(data_, this);
+    connect(timetable_view_, &TimetableView::timetableModified, this, &MainWindow::updateKpiBanner);
+    connect(timetable_view_, &TimetableView::lessonMoved, this, [this](const QString& aid, const QString& details) {
+        statusBar()->showMessage("Aula " + aid + " modificada na grade: " + details, 6000);
+        updateKpiBanner();
+    });
     config_widget_ = new ConfigWidget(this);
 
     tab_widget_->addTab(timetable_view_, "📅 Grade Semanal");

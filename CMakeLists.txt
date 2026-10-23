@@ -36,7 +36,10 @@ set(SOURCES
     src/solver/ScheduleSolver.cpp
     src/serialization/JsonSerialization.cpp
     src/ui/ModernTheme.cpp
+    src/ui/TimetableGridWidget.cpp
     src/ui/TimetableView.cpp
+    src/ui/MoveLessonDialog.cpp
+    src/ui/ChangeRoomDialog.cpp
     src/ui/ProfessorEditorDialog.cpp
     src/ui/TurmaEditorDialog.cpp
     src/ui/RoomEditorDialog.cpp
@@ -64,7 +67,10 @@ set(HEADERS
     include/ui/ModernTheme.h
     include/ui/SmartTableWidgetItem.h
     include/ui/TableSearchSortBar.h
+    include/ui/TimetableGridWidget.h
     include/ui/TimetableView.h
+    include/ui/MoveLessonDialog.h
+    include/ui/ChangeRoomDialog.h
     include/ui/ProfessorEditorDialog.h
     include/ui/TurmaEditorDialog.h
     include/ui/RoomEditorDialog.h

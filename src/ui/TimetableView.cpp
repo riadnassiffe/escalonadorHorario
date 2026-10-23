@@ -1,6 +1,8 @@
 #include "ui/TimetableView.h"
 #include "ui/SmartTableWidgetItem.h"
 #include "ui/ModernTheme.h"
+#include "ui/MoveLessonDialog.h"
+#include "ui/ChangeRoomDialog.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLineEdit>
@@ -79,8 +81,8 @@ void TimetableView::setupUi() {
 
     main_layout->addLayout(top_panel);
 
-    // Tabela da Grade Semanal
-    table_ = new QTableWidget(this);
+    // Tabela da Grade Semanal com Drag & Drop
+    table_ = new TimetableGridWidget(this);
     table_->setColumnCount(5);
     QStringList headers;
     for (auto d : model::allDays()) {
@@ -103,6 +105,10 @@ void TimetableView::setupUi() {
             this, &TimetableView::onSemestreFiltroChanged);
     connect(table_, &QTableWidget::customContextMenuRequested,
             this, &TimetableView::onCellContextMenu);
+    connect(table_, &QTableWidget::cellDoubleClicked,
+            this, &TimetableView::onCellDoubleClicked);
+    connect(table_, &TimetableGridWidget::lessonDropRequested,
+            this, &TimetableView::onLessonDropRequested);
     connect(search_lesson_, &QLineEdit::textChanged,
             this, &TimetableView::onSearchLessonChanged);
 
@@ -197,6 +203,25 @@ void TimetableView::renderTimetable() {
                     horarios_set.insert({inter.start_slot, inter.end_slot});
                 }
             }
+
+            // Adicionar períodos letivos da turma para exibir slots vazios na grade
+            int dur_slots = 10; // 50 minutos padrão
+            for (const auto& d : data_.disciplinas()) {
+                if (std::find(d.turmas().begin(), d.turmas().end(), id_str) != d.turmas().end()) {
+                    if (d.duracaoSlots() > 0) {
+                        dur_slots = d.duracaoSlots();
+                        break;
+                    }
+                }
+            }
+            for (auto d : turma->diasLetivos()) {
+                auto j_dia = turma->jornadaParaDia(d);
+                for (const auto& b : j_dia.blocosLetivos()) {
+                    for (int s = b.start_slot; s + dur_slots <= b.end_slot; s += dur_slots) {
+                        horarios_set.insert({s, s + dur_slots});
+                    }
+                }
+            }
         }
         for (const auto& a : data_.grade().alocacoes()) {
             if (match_semestre(a) && std::find(a.turmas.begin(), a.turmas.end(), id_str) != a.turmas.end()) {
@@ -236,6 +261,7 @@ void TimetableView::renderTimetable() {
         }
     }
 
+    row_intervals_.clear();
     if (horarios_set.empty()) {
         table_->setRowCount(1);
         auto* empty_item = new QTableWidgetItem("Nenhuma aula gerada ou alocada para este registro neste semestre.");
@@ -244,6 +270,10 @@ void TimetableView::renderTimetable() {
         table_->setItem(0, 0, empty_item);
         table_->setSpan(0, 0, 1, 5);
         return;
+    }
+
+    for (const auto& [start_s, end_s] : horarios_set) {
+        row_intervals_.emplace_back(start_s, end_s);
     }
 
     table_->setRowCount(static_cast<int>(horarios_set.size()));
@@ -519,6 +549,19 @@ void TimetableView::onCellContextMenu(const QPoint& pos) {
     if (!aula_aloc || !aula_model) return;
 
     QMenu menu(this);
+
+    auto* move_act = menu.addAction("🔄 Mover Horário / Sala...");
+    connect(move_act, &QAction::triggered, [this, aula_id]() {
+        moverAulaManual(aula_id);
+    });
+
+    auto* room_act = menu.addAction("🏢 Alterar Sala de Aula...");
+    connect(room_act, &QAction::triggered, [this, aula_id]() {
+        mudarSalaManual(aula_id);
+    });
+
+    menu.addSeparator();
+
     if (aula_model->isPinned()) {
         auto* unpin_act = menu.addAction("🔓 Desafixar Horário Desta Aula");
         connect(unpin_act, &QAction::triggered, [this, aid]() {
@@ -547,6 +590,28 @@ void TimetableView::onCellContextMenu(const QPoint& pos) {
             }
         });
     }
+
+    auto* desalocar_act = menu.addAction("❌ Desalocar Aula da Grade");
+    connect(desalocar_act, &QAction::triggered, [this, aid]() {
+        auto resp = QMessageBox::question(this, "Confirmar Desalocação",
+            "Deseja remover esta aula da grade de horários?\n(A aula ficará como não alocada até a próxima otimização)",
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        if (resp == QMessageBox::Yes) {
+            auto& alocs = data_.grade().alocacoes();
+            alocs.erase(std::remove_if(alocs.begin(), alocs.end(), [&](const model::AllocatedLesson& a) {
+                return a.aula_id == aid;
+            }), alocs.end());
+            auto* a_model = data_.findAula(aid);
+            if (a_model) a_model->unpin();
+            auto stats = data_.grade().estatisticas();
+            stats.total_aulas_alocadas = static_cast<int>(alocs.size());
+            data_.grade().setEstatisticas(stats);
+            data_.grade().addMensagemDiagnostico("[MANUAL] Aula " + aid + " desalocada da grade pelo usuário.");
+            renderTimetable();
+            emit timetableModified();
+            emit lessonMoved(QString::fromStdString(aid), "Desalocada da grade");
+        }
+    });
 
     menu.addSeparator();
     auto* pin_all_act = menu.addAction("📌 Fixar Todas as Aulas da Grade Atual (Bloquear para Próximo Solver)");
@@ -577,6 +642,352 @@ void TimetableView::onCellContextMenu(const QPoint& pos) {
     });
 
     menu.exec(table_->viewport()->mapToGlobal(pos));
+}
+
+void TimetableView::onCellDoubleClicked(int row, int col) {
+    auto* item = table_->item(row, col);
+    if (!item) return;
+    QString aid = item->data(Qt::UserRole).toString();
+    if (!aid.isEmpty()) {
+        moverAulaManual(aid);
+    }
+}
+
+void TimetableView::moverAulaManual(const QString& aula_id) {
+    std::string aid = aula_id.toStdString();
+    auto* a_aloc = data_.grade().findAula(aid);
+    auto* a_model = data_.findAula(aid);
+    if (!a_aloc || !a_model) return;
+
+    MoveLessonDialog dlg(data_, aid, row_intervals_, this);
+    if (dlg.exec() == QDialog::Accepted) {
+        auto target_day = dlg.selectedDay();
+        auto target_interval = dlg.selectedInterval();
+        std::string target_room = dlg.selectedRoomId();
+
+        bool room_changed = false;
+        std::string s_nome;
+        if (!target_room.empty() && (a_aloc->salas.empty() || a_aloc->salas.front() != target_room)) {
+            a_aloc->salas = { target_room };
+            a_model->setPinnedRooms(a_aloc->salas);
+            const auto* s = data_.findSala(target_room);
+            s_nome = s ? s->nome() : target_room;
+            room_changed = true;
+        }
+
+        int target_row = -1;
+        for (size_t r = 0; r < row_intervals_.size(); ++r) {
+            if (row_intervals_[r].start_slot == target_interval.start_slot) {
+                target_row = static_cast<int>(r);
+                break;
+            }
+        }
+        int target_col = static_cast<int>(target_day);
+        if (target_row >= 0 && target_col >= 0) {
+            if (a_aloc->dia != target_day || a_aloc->intervalo.start_slot != target_interval.start_slot) {
+                onLessonDropRequested(aula_id, target_row, target_col);
+            } else if (room_changed) {
+                a_aloc->is_pinned = true;
+                a_model->setPinned(true);
+                data_.grade().addMensagemDiagnostico("[MANUAL] Sala da aula " + aid + " (" + a_aloc->disciplina_nome + ") alterada para " + s_nome + ".");
+                renderTimetable();
+                emit timetableModified();
+                emit lessonMoved(aula_id, QString("Sala alterada para %1").arg(QString::fromStdString(s_nome)));
+            }
+        }
+    }
+}
+
+void TimetableView::mudarSalaManual(const QString& aula_id) {
+    std::string aid = aula_id.toStdString();
+    auto* a_aloc = data_.grade().findAula(aid);
+    auto* a_model = data_.findAula(aid);
+    if (!a_aloc || !a_model) return;
+
+    ChangeRoomDialog dlg(data_, aid, this);
+    if (dlg.exec() == QDialog::Accepted) {
+        std::string nova_sala_id = dlg.selectedRoomId();
+        if (nova_sala_id.empty()) return;
+
+        if (!a_aloc->salas.empty() && a_aloc->salas.front() == nova_sala_id) {
+            return;
+        }
+
+        std::string sala_antiga_nome;
+        if (!a_aloc->salas.empty()) {
+            const auto* s_ant = data_.findSala(a_aloc->salas.front());
+            sala_antiga_nome = s_ant ? s_ant->nome() : a_aloc->salas.front();
+        } else {
+            sala_antiga_nome = "Nenhuma";
+        }
+
+        const auto* s_nova = data_.findSala(nova_sala_id);
+        std::string sala_nova_nome = s_nova ? s_nova->nome() : nova_sala_id;
+
+        std::string conflito_aid = dlg.conflictingAulaId();
+        if (!conflito_aid.empty() && dlg.isSwapRequested()) {
+            auto* conflito_aloc = data_.grade().findAula(conflito_aid);
+            auto* conflito_model = data_.findAula(conflito_aid);
+            if (conflito_aloc) {
+                auto salas_antigas = a_aloc->salas;
+                a_aloc->salas = { nova_sala_id };
+                conflito_aloc->salas = salas_antigas;
+
+                if (dlg.isPinned()) {
+                    a_aloc->is_pinned = true;
+                    a_model->setPinned(true);
+                    a_model->setPinnedRooms(a_aloc->salas);
+                    conflito_aloc->is_pinned = true;
+                    if (conflito_model) {
+                        conflito_model->setPinned(true);
+                        conflito_model->setPinnedRooms(conflito_aloc->salas);
+                    }
+                }
+
+                data_.grade().addMensagemDiagnostico("[MANUAL] Troca de salas: Aula " + aid + " (" + a_aloc->disciplina_nome + ") trocou para " + sala_nova_nome +
+                                                     ", e Aula " + conflito_aid + " (" + conflito_aloc->disciplina_nome + ") trocou para " + sala_antiga_nome + ".");
+
+                renderTimetable();
+                emit timetableModified();
+                emit lessonMoved(QString::fromStdString(aid), QString("Sala trocada para %1 (Swap com %2)").arg(QString::fromStdString(sala_nova_nome), QString::fromStdString(conflito_aloc->disciplina_nome)));
+                return;
+            }
+        }
+
+        a_aloc->salas = { nova_sala_id };
+        if (dlg.isPinned()) {
+            a_aloc->is_pinned = true;
+            a_model->setPinned(true);
+            a_model->setPinnedRooms(a_aloc->salas);
+        }
+
+        data_.grade().addMensagemDiagnostico("[MANUAL] Sala da aula " + aid + " (" + a_aloc->disciplina_nome + ") alterada de " + sala_antiga_nome + " para " + sala_nova_nome + ".");
+
+        renderTimetable();
+        emit timetableModified();
+        emit lessonMoved(QString::fromStdString(aid), QString("Sala alterada para %1").arg(QString::fromStdString(sala_nova_nome)));
+    }
+}
+
+std::vector<std::string> TimetableView::verificarConflitosMovimentacao(
+    const std::string& aid,
+    model::DayOfWeek dia,
+    const model::TimeInterval& intervalo) const {
+
+    std::vector<std::string> conflitos;
+    const auto* a_aloc = data_.grade().findAula(aid);
+    if (!a_aloc) return conflitos;
+
+    auto time_overlaps = [](const model::TimeInterval& t1, const model::TimeInterval& t2) {
+        return std::max(t1.start_slot, t2.start_slot) < std::min(t1.end_slot, t2.end_slot);
+    };
+
+    auto semestres_conflitam = [](const model::AllocatedLesson& a1, const model::AllocatedLesson& a2) {
+        if (a1.regime == model::RegimeDisciplina::ANUAL || a2.regime == model::RegimeDisciplina::ANUAL) return true;
+        int s1 = (a1.semestre == model::SemestreLetivo::SEMESTRE_2 || a1.semestre_alocado == 2) ? 2 : 1;
+        int s2 = (a2.semestre == model::SemestreLetivo::SEMESTRE_2 || a2.semestre_alocado == 2) ? 2 : 1;
+        return s1 == s2;
+    };
+
+    // 1. Verificar turmas
+    for (const auto& t_id : a_aloc->turmas) {
+        const auto* t = data_.findTurma(t_id);
+        if (t) {
+            if (!t->funcionaNoDia(dia)) {
+                conflitos.push_back("A turma " + t->nome() + " não possui aulas na " + model::dayToLongString(dia) + ".");
+            }
+            auto j = t->jornadaParaDia(dia);
+            for (const auto& inter : j.intervalosAtivos()) {
+                if (time_overlaps(inter, intervalo)) {
+                    conflitos.push_back("O horário sobrepõe o intervalo (" + inter.toString() + ") da turma " + t->nome() + ".");
+                }
+            }
+            if (intervalo.start_slot < j.jornada_total.start_slot || intervalo.end_slot > j.jornada_total.end_slot) {
+                conflitos.push_back("O horário está fora da jornada total da turma " + t->nome() + " (" + j.jornada_total.toString() + ").");
+            }
+        }
+
+        // Choque com outras aulas da mesma turma
+        for (const auto& a : data_.grade().alocacoes()) {
+            if (a.aula_id != aid && a.dia == dia && semestres_conflitam(*a_aloc, a) && time_overlaps(a.intervalo, intervalo)) {
+                if (std::find(a.turmas.begin(), a.turmas.end(), t_id) != a.turmas.end()) {
+                    conflitos.push_back("Choque de turma: A turma " + (t ? t->nome() : t_id) + " já possui a aula '" + a.disciplina_nome + "' neste mesmo horário.");
+                }
+            }
+        }
+
+        // Limite diário de aulas da disciplina na turma
+        if (data_.config().distribuir_disciplinas_na_semana) {
+            int count_dia = 0;
+            for (const auto& a : data_.grade().alocacoes()) {
+                if (a.aula_id != aid && a.dia == dia && a.disciplina_id == a_aloc->disciplina_id && semestres_conflitam(*a_aloc, a)) {
+                    if (std::find(a.turmas.begin(), a.turmas.end(), t_id) != a.turmas.end()) {
+                        count_dia++;
+                    }
+                }
+            }
+            const auto* disc = data_.findDisciplina(a_aloc->disciplina_id);
+            int max_lim = (disc && disc->maxAulasPorDiaTurma() > 0) ? disc->maxAulasPorDiaTurma() : data_.config().max_aulas_disciplina_dia_turma;
+            if (count_dia + 1 > max_lim) {
+                conflitos.push_back("Limite diário: A turma " + (t ? t->nome() : t_id) + " excederá o limite de " + std::to_string(max_lim) + " aulas/dia desta disciplina.");
+            }
+        }
+    }
+
+    // 2. Verificar professores
+    for (const auto& p_id : a_aloc->professores) {
+        const auto* p = data_.findProfessor(p_id);
+        if (p) {
+            if (!p->isDisponivelNoIntervalo(dia, intervalo.start_slot, intervalo.end_slot)) {
+                conflitos.push_back("Disponibilidade: O Prof. " + p->nome() + " possui indisponibilidade cadastrada neste horário na " + model::dayToLongString(dia) + ".");
+            }
+        }
+        for (const auto& a : data_.grade().alocacoes()) {
+            if (a.aula_id != aid && a.dia == dia && semestres_conflitam(*a_aloc, a) && time_overlaps(a.intervalo, intervalo)) {
+                if (std::find(a.professores.begin(), a.professores.end(), p_id) != a.professores.end()) {
+                    conflitos.push_back("Choque de professor: O Prof. " + (p ? p->nome() : p_id) + " já possui a aula '" + a.disciplina_nome + "' alocada neste mesmo horário.");
+                }
+            }
+        }
+    }
+
+    // 3. Verificar salas
+    for (const auto& sala_id : a_aloc->salas) {
+        const auto* s = data_.findSala(sala_id);
+        for (const auto& a : data_.grade().alocacoes()) {
+            if (a.aula_id != aid && a.dia == dia && semestres_conflitam(*a_aloc, a) && time_overlaps(a.intervalo, intervalo)) {
+                if (std::find(a.salas.begin(), a.salas.end(), sala_id) != a.salas.end()) {
+                    conflitos.push_back("Choque de sala: A sala " + (s ? s->nome() : sala_id) + " já está ocupada pela aula '" + a.disciplina_nome + "' neste mesmo horário.");
+                }
+            }
+        }
+    }
+
+    return conflitos;
+}
+
+void TimetableView::onLessonDropRequested(const QString& aula_id, int target_row, int target_col) {
+    if (target_row < 0 || target_row >= static_cast<int>(row_intervals_.size())) return;
+    if (target_col < 0 || target_col >= 5) return;
+
+    auto target_day = static_cast<model::DayOfWeek>(target_col);
+    const auto& target_interval = row_intervals_[target_row];
+
+    auto* target_item = table_->item(target_row, target_col);
+    if (target_item) {
+        QString text = target_item->text();
+        if (text.startsWith("☕")) {
+            QMessageBox::warning(this, "Horário Inválido", "Não é possível alocar aulas dentro de um intervalo.");
+            return;
+        }
+        if (text == "—") {
+            QMessageBox::warning(this, "Horário Inválido", "O horário selecionado está fora da jornada letiva da turma neste dia.");
+            return;
+        }
+    }
+
+    std::string aid = aula_id.toStdString();
+    auto* a_aloc = data_.grade().findAula(aid);
+    auto* a_model = data_.findAula(aid);
+    if (!a_aloc || !a_model) return;
+
+    // Se soltou no mesmo lugar
+    if (a_aloc->dia == target_day && a_aloc->intervalo.start_slot == target_interval.start_slot) {
+        return;
+    }
+
+    // Verificar se o slot destino já possui uma aula alocada para o alvo atual
+    QString target_aid_q = target_item ? target_item->data(Qt::UserRole).toString() : QString();
+    std::string target_aid = target_aid_q.toStdString();
+    auto* target_aloc = !target_aid.empty() ? data_.grade().findAula(target_aid) : nullptr;
+    auto* target_model = !target_aid.empty() ? data_.findAula(target_aid) : nullptr;
+
+    if (target_aloc && target_aid != aid) {
+        QMessageBox box(this);
+        box.setWindowTitle("Trocar ou Mover Aula");
+        box.setIcon(QMessageBox::Question);
+        box.setText(QString("O horário de destino (%1 às %2) já possui a aula:\n\n"
+                            "  📌 %3\n\n"
+                            "Deseja trocar os horários entre as duas aulas (Swap) ou cancelar?")
+                    .arg(QString::fromStdString(model::dayToLongString(target_day)))
+                    .arg(QString::fromStdString(target_interval.toString()))
+                    .arg(QString::fromStdString(target_aloc->disciplina_nome)));
+
+        auto* btn_swap = box.addButton("🔄 Trocar Horários (Swap)", QMessageBox::ActionRole);
+        auto* btn_force = box.addButton("➡️ Alocar Juntas", QMessageBox::ActionRole);
+        auto* btn_cancel = box.addButton("Cancelar", QMessageBox::RejectRole);
+        box.setDefaultButton(btn_swap);
+        box.exec();
+
+        if (box.clickedButton() == btn_cancel) return;
+
+        if (box.clickedButton() == btn_swap) {
+            auto old_dia = a_aloc->dia;
+            auto old_inter = a_aloc->intervalo;
+
+            // Aula A -> Target
+            a_aloc->dia = target_day;
+            a_aloc->intervalo = model::TimeInterval(target_interval.start_slot, target_interval.start_slot + a_aloc->intervalo.durationSlots());
+            a_aloc->is_pinned = true;
+            a_model->setPinned(true);
+            a_model->setPinnedDay(a_aloc->dia);
+            a_model->setPinnedStartSlot(a_aloc->intervalo.start_slot);
+            a_model->setPinnedRooms(a_aloc->salas);
+
+            // Aula B -> Old
+            target_aloc->dia = old_dia;
+            target_aloc->intervalo = model::TimeInterval(old_inter.start_slot, old_inter.start_slot + target_aloc->intervalo.durationSlots());
+            target_aloc->is_pinned = true;
+            if (target_model) {
+                target_model->setPinned(true);
+                target_model->setPinnedDay(target_aloc->dia);
+                target_model->setPinnedStartSlot(target_aloc->intervalo.start_slot);
+                target_model->setPinnedRooms(target_aloc->salas);
+            }
+
+            data_.grade().addMensagemDiagnostico("[MANUAL] Troca de horários: Aula " + aid + " (" + a_aloc->disciplina_nome + ") trocada com Aula " + target_aid + " (" + target_aloc->disciplina_nome + ").");
+
+            renderTimetable();
+            emit timetableModified();
+            emit lessonMoved(QString::fromStdString(aid), QString("Trocada com %1").arg(QString::fromStdString(target_aloc->disciplina_nome)));
+            return;
+        }
+    }
+
+    // Slot vazio ou "Alocar Juntas"
+    model::TimeInterval new_interval(target_interval.start_slot, target_interval.start_slot + a_aloc->intervalo.durationSlots());
+    auto conflitos = verificarConflitosMovimentacao(aid, target_day, new_interval);
+    if (!conflitos.empty()) {
+        QString msg = "Atenção: A movimentação manual causará as seguintes incompatibilidades:\n\n";
+        for (const auto& c : conflitos) {
+            msg += "• " + QString::fromStdString(c) + "\n";
+        }
+        msg += "\nDeseja confirmar a alocação manual mesmo assim?";
+        auto resp = QMessageBox::warning(this, "Aviso de Conflitos", msg, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        if (resp != QMessageBox::Yes) return;
+    }
+
+    int mode = combo_view_type_->currentIndex();
+    if (mode == 2 && combo_target_->currentIndex() >= 0) {
+        std::string room_id = combo_target_->currentData().toString().toStdString();
+        if (!room_id.empty()) {
+            a_aloc->salas = { room_id };
+        }
+    }
+
+    a_aloc->dia = target_day;
+    a_aloc->intervalo = new_interval;
+    a_aloc->is_pinned = true;
+    a_model->setPinned(true);
+    a_model->setPinnedDay(a_aloc->dia);
+    a_model->setPinnedStartSlot(a_aloc->intervalo.start_slot);
+    a_model->setPinnedRooms(a_aloc->salas);
+
+    data_.grade().addMensagemDiagnostico("[MANUAL] Aula " + aid + " (" + a_aloc->disciplina_nome + ") movida manualmente para " + model::dayToLongString(target_day) + " às " + a_aloc->intervalo.toString() + ".");
+
+    renderTimetable();
+    emit timetableModified();
+    emit lessonMoved(QString::fromStdString(aid), QString::fromStdString(model::dayToLongString(target_day) + " às " + a_aloc->intervalo.toString()));
 }
 
 } // namespace scheduler::ui
