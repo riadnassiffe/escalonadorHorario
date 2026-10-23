@@ -23,7 +23,7 @@ TableSearchSortBar::TableSearchSortBar(QWidget* parent)
     // Contador de registros encontrados
     lbl_count_ = new QLabel("0 itens", this);
     lbl_count_->setStyleSheet(
-        "background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; "
+        "background-color: palette(base); color: palette(window-text); border: 1px solid palette(mid); "
         "border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: 500;");
     layout->addWidget(lbl_count_);
 
@@ -31,7 +31,7 @@ TableSearchSortBar::TableSearchSortBar(QWidget* parent)
 
     // Label de ordenação
     auto* lbl_sort = new QLabel("Ordenar:", this);
-    lbl_sort->setStyleSheet("color: #94a3b8; font-weight: 600; font-size: 12px;");
+    lbl_sort->setStyleSheet("font-weight: 600; font-size: 12px;");
     layout->addWidget(lbl_sort);
 
     // Dropdown de coluna para ordenação
@@ -44,10 +44,7 @@ TableSearchSortBar::TableSearchSortBar(QWidget* parent)
     btn_sort_order_ = new QToolButton(this);
     btn_sort_order_->setObjectName("btnSecondary");
     btn_sort_order_->setCursor(Qt::PointingHandCursor);
-    btn_sort_order_->setStyleSheet(
-        "QToolButton { background-color: #1e293b; color: #38bdf8; border: 1px solid #334155; "
-        "border-radius: 6px; padding: 5px 10px; font-weight: 600; font-size: 11px; } "
-        "QToolButton:hover { background-color: #334155; border-color: #38bdf8; }");
+    btn_sort_order_->setStyleSheet("font-weight: 600; font-size: 11px; padding: 4px 10px;");
     updateOrderButtonState();
     layout->addWidget(btn_sort_order_);
 
@@ -195,17 +192,17 @@ void TableSearchSortBar::updateCountLabel(int visibleCount, int totalCount) {
     if (search_edit_->text().trimmed().isEmpty()) {
         lbl_count_->setText(QString("%1 %2").arg(totalCount).arg(totalCount == 1 ? entitySingular_ : entityPlural_));
         lbl_count_->setStyleSheet(
-            "background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; "
+            "background-color: palette(base); color: palette(window-text); border: 1px solid palette(mid); "
             "border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: 500;");
     } else if (visibleCount == 0) {
         lbl_count_->setText("Nenhum resultado");
         lbl_count_->setStyleSheet(
-            "background-color: #450a0a; color: #fca5a5; border: 1px solid #ef4444; "
+            "background-color: rgba(239, 68, 68, 0.15); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.4); "
             "border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: bold;");
     } else {
         lbl_count_->setText(QString("%1 de %2").arg(visibleCount).arg(totalCount));
         lbl_count_->setStyleSheet(
-            "background-color: #0c4a6e; color: #38bdf8; border: 1px solid #0284c7; "
+            "background-color: rgba(2, 132, 199, 0.15); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.4); "
             "border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: bold;");
     }
 }

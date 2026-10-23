@@ -38,7 +38,7 @@ void ConfigWidget::setupUi() {
 
         lbl_val = new QLabel(QString::number(initial), grp_pesos);
         lbl_val->setFixedWidth(35);
-        lbl_val->setStyleSheet("font-weight: bold; color: #38bdf8; font-size: 14px;");
+        lbl_val->setStyleSheet("font-weight: bold; color: palette(highlight); font-size: 14px;");
         row->addWidget(lbl_val);
 
         connect(slider, &QSlider::valueChanged, this, &ConfigWidget::updateSliderLabels);

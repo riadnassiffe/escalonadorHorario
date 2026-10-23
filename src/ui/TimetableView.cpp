@@ -1,5 +1,6 @@
 #include "ui/TimetableView.h"
 #include "ui/SmartTableWidgetItem.h"
+#include "ui/ModernTheme.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLineEdit>
@@ -25,7 +26,7 @@ void TimetableView::setupUi() {
     top_panel->setSpacing(10);
 
     auto* lbl_mode = new QLabel("Modo de Exibição:", this);
-    lbl_mode->setStyleSheet("font-weight: bold; color: #38bdf8;");
+    lbl_mode->setStyleSheet("font-weight: bold; color: palette(highlight);");
     top_panel->addWidget(lbl_mode);
 
     combo_view_type_ = new QComboBox(this);
@@ -36,7 +37,7 @@ void TimetableView::setupUi() {
     top_panel->addWidget(combo_view_type_);
 
     auto* lbl_entity = new QLabel("Selecionar Alvo:", this);
-    lbl_entity->setStyleSheet("font-weight: bold; color: #38bdf8; margin-left: 10px;");
+    lbl_entity->setStyleSheet("font-weight: bold; color: palette(highlight); margin-left: 10px;");
     top_panel->addWidget(lbl_entity);
 
     combo_target_ = new QComboBox(this);
@@ -44,7 +45,7 @@ void TimetableView::setupUi() {
     top_panel->addWidget(combo_target_);
 
     auto* lbl_semestre = new QLabel("Semestre:", this);
-    lbl_semestre->setStyleSheet("font-weight: bold; color: #38bdf8; margin-left: 10px;");
+    lbl_semestre->setStyleSheet("font-weight: bold; color: palette(highlight); margin-left: 10px;");
     top_panel->addWidget(lbl_semestre);
 
     combo_semestre_filtro_ = new QComboBox(this);
@@ -57,7 +58,7 @@ void TimetableView::setupUi() {
     top_panel->addStretch();
 
     lbl_info_banner_ = new QLabel(this);
-    lbl_info_banner_->setStyleSheet("color: #94a3b8; font-size: 12px;");
+    lbl_info_banner_->setStyleSheet("font-size: 12px;");
     top_panel->addWidget(lbl_info_banner_);
 
     top_panel->addSpacing(15);
@@ -71,7 +72,7 @@ void TimetableView::setupUi() {
 
     lbl_search_count_ = new QLabel(this);
     lbl_search_count_->setStyleSheet(
-        "background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; "
+        "background-color: palette(base); color: palette(window-text); border: 1px solid palette(mid); "
         "border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: 500;");
     lbl_search_count_->setVisible(false);
     top_panel->addWidget(lbl_search_count_);
@@ -415,15 +416,16 @@ void TimetableView::renderTimetable() {
                 auto* item = new QTableWidgetItem(cell_text);
                 item->setData(Qt::UserRole, main_aula_id);
 
+                bool is_dark = ModernTheme::isDarkTheme();
                 if (has_lab) {
-                    item->setBackground(QColor(236, 72, 153, 35));
-                    item->setForeground(QColor("#f472b6"));
+                    item->setBackground(is_dark ? QColor(236, 72, 153, 40) : QColor(251, 207, 232, 160));
+                    item->setForeground(is_dark ? QColor("#f472b6") : QColor("#9d174d"));
                 } else if (has_special) {
-                    item->setBackground(QColor(139, 92, 246, 35));
-                    item->setForeground(QColor("#a78bfa"));
+                    item->setBackground(is_dark ? QColor(139, 92, 246, 40) : QColor(233, 213, 255, 160));
+                    item->setForeground(is_dark ? QColor("#c4b5fd") : QColor("#6b21a8"));
                 } else {
-                    item->setBackground(QColor(37, 99, 235, 35));
-                    item->setForeground(QColor("#60a5fa"));
+                    item->setBackground(is_dark ? QColor(37, 99, 235, 40) : QColor(219, 234, 254, 160));
+                    item->setForeground(is_dark ? QColor("#60a5fa") : QColor("#1e40af"));
                 }
 
                 item->setData(Qt::UserRole + 1, item->background());
@@ -432,7 +434,8 @@ void TimetableView::renderTimetable() {
             } else {
                 auto* item = new QTableWidgetItem("-");
                 item->setTextAlignment(Qt::AlignCenter);
-                item->setForeground(QColor("#475569"));
+                bool is_dark = ModernTheme::isDarkTheme();
+                item->setForeground(is_dark ? QColor("#64748b") : QColor("#94a3b8"));
                 item->setData(Qt::UserRole + 1, item->background());
                 item->setData(Qt::UserRole + 2, item->foreground());
                 table_->setItem(row, col, item);
@@ -462,14 +465,15 @@ void TimetableView::onSearchLessonChanged(const QString& query) {
             QBrush origBg = it->data(Qt::UserRole + 1).value<QBrush>();
             QBrush origFg = it->data(Qt::UserRole + 2).value<QBrush>();
 
+            bool is_dark = ModernTheme::isDarkTheme();
             if (!clean.isEmpty()) {
                 if (removeAccents(text).toLower().contains(clean)) {
                     matches++;
-                    it->setBackground(QColor(245, 158, 11, 120)); // Destaque âmbar/ouro
-                    it->setForeground(QColor("#fef08a"));
+                    it->setBackground(is_dark ? QColor(245, 158, 11, 140) : QColor(254, 240, 138, 220));
+                    it->setForeground(is_dark ? QColor("#fef08a") : QColor("#854d0e"));
                 } else {
-                    it->setBackground(QColor(15, 23, 42, 160)); // Atenuado
-                    it->setForeground(QColor("#475569"));
+                    it->setBackground(is_dark ? QColor(15, 23, 42, 160) : QColor(241, 245, 249, 180));
+                    it->setForeground(is_dark ? QColor("#475569") : QColor("#94a3b8"));
                 }
             } else {
                 if (origBg.style() != Qt::NoBrush) {
@@ -491,12 +495,12 @@ void TimetableView::onSearchLessonChanged(const QString& query) {
         if (matches == 0) {
             lbl_search_count_->setText("Nenhuma aula encontrada");
             lbl_search_count_->setStyleSheet(
-                "background-color: #450a0a; color: #fca5a5; border: 1px solid #ef4444; "
+                "background-color: rgba(239, 68, 68, 0.15); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.4); "
                 "border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: bold;");
         } else {
             lbl_search_count_->setText(QString("%1 %2").arg(matches).arg(matches == 1 ? "aula encontrada" : "aulas encontradas"));
             lbl_search_count_->setStyleSheet(
-                "background-color: #0c4a6e; color: #38bdf8; border: 1px solid #0284c7; "
+                "background-color: rgba(2, 132, 199, 0.15); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.4); "
                 "border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: bold;");
         }
     }

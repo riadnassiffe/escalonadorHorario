@@ -312,16 +312,247 @@ graph TD
 | `AllocatedLesson` | `include/model/Timetable.h` | Aula posicionada na grade, contendo dia, intervalo de slots, sala e semestre de alocação. |
 | `Timetable` | `include/model/Timetable.h` | Grade horária completa, estatísticas de execução (status, tempo, penalidades $J, D, W, J_G$). |
 | `OptimizationConfig`| `include/model/OptimizationConfig.h`| Configuração da otimização: pesos $\lambda_i$, algoritmo, escopo semestral e timeout. |
-| `InstitutionData` | `include/model/InstitutionData.h` | Repositório central em memória de professores, turmas, salas, disciplinas e parâmetros. |
+| `InstitutionData` | `include/model/InstitutionData.h` | Repositório central de dados com geradores dinâmicos de ID (`nextProfessorId`, `nextTurmaId`, etc.). |
 | `Preprocessor` | `src/solver/Preprocessor.cpp` | Validação de consistência, cálculo de $C_a$ e detecção prévia de inviabilidade. |
 | `ScheduleSolver` | `src/solver/ScheduleSolver.cpp` | Motor de resolução matemática (CP-SAT, MILP, Heurística e Meta-heurísticas). |
-| `MainWindow` | `src/ui/MainWindow.cpp` | Janela principal com abas de cadastro, KPIs globais e acionamento da otimização. |
+| `MainWindow` | `src/ui/MainWindow.cpp` | Janela principal com tabelas de seleção estendida, KPIs, atalhos de remoção e orquestração. |
+| `ProfessorEditorDialog`| `include/ui/ProfessorEditorDialog.h`| Diálogo com abas ergonômicas de disponibilidade semanal, presets rápidos, preferências e aversão a janelas. |
+| `TurmaEditorDialog` | `include/ui/TurmaEditorDialog.h` | Diálogo com abas de jornadas diárias, múltiplos intervalos de recesso, presets e vínculo de sala teórica fixa. |
+| `RoomEditorDialog` | `include/ui/RoomEditorDialog.h` | Diálogo simplificado de cadastro de salas e laboratórios com tipos de ambiente e capacidade. |
+| `LessonEditorDialog`| `include/ui/LessonEditorDialog.h`| Diálogo de cadastro de disciplinas com seletores nominais limpos e salas alternativas. |
+| `TableSearchSortBar`| `include/ui/TableSearchSortBar.h`| Barra reativa de busca em tempo real e ordenação alfanumérica com filtro automático de colunas visíveis. |
 | `TimetableView` | `src/ui/TimetableView.cpp` | Visualizador interativo de grade semanal com filtro por semestre, busca e pinning. |
 | `JsonSerialization`| `src/serialization/JsonSerialization.cpp` | Persistência e leitura do projeto completo em formato JSON padronizado. |
 | `ScheduleReportExporter`| `src/ui/ScheduleReportExporter.cpp`| Exportador de relatórios em HTML estilizado com badges semestrais e CSV analítico. |
+| `ModernTheme` | `src/ui/ModernTheme.cpp` | Design System dark moderno, controle visual de comboboxes com setas SVG e scrollbars confortáveis. |
 
 ---
 
-## 11. Conclusão
+## 11. Gestão Dinâmica de Dados e Experiência do Usuário (CRUD Moderno)
+
+A fim de elevar o sistema a um padrão profissional de uso diário, o gerenciamento de dados e a interface gráfica foram totalmente desacoplados da rigidez de códigos internos:
+
+### 11.1. Geração Dinâmica e Automática de IDs
+* **Transparência e Autonomia**: O usuário final não necessita mais inventar, digitar ou gerenciar códigos de identificação (`ID`).
+* **Algoritmo Incremental Livre de Colisões**:
+  * Implementados na classe `InstitutionData`:
+    * `nextProfessorId()` $\implies$ gera códigos sequenciais com prefixo `P` (`P01`, `P02`, etc.);
+    * `nextTurmaId()` $\implies$ gera códigos sequenciais com prefixo `T` (`T01`, `T02`, etc.);
+    * `nextSalaId()` $\implies$ gera códigos sequenciais com prefixo `S` (`S01`, `S02`, etc.);
+    * `nextDisciplinaId()` $\implies$ gera códigos sequenciais com prefixo `D` (`D01`, `D02`, etc.).
+  * O algoritmo examina os sufixos numéricos de todos os registros existentes, localiza o valor máximo e gera o próximo identificador vago, validando a inexistência de duplicidade via `find...()`.
+  * Essa abordagem preserva integralmente a integridade relacional do modelo matemático e das referências em arquivos JSON (`disciplina.professor_id`, `lesson.turma_id`, `lesson.sala_id`) sem onerar o operador humano.
+
+### 11.2. Ocultação Total de IDs e Limpeza Visual
+* **Tabelas de Cadastro**: Nas 4 tabelas centrais da `MainWindow` (Professores, Turmas, Salas e Disciplinas), a coluna primária que armazena o ID técnico permanece ativa em memória, porém é ocultada visualmente via `setColumnHidden(0, true)`.
+* **Formulários de Edição**: Todos os campos de texto que solicitavam "Código (ID)" foram removidos dos diálogos (`ProfessorEditorDialog`, `TurmaEditorDialog`, `RoomEditorDialog` e `LessonEditorDialog`). O foco do cadastro volta-se exclusivamente para os atributos de negócio: Nome, Turno, Jornada, Carga e Tipo de Ambiente.
+* **Seletores Nominais Amigáveis**: Dropdowns (`QComboBox`) e listas (`QListWidget`) exibem exclusivamente nomes legíveis (ex: `"Prof. Carlos Silva (Matemática)"`, `"1º Ano A - Ensino Médio"`, `"Laboratório de Informática"`), eliminando a poluição visual de colchetes e códigos como `[P01]`, `[T01]` ou `[LAB_INF]`.
+* **Busca e Ordenação Inteligente**: O componente `TableSearchSortBar` ignora automaticamente colunas ocultas, oferecendo ordenação e filtragem restritas às colunas perceptíveis pelo usuário.
+
+### 11.3. Remoção em Massa de Dados (*Batch Deletion*)
+* **Seleção Estendida Multirregistro**: As 4 tabelas de dados operam em modo `QAbstractItemView::ExtendedSelection`, habilitando seleções múltiplas contíguas (<kbd>Shift</kbd> + clique) ou intercaladas (<kbd>Ctrl</kbd> + clique), além do atalho universal de seleção total (<kbd>Ctrl</kbd> + <kbd>A</kbd>).
+* **Atalho Rápido do Teclado**: O acionamento da tecla <kbd>Delete</kbd> em qualquer tabela dispara imediatamente o fluxo de exclusão da seleção ativa.
+* **Confirmação Amigável e Contextual**:
+  * Para **1 registro**: exibe o nome individual da entidade (ex: *"Deseja realmente remover o professor 'Carlos Silva'?"*).
+  * Para **múltiplos registros**: informa o total exato de itens e lista nominalmente até os 8 primeiros selecionados (ex: *"Deseja realmente remover os 5 professores selecionados em massa? • Carlos Silva • Ana Souza..."*).
+* **Sincronização em Cascata**: A exclusão em lote atualiza instantaneamente as dependências entre disciplinas, ocorrências de aulas e a grade horária vigente.
+
+### 11.4. Ergonomia e Acessibilidade dos Editores
+* **`ProfessorEditorDialog`**:
+  * Estruturação em duas abas: `⏰ Horários de Disponibilidade` (Aba 1) e `⭐ Turnos Pretendidos & Preferências` (Aba 2).
+  * Botões de preenchimento rápido em um clique: **Manhã**, **Tarde**, **Integral**, **Noite**, **Dia Todo** e **Limpar Todos**.
+  * Tabela de intervalos com rolagem suave e dimensão expandida, garantindo acesso completo aos seletores de dias e horas de início e término.
+* **`TurmaEditorDialog`**:
+  * Separação entre `📅 Horários & Jornadas por Dia` e `🏛️ Sala Teórica Permanente`.
+  * Configuração diária com suporte a até 3 intervalos de recesso/recreio por dia, cálculo automático de minutos letivos e botões para replicar horários entre os dias da semana.
+
+---
+
+## 12. Visão Geral do Modelo Completo e Catálogo de Restrições
+
+Esta seção consolida a formalização matemática integral do **EscalonadorGemini**. O problema de programação de horários é formulado como uma otimização com restrições rígidas inegociáveis e critérios de preferência configuráveis.
+
+Para facilitar a distinção:
+* **Restrições Rígidas (*Hard Constraints*)**: Devem ser estritamente atendidas. Caso alguma seja violada, a grade é considerada matematicamente infactível (*Infeasible*).
+* <span style="color: #0284c7;">***Restrições Opcionais / Flexíveis (Soft Constraints & Configurações)***</span>: *Destacadas em itálico e em azul*. Podem ser ativadas, desativadas ou ter seus pesos penalizadores ajustados pelo usuário na interface gráfica conforme a política pedagógica da instituição.
+
+---
+
+### 12.1. Formulação Canônica Unificada
+
+$$\min \quad Z = \sum_{k} \lambda_k \cdot \Phi_k(x, y, z)$$
+
+$$\text{sujeito a:}$$
+
+$$\begin{cases}
+\text{Restrições Rígidas (H1 a H10)} & \implies \text{Obrigatórias em todas as resoluções} \\
+\color{#0284c7}{\text{\textit{Restrições Opcionais e Critérios Flexíveis (O1 a O11)}}} & \implies \color{#0284c7}{\text{\textit{Configuradas via Interface / Painel de Parâmetros}}}
+\end{cases}$$
+
+---
+
+### 12.2. Catálogo Detalhado de Todas as Restrições
+
+#### [H1] Alocação Única e Completa de Cada Aula
+* **Classificação**: **Restrição Rígida (*Hard*)**
+* **Descrição**: Toda ocorrência de aula $a \in A$ pertencente à matriz curricular da instituição deve ser alocada exatamente uma vez em uma combinação de dia, horário e espaço físico admissível.
+* **Equação**:
+  $$\sum_{(d, b, r) \in C_a} x_{a, d, b, r} = 1, \quad \forall a \in A$$
+
+#### [H2] Não-Sobreposição de Horários de Professores (por Semestre)
+* **Classificação**: **Restrição Rígida (*Hard*)**
+* **Descrição**: Um professor jamais pode ministrar duas aulas no mesmo dia e slot horário no mesmo semestre. Para disciplinas anuais, a mesma variável de alocação atua em ambos os semestres.
+* **Equação**:
+  $$\operatorname{NoOverlap}\left( \left\{ I_{a, d, b, r} \;\middle|\; a \in A, \, p \in P_a, \, \text{ativo}(a, s), \, (d, b, r) \in C_a \right\} \right), \quad \forall p \in P, \; \forall d \in D, \; \forall s \in \{1, 2\}$$
+
+#### [H3] Não-Sobreposição de Turmas e Respeito a Recessos/Intervalos (por Semestre)
+* **Classificação**: **Restrição Rígida (*Hard*)**
+* **Descrição**: Uma turma jamais pode assistir a duas aulas simultâneas, e nenhuma aula pode sobrepor os horários de recesso/recreio definidos na jornada da turma.
+* **Equação**:
+  $$\operatorname{NoOverlap}\left( \left\{ I_{a, d, b, r} \;\middle|\; a \in A, \, t \in T_a, \, \text{ativo}(a, s), \, (d, b, r) \in C_a \right\} \cup \text{Recessos}(t, d) \right), \quad \forall t \in T, \; \forall d \in D, \; \forall s \in \{1, 2\}$$
+
+#### [H4] Não-Sobreposição de Ocupação de Salas e Ambientes (por Semestre)
+* **Classificação**: **Restrição Rígida (*Hard*)**
+* **Descrição**: Um espaço físico (sala teórica ou laboratório) só pode abrigar uma turma por vez no mesmo horário.
+* **Equação**:
+  $$\operatorname{NoOverlap}\left( \left\{ I_{a, d, b, r} \;\middle|\; a \in A, \, \text{ativo}(a, s), \, (d, b, r) \in C_a \text{ com sala } r \right\} \right), \quad \forall r \in S, \; \forall d \in D, \; \forall s \in \{1, 2\}$$
+
+#### [H5] Consistência de Sala Teórica Fixa por Turma
+* **Classificação**: **Restrição Rígida (*Hard*)**
+* **Descrição**: Toda turma possui uma única sala teórica permanente durante todo o ano letivo. Todas as aulas teóricas da turma devem ocorrer estritamente nessa sala.
+* **Equação**:
+  $$\sum_{r \in S^{\text{teo}}} z_{t, r} = 1, \quad \forall t \in T$$
+  $$x_{a, d, b, r} \le z_{t, r}, \quad \forall a \in A \text{ com } \text{tipo}(a) = \text{TEORICA}, \; t \in T_a, \; (d, b, r) \in C_a$$
+
+#### [H6] Habilitação de Salas, Laboratórios e Capacidade Discente
+* **Classificação**: **Restrição Rígida (*Hard*)**
+* **Descrição**: Aulas laboratoriais ou especiais só podem ocupar salas com os recursos tecnológicos exigidos, e a capacidade física de assentos deve comportar o total de discentes inscritos.
+* **Garantia**: Construída formalmente na filtragem do domínio de candidatos $C_a$.
+
+#### [H7] Respeito Incondicional a Aulas Fixadas Manualmente (*Pinning*)
+* **Classificação**: **Restrição Rígida (*Hard*)**
+* **Descrição**: Se o usuário travou uma aula em determinado horário e sala na interface gráfica, essa escolha é respeitada compulsoriamente pelo otimizador.
+* **Equação**:
+  $$x_{a, \bar{d}, \bar{b}, \bar{r}} = 1, \quad \forall a \text{ fixada pelo usuário}$$
+
+#### [H8] Teto da Carga Horária Máxima Diária por Docente
+* **Classificação**: **Restrição Rígida (*Hard*)**
+* **Descrição**: Um professor não pode ultrapassar o limite máximo de minutos de aula contratados por dia ($\text{cargaMax}(p)$).
+* **Equação**:
+  $$\sum_{a \in A \,:\, p \in P_a} \sum_{(d, b, r) \in C_a} \text{duracao}(a) \cdot x_{a, d, b, r} \le \text{cargaMax}(p), \quad \forall p \in P, \; \forall d \in D$$
+
+#### [H9] Acoplamento e Identidade Intersemestral de Disciplinas Anuais
+* **Classificação**: **Restrição Rígida (*Hard*)**
+* **Descrição**: Disciplinas de regime anual mantêm exatamente o mesmo dia, horário e sala física em ambos os semestres letivos, garantindo a estabilidade pedagógica escolar.
+* **Equação**:
+  $$x_{a, d, b, r}^{(s=1)} = x_{a, d, b, r}^{(s=2)}, \quad \forall a \in A \text{ tal que } \text{regime}(a) = \text{ANUAL}$$
+
+#### [H10] Respeito à Janela de Disponibilidade Docente e Turno da Turma
+* **Classificação**: **Restrição Rígida (*Hard*)**
+* **Descrição**: Professores só lecionam nos intervalos horários em que se declararam disponíveis. Aulas de uma turma devem estar contidas no turno em que ela funciona.
+* **Garantia**: Garantida por construção no espaço viável $C_a$.
+
+---
+
+#### <span style="color: #0284c7;">*[O1] Preenchimento Integral da Jornada da Turma*</span>
+* **Classificação**: <span style="color: #0284c7;">***Restrição Rígida Opcional (Ativada pelo Usuário)***</span>
+* **Descrição**: *Quando ativada na aba de parâmetros (`preenchimento_integral_jornada = true`), impõe que absolutamente todos os slots letivos da jornada diária da turma estejam cobertos por aulas, proibindo qualquer término antecipado ou início postergado.*
+* **Equação**:
+  $$\color{#0284c7}{\sum_{a \in A \,:\, t \in T_a} \sum_{\substack{(d, b, r) \in C_a \\ b \le k < b + d_a}} x_{a, d, b, r} = 1, \quad \forall t \in T, \; \forall d \in \text{dias}(t), \; \forall k \in \text{slotsLetivos}(t, d)}$$
+
+#### <span style="color: #0284c7;">*[O2] Limite Máximo de Aulas da Mesma Disciplina por Dia para a Turma*</span>
+* **Classificação**: <span style="color: #0284c7;">***Restrição Opcional / Configurável (Hard/Soft)***</span>
+* **Descrição**: *Evita que uma mesma disciplina concentre muitas aulas em um único dia para a turma (teto padrão de 2 aulas diárias, permitindo aulas geminadas).*
+* **Equação**:
+  $$\color{#0284c7}{\sum_{a \in A_k} \sum_{(d, b, r) \in C_a} x_{a, d, b, r} \le M_{\text{diário}}(k), \quad \forall d \in D, \; \forall k \in \mathcal{D}, \; \forall t \in T_k}$$
+
+#### <span style="color: #0284c7;">*[O3] Agrupamento de Aulas em Blocos Consecutivos (Aulas Geminadas)*</span>
+* **Classificação**: <span style="color: #0284c7;">***Restrição Opcional por Disciplina (Configurável no Cadastro)***</span>
+* **Descrição**: *Quando marcado no cadastro da disciplina (`exigirAulasConsecutivas = true`), o solver força que as aulas semanais ocorram agrupadas em blocos contínuos (ex: disciplina de 4 aulas ocorre em 1 bloco de 4 aulas no mesmo dia; disciplina de 8 aulas ocorre em 2 blocos de 4 aulas em 2 dias).*
+* **Equação**:
+  $$\color{#0284c7}{\sum_{a \in A_k} \sum_{(d, b, r) \in C_a} x_{a, d, b, r} = B_{\text{tamanho}} \cdot w_{k, d}, \quad \text{onde } w_{k, d} \in \{0, 1\} \text{ e } \sum_{d} w_{k, d} = N_{\text{blocos}}}$$
+
+#### <span style="color: #0284c7;">*[O4] Minimização de Janelas de Professores Ponderada por Turno e por Preferência Docente*</span>
+* **Classificação**: <span style="color: #0284c7;">***Critério Flexível (Soft Constraint) — Peso $\lambda_1$***</span>
+* **Descrição**: *Minimiza os horários vagos ociosos entre aulas do docente. O cálculo é particionado por turno (evitando penalizar a transição natural entre tarde e noite) e ponderado pela sensibilidade individual a janelas informada pelo próprio professor ($\alpha_p \in [0, 10]$).*
+* **Termo da Função Objetivo**:
+  $$\color{#0284c7}{J_{\text{prof}} = \sum_{p \in P} \alpha_p \sum_{d \in D} \sum_{\text{turno}} \operatorname{gap}_{p, d, \text{turno}}}$$
+
+#### <span style="color: #0284c7;">*[O5] Respeito aos Turnos Pretendidos pelo Professor por Dia da Semana*</span>
+* **Classificação**: <span style="color: #0284c7;">***Critério Flexível (Soft Constraint) — Peso $\lambda_5$***</span>
+* **Descrição**: *Aplica penalidade sempre que o otimizador precisa alocar um professor em um turno em que ele indicou não pretender lecionar naquele dia da semana.*
+* **Termo da Função Objetivo**:
+  $$\color{#0284c7}{T_{\text{prof\_turnos}} = \sum_{p \in P} \sum_{d \in D} \sum_{\substack{\text{turno} \\ \text{turno} \notin \text{pretendidos}(p, d)}} y_{p, d, \text{turno}}}$$
+
+#### <span style="color: #0284c7;">*[O6] Minimização de Dias Trabalhados e Compactação da Jornada Docente*</span>
+* **Classificação**: <span style="color: #0284c7;">***Critério Flexível (Soft Constraint) — Peso $\lambda_2$***</span>
+* **Descrição**: *Compacta a carga de trabalho do professor no menor número possível de dias da semana, desestimulando idas à instituição para ministrar apenas uma aula esparsa.*
+* **Termo da Função Objetivo**:
+  $$\color{#0284c7}{D_{\text{prof}} = \sum_{p \in P} \sum_{d \in D} y_{p, d}, \quad \text{onde } y_{p, d} \ge x_{a, d, b, r}}$$
+
+#### <span style="color: #0284c7;">*[O7] Respeito às Notas de Preferência de Dias da Semana dos Docentes*</span>
+* **Classificação**: <span style="color: #0284c7;">***Critério Flexível (Soft Constraint) — Peso $\lambda_4$***</span>
+* **Descrição**: *Prioriza a alocação dos professores em seus dias favoritos (peso 10) e penaliza dias menos desejados (peso 0 a 9) declarados individualmente na interface.*
+* **Termo da Função Objetivo**:
+  $$\color{#0284c7}{W_{\text{prof\_dias}} = \sum_{p \in P} \sum_{d \in D} (10 - w_{p, d}) \cdot y_{p, d}}$$
+
+#### <span style="color: #0284c7;">*[O8] Minimização de Lacunas e Horários Vagos nas Turmas*</span>
+* **Classificação**: <span style="color: #0284c7;">***Critério Flexível (Soft Constraint) — Peso $\lambda_6$***</span>
+* **Descrição**: *Evita que estudantes tenham aulas vazias no meio de suas atividades diárias, garantindo uma rotina escolar compacta e coesa.*
+* **Termo da Função Objetivo**:
+  $$\color{#0284c7}{J_{\text{turma}} = \sum_{t \in T} \sum_{d \in D} \operatorname{lacunas}_{t, d}}$$
+
+#### <span style="color: #0284c7;">*[O9] Minimização de Custo de Alocação de Horários e Preferências Gerais*</span>
+* **Classificação**: <span style="color: #0284c7;">***Critério Flexível (Soft Constraint) — Peso $\lambda_3$***</span>
+* **Descrição**: *Penaliza a alocação de disciplinas em horários desfavoráveis pedagogicamente.*
+* **Termo da Função Objetivo**:
+  $$\color{#0284c7}{P_{\text{custo}} = \sum_{a \in A} \sum_{(d, b, r) \in C_a} \operatorname{custo}(d, b) \cdot x_{a, d, b, r}}$$
+
+#### <span style="color: #0284c7;">*[O10] Estabilidade em Relação à Grade Vigente na Tela (Warm Start)*</span>
+* **Classificação**: <span style="color: #0284c7;">***Critério Flexível (Soft Constraint / Re-otimização)***</span>
+* **Descrição**: *Em processos de re-otimização, penaliza alterações desnecessárias nas aulas que já estavam confortavelmente posicionadas, preservando o histórico da instituição.*
+* **Termo da Função Objetivo**:
+  $$\color{#0284c7}{W_{\text{warm\_start}} = \sum_{a} \sum_{\substack{(d, b, r) \\ (d, b, r) \neq (\bar{d}_a, \bar{b}_a, \bar{r}_a)}} x_{a, d, b, r}}$$
+
+#### <span style="color: #0284c7;">*[O11] Minimização de Troca de Salas e Uso de Ambientes Secundários*</span>
+* **Classificação**: <span style="color: #0284c7;">***Critério Flexível (Soft Constraint)***</span>
+* **Descrição**: *Privilegia a sala de preferência prioritária da disciplina e penaliza o uso de salas reservas.*
+* **Termo da Função Objetivo**:
+  $$\color{#0284c7}{C_{\text{salas}} = \sum_{a \in A} \sum_{(d, b, r) \in C_a} \operatorname{custo}(r) \cdot x_{a, d, b, r}}$$
+
+---
+
+### 12.3. Tabela Comparativa Geral de Restrições
+
+| Código | Restrição do Sistema | Natureza | Nível de Aplicação | Configuração na Interface |
+| :---: | :--- | :---: | :---: | :--- |
+| **H1** | Alocação Única por Aula | **Rígida (*Hard*)** | Ocorrência de Aula | Imposição estrutural matemática |
+| **H2** | Não-Sobreposição de Docentes | **Rígida (*Hard*)** | Docente $\times$ Semestre | Imposição via `AddNoOverlap` |
+| **H3** | Não-Sobreposição de Turmas e Recessos | **Rígida (*Hard*)** | Turma $\times$ Semestre | Imposição via `AddNoOverlap` |
+| **H4** | Não-Sobreposição de Salas | **Rígida (*Hard*)** | Sala $\times$ Semestre | Imposição via `AddNoOverlap` |
+| **H5** | Consistência de Sala Teórica Fixa | **Rígida (*Hard*)** | Turma $\times$ Sala | Definida na aba de Turmas |
+| **H6** | Tipo de Sala e Capacidade Física | **Rígida (*Hard*)** | Aula $\times$ Sala | Filtragem estrita de $C_a$ |
+| **H7** | Respeito a Aulas Fixadas (*Pinning*) | **Rígida (*Hard*)** | Ocorrência de Aula | Fixação manual com botão direito na grade |
+| **H8** | Limite de Carga Diária do Docente | **Rígida (*Hard*)** | Docente $\times$ Dia | Campo "Carga Máx. Diária" no docente |
+| **H9** | Acoplamento Anual Intersemestral | **Rígida (*Hard*)** | Disciplina Anual | Seleção do regime na disciplina |
+| **H10**| Disponibilidade Docente e Turno | **Rígida (*Hard*)** | Docente e Turma | Abas de Horários do Docente e Turma |
+| <span style="color: #0284c7;">*O1*</span> | <span style="color: #0284c7;">*Preenchimento Integral da Jornada*</span> | <span style="color: #0284c7;">***Opcional (Hard)***</span> | *Turma $\times$ Dia* | *Checkbox no painel de parâmetros* |
+| <span style="color: #0284c7;">*O2*</span> | <span style="color: #0284c7;">*Máximo de Aulas Diárias da Disciplina*</span>| <span style="color: #0284c7;">***Opcional (Hard/Soft)***</span>| *Disciplina $\times$ Turma* | *Campo no cadastro da disciplina* |
+| <span style="color: #0284c7;">*O3*</span> | <span style="color: #0284c7;">*Aulas Consecutivas em Bloco*</span> | <span style="color: #0284c7;">***Opcional (Hard)***</span> | *Disciplina* | *Checkbox "Blocos consecutivos"* |
+| <span style="color: #0284c7;">*O4*</span> | <span style="color: #0284c7;">*Minimização de Janelas Docentes por Turno*</span>| <span style="color: #0284c7;">***Opcional (Soft)***</span> | *Docente $\times$ Turno* | *Peso global $\lambda_1$ e peso individual $\alpha_p$* |
+| <span style="color: #0284c7;">*O5*</span> | <span style="color: #0284c7;">*Respeito aos Turnos Pretendidos Docentes*</span>| <span style="color: #0284c7;">***Opcional (Soft)***</span> | *Docente $\times$ Dia* | *Peso global $\lambda_5$ e checkboxes do docente* |
+| <span style="color: #0284c7;">*O6*</span> | <span style="color: #0284c7;">*Minimização de Dias Trabalhados*</span> | <span style="color: #0284c7;">***Opcional (Soft)***</span> | *Docente* | *Peso global $\lambda_2$ no painel* |
+| <span style="color: #0284c7;">*O7*</span> | <span style="color: #0284c7;">*Preferências de Dias da Semana Docentes*</span>| <span style="color: #0284c7;">***Opcional (Soft)***</span> | *Docente $\times$ Dia* | *Peso global $\lambda_4$ e sliders de notas 0-10* |
+| <span style="color: #0284c7;">*O8*</span> | <span style="color: #0284c7;">*Minimização de Lacunas nas Turmas*</span> | <span style="color: #0284c7;">***Opcional (Soft)***</span> | *Turma $\times$ Dia* | *Peso global $\lambda_6$ no painel* |
+| <span style="color: #0284c7;">*O9*</span> | <span style="color: #0284c7;">*Minimização de Custos de Horários*</span> | <span style="color: #0284c7;">***Opcional (Soft)***</span> | *Aula $\times$ Horário* | *Peso global $\lambda_3$ no painel* |
+| <span style="color: #0284c7;">*O10*</span>| <span style="color: #0284c7;">*Estabilidade em Relação à Grade Atual*</span> | <span style="color: #0284c7;">***Opcional (Soft)***</span> | *Grade Vigente* | *Opção "Usar distribuição como entrada"* |
+| <span style="color: #0284c7;">*O11*</span>| <span style="color: #0284c7;">*Priorização de Salas Ideais*</span> | <span style="color: #0284c7;">***Opcional (Soft)***</span> | *Aula $\times$ Sala* | *Ordem de preferência de salas alternativas* |
+
+---
+
+## 13. Conclusão
 
 O modelo matemático implementado no **EscalonadorGemini** consolida formalismo matemático rigoroso, eficiência computacional moderna com CP-SAT e flexibilidade operacional total para lidar com cenários escolares complexos envolvendo disciplinas anuais e semestrais, salas teóricas fixas, restrições pedagógicas e preferências docentes.
+
+Com a arquitetura moderna de gerenciamento de dados implementada, o sistema une sofisticação técnica de Pesquisa Operacional a uma experiência do usuário fluida, com identificadores dinâmicos transparentes, remoção em massa de dados e controle visual ergonômico de jornadas e disponibilidades.
+

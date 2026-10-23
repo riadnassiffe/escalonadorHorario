@@ -1,9 +1,13 @@
 #include "ui/MainWindow.h"
 #include "ui/ModernTheme.h"
+#include "ui/ProfessorEditorDialog.h"
+#include "ui/TurmaEditorDialog.h"
+#include "ui/OptimizeDialog.h"
 #include "ui/ScheduleReportExporter.h"
 #include "serialization/JsonSerialization.h"
 #include "solver/ScheduleSolver.h"
 #include <QApplication>
+#include <QPixmap>
 #include <iostream>
 #include <string>
 
@@ -133,6 +137,50 @@ int main(int argc, char* argv[]) {
         return (stats.status == "OPTIMAL" || stats.status == "FEASIBLE") ? 0 : 1;
     }
 
+    if (argc > 1 && std::string(argv[1]) == "--render-screenshots") {
+        qputenv("QT_QPA_PLATFORM", "offscreen");
+        QApplication app(argc, argv);
+        scheduler::ui::ModernTheme::applyTheme(app);
+
+        scheduler::model::InstitutionData inst;
+        std::string err;
+        scheduler::serialization::JsonSerialization::carregarArquivo("exemploIFC.json", inst, err);
+
+        // 1. MainWindow
+        auto* main_win = new scheduler::ui::MainWindow();
+        main_win->show();
+        main_win->resize(1280, 800);
+        app.processEvents();
+        main_win->grab().save("/home/riadmn/.gemini/antigravity-ide/brain/623a91fa-fc3a-4352-bebe-6ffdd07616fb/kde_mainwindow.png");
+
+        // 2. Professor Dialog
+        const scheduler::model::Professor* prof = inst.professores().empty() ? nullptr : &inst.professores().front();
+        auto* prof_dlg = new scheduler::ui::ProfessorEditorDialog(nullptr, prof);
+        prof_dlg->show();
+        prof_dlg->resize(760, 720);
+        app.processEvents();
+        prof_dlg->grab().save("/home/riadmn/.gemini/antigravity-ide/brain/623a91fa-fc3a-4352-bebe-6ffdd07616fb/kde_prof_dialog.png");
+
+        // 3. Turma Dialog
+        const scheduler::model::Turma* turma = inst.turmas().empty() ? nullptr : &inst.turmas().front();
+        auto* turma_dlg = new scheduler::ui::TurmaEditorDialog(inst.salas(), nullptr, turma);
+        turma_dlg->show();
+        turma_dlg->resize(820, 750);
+        app.processEvents();
+        turma_dlg->grab().save("/home/riadmn/.gemini/antigravity-ide/brain/623a91fa-fc3a-4352-bebe-6ffdd07616fb/kde_turma_dialog.png");
+
+        // 4. Optimize Dialog
+        scheduler::model::OptimizationConfig cfg;
+        auto* opt_dlg = new scheduler::ui::OptimizeDialog(cfg, 10, nullptr);
+        opt_dlg->show();
+        opt_dlg->resize(600, 520);
+        app.processEvents();
+        opt_dlg->grab().save("/home/riadmn/.gemini/antigravity-ide/brain/623a91fa-fc3a-4352-bebe-6ffdd07616fb/kde_optimize_dialog.png");
+
+        std::cout << "[OK] Capturas salvas com sucesso no tema nativo do sistema / KDE." << std::endl;
+        return 0;
+    }
+
     // Modo Interface Gráfica Qt
     QApplication app(argc, argv);
     app.setApplicationName("EscalonadorGemini");
@@ -140,7 +188,7 @@ int main(int argc, char* argv[]) {
     app.setOrganizationName("EscalonadorGemini");
     app.setApplicationVersion("1.0.0");
 
-    // Aplica tema visual moderno
+    // Aplica tema visual nativo do sistema / KDE Plasma
     scheduler::ui::ModernTheme::applyTheme(app);
 
     scheduler::ui::MainWindow main_window;

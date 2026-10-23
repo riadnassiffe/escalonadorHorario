@@ -1,6 +1,7 @@
 #include "solver/Preprocessor.h"
 #include <algorithm>
 #include <sstream>
+#include <set>
 
 namespace scheduler::solver {
 
@@ -176,6 +177,22 @@ std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
 
     std::vector<CandidateAllocation> candidatos;
 
+    std::string prof_nomes;
+    for (size_t i = 0; i < aula.professores().size(); ++i) {
+        if (i > 0) prof_nomes += ", ";
+        const auto* p = data.findProfessor(aula.professores()[i]);
+        prof_nomes += (p && !p->nome().empty()) ? p->nome() : aula.professores()[i];
+    }
+    if (prof_nomes.empty()) prof_nomes = "Não informado";
+
+    std::string turma_nomes;
+    for (size_t i = 0; i < aula.turmas().size(); ++i) {
+        if (i > 0) turma_nomes += ", ";
+        const auto* t = data.findTurma(aula.turmas()[i]);
+        turma_nomes += (t && !t->nome().empty()) ? t->nome() : aula.turmas()[i];
+    }
+    if (turma_nomes.empty()) turma_nomes = "Não informada";
+
     // Obter turmas da aula
     std::vector<const model::Turma*> turmas_aula;
     for (const auto& t_id : aula.turmas()) {
@@ -183,7 +200,10 @@ std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
         if (t) turmas_aula.push_back(t);
     }
     if (turmas_aula.empty()) {
-        diagnostico_aula.push_back("Aula " + aula.id() + ": Nenhuma turma válida encontrada.");
+        diagnostico_aula.push_back("Não foi possível alocar a aula: " + aula.id() + " (" + aula.disciplinaNome() + ")"
+            + " | Professor: " + prof_nomes
+            + " | Turma: " + turma_nomes
+            + " | Restrições quebradas: Nenhuma turma válida encontrada para a aula.");
         return candidatos;
     }
 
@@ -194,7 +214,10 @@ std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
         if (p) profs_aula.push_back(p);
     }
     if (profs_aula.empty()) {
-        diagnostico_aula.push_back("Aula " + aula.id() + ": Nenhum professor válido encontrado.");
+        diagnostico_aula.push_back("Não foi possível alocar a aula: " + aula.id() + " (" + aula.disciplinaNome() + ")"
+            + " | Professor: " + prof_nomes
+            + " | Turma: " + turma_nomes
+            + " | Restrições quebradas: Nenhum professor válido encontrado para a aula.");
         return candidatos;
     }
 
@@ -229,8 +252,10 @@ std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
     }
 
     if (salas_admissiveis.empty()) {
-        diagnostico_aula.push_back("Aula " + aula.id() + ": Nenhuma sala admissível para o tipo '" +
-                                   aula.tipo() + "'.");
+        diagnostico_aula.push_back("Não foi possível alocar a aula: " + aula.id() + " (" + aula.disciplinaNome() + ")"
+            + " | Professor: " + prof_nomes
+            + " | Turma: " + turma_nomes
+            + " | Restrições quebradas: Nenhuma sala física admissível cadastrada para o tipo '" + aula.tipo() + "'.");
         return candidatos;
     }
 
@@ -249,6 +274,13 @@ std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
         return candidatos;
     }
 
+    bool turmas_sem_dia = false;
+    bool duracao_excede_blocos = false;
+    bool fora_turnos = false;
+    bool prof_sem_disponibilidade = false;
+    bool conflito_outra_turma = false;
+    int blocos_avaliados = 0;
+
     // Iterar sobre todos os dias da semana
     for (auto dia : model::allDays()) {
         // Verificar se todas as turmas funcionam no dia
@@ -256,6 +288,7 @@ std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
         for (const auto* t : turmas_aula) {
             if (!t->funcionaNoDia(dia)) {
                 turmas_ok = false;
+                turmas_sem_dia = true;
                 break;
             }
         }
@@ -266,13 +299,20 @@ std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
         auto blocos = jornada1.blocosLetivos();
 
         for (const auto& bloco : blocos) {
+            blocos_avaliados++;
             int max_start = bloco.end_slot - L_a;
+            if (max_start < bloco.start_slot) {
+                duracao_excede_blocos = true;
+                continue;
+            }
+
             for (int t = bloco.start_slot; t <= max_start; ++t) {
                 // 1. Verificar se cabe em todas as demais turmas no mesmo dia e slot
                 bool todas_turmas_acomodam = true;
                 for (size_t i = 1; i < turmas_aula.size(); ++i) {
                     if (!turmaAcomodaAula(*turmas_aula[i], dia, t, L_a)) {
                         todas_turmas_acomodam = false;
+                        conflito_outra_turma = true;
                         break;
                     }
                 }
@@ -286,13 +326,17 @@ std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
                         break;
                     }
                 }
-                if (!turno_ok) continue;
+                if (!turno_ok) {
+                    fora_turnos = true;
+                    continue;
+                }
 
                 // 3. Verificar disponibilidade de todos os professores
                 bool todos_profs_disponiveis = true;
                 for (const auto* p : profs_aula) {
                     if (!p->isDisponivelNoIntervalo(dia, t, t + L_a)) {
                         todos_profs_disponiveis = false;
+                        prof_sem_disponibilidade = true;
                         break;
                     }
                 }
@@ -325,8 +369,36 @@ std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
     }
 
     if (candidatos.empty()) {
-        diagnostico_aula.push_back("Aula " + aula.id() + " (" + aula.disciplinaNome() +
-                                   "): Não foi possível gerar nenhum horário admissível dentro dos blocos das turmas e disponibilidade dos professores.");
+        std::vector<std::string> restricoes;
+        if (prof_sem_disponibilidade) {
+            restricoes.push_back("Professor sem disponibilidade nos blocos de horários da turma");
+        }
+        if (fora_turnos) {
+            restricoes.push_back("Horários da turma fora dos turnos permitidos para a disciplina");
+        }
+        if (duracao_excede_blocos) {
+            restricoes.push_back("Duração da aula (" + std::to_string(aula.duracaoMinutos()) + " min) excede o tamanho dos blocos contínuos entre intervalos");
+        }
+        if (conflito_outra_turma) {
+            restricoes.push_back("Incompatibilidade de horário entre turmas agrupadas");
+        }
+        if (turmas_sem_dia && blocos_avaliados == 0) {
+            restricoes.push_back("Turma não possui dias letivos configurados");
+        }
+        if (restricoes.empty()) {
+            restricoes.push_back("Nenhum horário admissível encontrado dentro da jornada da turma e disponibilidade do professor");
+        }
+
+        std::string restricoes_str;
+        for (size_t r = 0; r < restricoes.size(); ++r) {
+            if (r > 0) restricoes_str += "; ";
+            restricoes_str += restricoes[r];
+        }
+
+        diagnostico_aula.push_back("Não foi possível alocar a aula: " + aula.id() + " (" + aula.disciplinaNome() + ")"
+            + " | Professor: " + prof_nomes
+            + " | Turma: " + turma_nomes
+            + " | Restrições quebradas: " + restricoes_str);
     }
 
     return candidatos;

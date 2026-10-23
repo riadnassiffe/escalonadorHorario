@@ -51,6 +51,7 @@ private slots:
 
 private:
     void setupUi();
+    void setupMenuBar();
     void setupToolBar();
     void setupKpiBanner();
     void updateKpiBanner();

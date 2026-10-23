@@ -1,17 +1,68 @@
 #include "ui/ModernTheme.h"
 #include <QFont>
-#include <QPalette>
+#include <QStyleFactory>
+#include <QStyle>
 
 namespace scheduler::ui {
 
+static ModernTheme::ThemeMode s_current_theme_mode = ModernTheme::ThemeMode::SystemKDE;
+
 void ModernTheme::applyTheme(QApplication& app) {
-    QFont default_font("Segoe UI", 10);
-    default_font.setStyleHint(QFont::SansSerif);
-    app.setFont(default_font);
-    app.setStyleSheet(getStyleSheet());
+    setThemeMode(app, ThemeMode::SystemKDE);
 }
 
-QString ModernTheme::getStyleSheet() {
+ModernTheme::ThemeMode ModernTheme::currentThemeMode() {
+    return s_current_theme_mode;
+}
+
+bool ModernTheme::isDarkTheme() {
+    if (s_current_theme_mode == ThemeMode::ModernDark) {
+        return true;
+    }
+    if (qApp) {
+        return (qApp->palette().color(QPalette::Window).lightness() < 128);
+    }
+    return false;
+}
+
+void ModernTheme::setThemeMode(QApplication& app, ThemeMode mode) {
+    s_current_theme_mode = mode;
+
+    if (mode == ThemeMode::ModernDark) {
+        if (QStyleFactory::keys().contains("Fusion", Qt::CaseInsensitive)) {
+            app.setStyle(QStyleFactory::create("Fusion"));
+        }
+        QFont default_font("Segoe UI", 10);
+        default_font.setStyleHint(QFont::SansSerif);
+        app.setFont(default_font);
+        app.setStyleSheet(getStyleSheet(ThemeMode::ModernDark));
+    } else if (mode == ThemeMode::Breeze) {
+        if (QStyleFactory::keys().contains("Breeze", Qt::CaseInsensitive)) {
+            app.setStyle(QStyleFactory::create("Breeze"));
+        }
+        app.setFont(QFont()); // restaura fonte padrão do sistema KDE
+        app.setStyleSheet(getStyleSheet(ThemeMode::Breeze));
+    } else if (mode == ThemeMode::Fusion) {
+        if (QStyleFactory::keys().contains("Fusion", Qt::CaseInsensitive)) {
+            app.setStyle(QStyleFactory::create("Fusion"));
+        }
+        app.setFont(QFont());
+        app.setStyleSheet(getStyleSheet(ThemeMode::Fusion));
+    } else {
+        // ThemeMode::SystemKDE (Padrão do Sistema / KDE)
+        // No KDE Plasma 6 o estilo nativo ativo costuma ser 'union' ou 'breeze'.
+        QString current_style = app.style() ? app.style()->objectName().toLower() : "";
+        if (current_style != "union" && current_style != "breeze") {
+            if (QStyleFactory::keys().contains("Breeze", Qt::CaseInsensitive)) {
+                app.setStyle(QStyleFactory::create("Breeze"));
+            }
+        }
+        app.setFont(QFont()); // respeita a fonte configurada pelo usuário no KDE
+        app.setStyleSheet(getStyleSheet(ThemeMode::SystemKDE));
+    }
+}
+
+static QString getDarkStyleSheet() {
     return QString(R"(
         QWidget {
             background-color: #0f172a;
@@ -324,6 +375,37 @@ QString ModernTheme::getStyleSheet() {
             color: #e2e8f0;
             font-family: 'Consolas', 'Fira Code', monospace;
             font-size: 12px;
+        }
+    )");
+}
+
+QString ModernTheme::getStyleSheet(ThemeMode mode) {
+    if (mode == ThemeMode::ModernDark) {
+        return getDarkStyleSheet();
+    }
+
+    // Estilos complementares semânticos que respeitam a paleta do sistema (QPalette)
+    // e preservam a renderização nativa de controles do KDE Plasma / Breeze.
+    return QString(R"(
+        /* Botão principal de destaque da barra de ferramentas */
+        QToolButton#btnOptimize {
+            background-color: palette(highlight);
+            color: palette(highlighted-text);
+            font-weight: bold;
+            border-radius: 6px;
+            padding: 6px 16px;
+        }
+
+        QPushButton#btnDanger {
+            background-color: #dc2626;
+            color: #ffffff;
+            font-weight: bold;
+            border-radius: 4px;
+            padding: 6px 12px;
+        }
+
+        QPushButton#btnDanger:hover {
+            background-color: #b91c1c;
         }
     )");
 }

@@ -84,7 +84,7 @@ void ProfessorEditorDialog::setupUi() {
     auto* lbl_disp_info = new QLabel(
         "Configure os horários em que o professor está disponível para ministrar aulas em cada dia da semana.<br>"
         "Você pode usar os botões rápidos para preencher toda a semana ou ajustar os dias e horários diretamente na tabela.", tab_disp);
-    lbl_disp_info->setStyleSheet("color: #94a3b8; font-size: 11px;");
+    lbl_disp_info->setStyleSheet("font-size: 11px;");
     lbl_disp_info->setWordWrap(true);
     layout_tab_disp->addWidget(lbl_disp_info);
 
@@ -92,7 +92,7 @@ void ProfessorEditorDialog::setupUi() {
     auto* bar_presets = new QHBoxLayout();
     bar_presets->setSpacing(6);
     auto* lbl_pre_tit = new QLabel("⚡ Preencher:", tab_disp);
-    lbl_pre_tit->setStyleSheet("font-weight: bold; color: #38bdf8;");
+    lbl_pre_tit->setStyleSheet("font-weight: bold; color: palette(highlight);");
     bar_presets->addWidget(lbl_pre_tit);
 
     auto* btn_def_m = new QPushButton("🌅 Manhã", tab_disp);
@@ -188,7 +188,7 @@ void ProfessorEditorDialog::setupUi() {
     auto* lbl_janela_info = new QLabel(
         "Define a tolerância individual do professor a horários ociosos (janelas) entre aulas no mesmo turno.<br>"
         "0 = Indiferente a janelas (sem custo); 10 = Não tolera janelas (máxima penalidade no escalonador).", grp_janela);
-    lbl_janela_info->setStyleSheet("color: #94a3b8; font-size: 11px;");
+    lbl_janela_info->setStyleSheet("font-size: 11px;");
     lbl_janela_info->setWordWrap(true);
     layout_janela->addWidget(lbl_janela_info);
 
@@ -207,12 +207,12 @@ void ProfessorEditorDialog::setupUi() {
 
     lbl_val_peso_janela_ = new QLabel("8", grp_janela);
     lbl_val_peso_janela_->setFixedWidth(30);
-    lbl_val_peso_janela_->setStyleSheet("font-weight: bold; color: #38bdf8; font-size: 14px;");
+    lbl_val_peso_janela_->setStyleSheet("font-weight: bold; color: palette(highlight); font-size: 14px;");
     row_janela->addWidget(lbl_val_peso_janela_);
 
     lbl_desc_peso_janela_ = new QLabel("Baixa tolerância a janelas", grp_janela);
     lbl_desc_peso_janela_->setFixedWidth(230);
-    lbl_desc_peso_janela_->setStyleSheet("color: #cbd5e1; font-size: 12px;");
+    lbl_desc_peso_janela_->setStyleSheet("font-size: 12px;");
     row_janela->addWidget(lbl_desc_peso_janela_);
 
     connect(slider_peso_janela_, &QSlider::valueChanged, this, &ProfessorEditorDialog::onSliderJanelaChanged);
@@ -228,7 +228,7 @@ void ProfessorEditorDialog::setupUi() {
         "Marque os turnos em que o professor pretende trabalhar em cada dia. "
         "O cálculo de janelas é feito separadamente por turno (sem penalizar pausas entre turnos diferentes). "
         "Aulas alocadas em turnos desmarcados recebem penalidade na função objetivo.", grp_turnos);
-    lbl_turnos_info->setStyleSheet("color: #94a3b8; font-size: 11px;");
+    lbl_turnos_info->setStyleSheet("font-size: 11px;");
     lbl_turnos_info->setWordWrap(true);
     layout_turnos->addWidget(lbl_turnos_info);
 
@@ -262,7 +262,7 @@ void ProfessorEditorDialog::setupUi() {
     for (size_t i = 0; i < 5; ++i) {
         auto d = static_cast<model::DayOfWeek>(i);
         auto* lbl_d = new QLabel(QString::fromStdString(model::dayToLongString(d)), grp_turnos);
-        lbl_d->setStyleSheet("font-weight: 600; color: #f1f5f9;");
+        lbl_d->setStyleSheet("font-weight: 600;");
         grid_turnos->addWidget(lbl_d, static_cast<int>(i) + 1, 0);
 
         for (size_t s = 0; s < 3; ++s) {
@@ -282,7 +282,7 @@ void ProfessorEditorDialog::setupUi() {
 
     auto* lbl_aviso = new QLabel(
         "Convenção: 10 = maior preferência, 0 = dia menos desejado (não indisponível). Padrão neutro: 5.", grp_pesos);
-    lbl_aviso->setStyleSheet("color: #94a3b8; font-size: 11px;");
+    lbl_aviso->setStyleSheet("font-size: 11px;");
     lbl_aviso->setWordWrap(true);
     layout_pesos->addWidget(lbl_aviso);
 
@@ -305,13 +305,13 @@ void ProfessorEditorDialog::setupUi() {
 
         auto* lbl_val = new QLabel("5", grp_pesos);
         lbl_val->setFixedWidth(30);
-        lbl_val->setStyleSheet("font-weight: bold; color: #38bdf8; font-size: 14px;");
+        lbl_val->setStyleSheet("font-weight: bold; color: palette(highlight); font-size: 14px;");
         lbls_valores_dias_[i] = lbl_val;
         row_layout->addWidget(lbl_val);
 
         auto* lbl_desc = new QLabel("Neutra", grp_pesos);
         lbl_desc->setFixedWidth(160);
-        lbl_desc->setStyleSheet("color: #cbd5e1; font-size: 12px;");
+        lbl_desc->setStyleSheet("font-size: 12px;");
         lbls_desc_dias_[i] = lbl_desc;
         row_layout->addWidget(lbl_desc);
 
@@ -356,19 +356,19 @@ void ProfessorEditorDialog::onSliderValueChanged() {
         lbls_valores_dias_[i]->setText(QString::number(val));
         if (val == 10) {
             lbls_desc_dias_[i]->setText("⭐ Maior preferência");
-            lbls_desc_dias_[i]->setStyleSheet("color: #10b981; font-weight: bold;");
+            lbls_desc_dias_[i]->setStyleSheet("color: #16a34a; font-weight: bold;");
         } else if (val >= 7) {
             lbls_desc_dias_[i]->setText("Alta preferência");
-            lbls_desc_dias_[i]->setStyleSheet("color: #38bdf8; font-weight: bold;");
+            lbls_desc_dias_[i]->setStyleSheet("color: #0284c7; font-weight: bold;");
         } else if (val >= 4) {
             lbls_desc_dias_[i]->setText("Preferência neutra");
-            lbls_desc_dias_[i]->setStyleSheet("color: #94a3b8;");
+            lbls_desc_dias_[i]->setStyleSheet("color: palette(window-text);");
         } else if (val >= 1) {
             lbls_desc_dias_[i]->setText("Baixa preferência");
-            lbls_desc_dias_[i]->setStyleSheet("color: #f59e0b;");
+            lbls_desc_dias_[i]->setStyleSheet("color: #d97706;");
         } else {
             lbls_desc_dias_[i]->setText("⚠️ Menos desejado (peso 0)");
-            lbls_desc_dias_[i]->setStyleSheet("color: #ef4444; font-weight: bold;");
+            lbls_desc_dias_[i]->setStyleSheet("color: #dc2626; font-weight: bold;");
         }
     }
 }
@@ -378,19 +378,19 @@ void ProfessorEditorDialog::onSliderJanelaChanged() {
     lbl_val_peso_janela_->setText(QString::number(val));
     if (val == 10) {
         lbl_desc_peso_janela_->setText("⭐ Máxima aversão (não tolera janelas)");
-        lbl_desc_peso_janela_->setStyleSheet("color: #ef4444; font-weight: bold;");
+        lbl_desc_peso_janela_->setStyleSheet("color: #dc2626; font-weight: bold;");
     } else if (val >= 7) {
         lbl_desc_peso_janela_->setText("Baixa tolerância a janelas");
-        lbl_desc_peso_janela_->setStyleSheet("color: #f59e0b; font-weight: bold;");
+        lbl_desc_peso_janela_->setStyleSheet("color: #d97706; font-weight: bold;");
     } else if (val >= 4) {
         lbl_desc_peso_janela_->setText("Tolerância neutra / média");
-        lbl_desc_peso_janela_->setStyleSheet("color: #94a3b8;");
+        lbl_desc_peso_janela_->setStyleSheet("color: palette(window-text);");
     } else if (val >= 1) {
         lbl_desc_peso_janela_->setText("Alta tolerância a janelas");
-        lbl_desc_peso_janela_->setStyleSheet("color: #38bdf8;");
+        lbl_desc_peso_janela_->setStyleSheet("color: #0284c7;");
     } else {
         lbl_desc_peso_janela_->setText("Indiferente (sem penalidade)");
-        lbl_desc_peso_janela_->setStyleSheet("color: #10b981; font-weight: bold;");
+        lbl_desc_peso_janela_->setStyleSheet("color: #16a34a; font-weight: bold;");
     }
 }
 

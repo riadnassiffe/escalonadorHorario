@@ -1,4 +1,5 @@
 #include "ui/OptimizeDialog.h"
+#include "ui/ModernTheme.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -23,18 +24,18 @@ void OptimizeDialog::setupUi() {
     main_layout->setContentsMargins(20, 20, 20, 20);
 
     // 1. Banner Superior
-    auto* banner_card = new QWidget(this);
+    auto* banner_card = new QFrame(this);
+    banner_card->setFrameShape(QFrame::StyledPanel);
     banner_card->setStyleSheet(
-        "background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1e293b, stop:1 #172554);"
-        "border: 1px solid #3b82f6; border-radius: 8px; padding: 10px;");
+        "QFrame { background-color: palette(base); border: 1px solid palette(highlight); border-radius: 8px; padding: 10px; }");
     auto* lay_banner = new QVBoxLayout(banner_card);
     lay_banner->setSpacing(4);
 
     auto* lbl_title = new QLabel("⚡ OTIMIZAÇÃO DA GRADE ESCOLAR", banner_card);
-    lbl_title->setStyleSheet("font-size: 15px; font-weight: bold; color: #38bdf8;");
+    lbl_title->setStyleSheet("font-size: 15px; font-weight: bold; color: palette(highlight);");
     auto* lbl_subtitle = new QLabel("Selecione o algoritmo desejado para resolver o problema de alocação de horários e configure os parâmetros de busca.", banner_card);
     lbl_subtitle->setWordWrap(true);
-    lbl_subtitle->setStyleSheet("font-size: 12px; color: #cbd5e1;");
+    lbl_subtitle->setStyleSheet("font-size: 12px;");
 
     lay_banner->addWidget(lbl_title);
     lay_banner->addWidget(lbl_subtitle);
@@ -47,7 +48,7 @@ void OptimizeDialog::setupUi() {
 
     auto* lay_combo = new QHBoxLayout();
     auto* lbl_combo_title = new QLabel("Algoritmo:", grp_algo);
-    lbl_combo_title->setStyleSheet("font-weight: bold; font-size: 13px; color: #f8fafc; min-width: 80px;");
+    lbl_combo_title->setStyleSheet("font-weight: bold; font-size: 13px; min-width: 80px;");
     
     combo_algorithm_ = new QComboBox(grp_algo);
     combo_algorithm_->addItem("Google OR-Tools CP-SAT (Restrições / Exato) [Recomendado]",
@@ -72,13 +73,13 @@ void OptimizeDialog::setupUi() {
     auto* card_details = new QFrame(grp_algo);
     card_details->setFrameShape(QFrame::StyledPanel);
     card_details->setStyleSheet(
-        "background-color: #0b1329; border: 1px solid #1e3a8a; border-radius: 6px; padding: 10px;");
+        "QFrame { background-color: palette(base); border: 1px solid palette(mid); border-radius: 6px; padding: 10px; }");
     auto* lay_details = new QVBoxLayout(card_details);
     lay_details->setSpacing(6);
 
     lbl_algo_desc_ = new QLabel(card_details);
     lbl_algo_desc_->setWordWrap(true);
-    lbl_algo_desc_->setStyleSheet("color: #e2e8f0; font-size: 12px; line-height: 1.4;");
+    lbl_algo_desc_->setStyleSheet("font-size: 12px; line-height: 1.4;");
 
     auto* lay_badges = new QHBoxLayout();
     lay_badges->setSpacing(8);
@@ -86,7 +87,7 @@ void OptimizeDialog::setupUi() {
     auto make_badge = [](const QString& title, QLabel*& lbl_val, const QString& bg_color, const QString& text_color) {
         auto* box = new QHBoxLayout();
         auto* tag = new QLabel(title + ": ");
-        tag->setStyleSheet("color: #94a3b8; font-size: 11px; font-weight: 500;");
+        tag->setStyleSheet("font-size: 11px; font-weight: 500;");
         lbl_val = new QLabel();
         lbl_val->setStyleSheet(QString("background-color: %1; color: %2; font-size: 11px; font-weight: bold; border-radius: 4px; padding: 2px 6px;")
                                .arg(bg_color, text_color));
@@ -95,9 +96,16 @@ void OptimizeDialog::setupUi() {
         return box;
     };
 
-    lay_badges->addLayout(make_badge("Abordagem", lbl_algo_type_, "#1e293b", "#38bdf8"));
-    lay_badges->addLayout(make_badge("Garantia", lbl_algo_guarantee_, "#14532d", "#4ade80"));
-    lay_badges->addLayout(make_badge("Desempenho", lbl_algo_speed_, "#312e81", "#a5b4fc"));
+    bool is_dark = ModernTheme::isDarkTheme();
+    lay_badges->addLayout(make_badge("Abordagem", lbl_algo_type_,
+                                     is_dark ? "#1e293b" : "rgba(2, 132, 199, 0.15)",
+                                     is_dark ? "#38bdf8" : "#0284c7"));
+    lay_badges->addLayout(make_badge("Garantia", lbl_algo_guarantee_,
+                                     is_dark ? "#14532d" : "rgba(22, 163, 74, 0.15)",
+                                     is_dark ? "#4ade80" : "#16a34a"));
+    lay_badges->addLayout(make_badge("Desempenho", lbl_algo_speed_,
+                                     is_dark ? "#312e81" : "rgba(109, 40, 217, 0.15)",
+                                     is_dark ? "#a5b4fc" : "#6d28d9"));
     lay_badges->addStretch();
 
     lay_details->addWidget(lbl_algo_desc_);
@@ -143,16 +151,16 @@ void OptimizeDialog::setupUi() {
     chk_usar_grade_atual_ = new QCheckBox("Usar distribuição de disciplinas atual em tela como entrada (Warm Start)", grp_params);
     chk_usar_grade_atual_->setChecked(initial_config_.usar_distribuicao_como_entrada && num_aulas_em_tela_ > 0);
     chk_usar_grade_atual_->setEnabled(num_aulas_em_tela_ > 0);
-    chk_usar_grade_atual_->setStyleSheet("font-weight: bold; color: #38bdf8;");
+    chk_usar_grade_atual_->setStyleSheet("font-weight: bold; color: palette(highlight);");
 
     lbl_grade_atual_info_ = new QLabel(grp_params);
     lbl_grade_atual_info_->setWordWrap(true);
     if (num_aulas_em_tela_ > 0) {
         lbl_grade_atual_info_->setText(QString("💡 Grade em tela detectada com %1 aulas. O algoritmo utilizará essa distribuição como ponto de partida inicial para acelerar e guiar a busca.").arg(num_aulas_em_tela_));
-        lbl_grade_atual_info_->setStyleSheet("color: #94a3b8; font-size: 11px;");
+        lbl_grade_atual_info_->setStyleSheet("font-size: 11px;");
     } else {
         lbl_grade_atual_info_->setText("ℹ️ Nenhuma grade alocada na tela no momento. O algoritmo iniciará uma alocação do zero.");
-        lbl_grade_atual_info_->setStyleSheet("color: #64748b; font-size: 11px;");
+        lbl_grade_atual_info_->setStyleSheet("font-size: 11px;");
     }
     form_params->addRow("", chk_usar_grade_atual_);
     form_params->addRow("", lbl_grade_atual_info_);

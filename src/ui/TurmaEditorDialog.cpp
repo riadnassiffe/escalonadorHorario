@@ -89,7 +89,7 @@ void TurmaEditorDialog::setupUi() {
     auto* bar_semana = new QHBoxLayout();
     bar_semana->setSpacing(6);
     auto* lbl_rapido = new QLabel("⚡ Aplicar em toda a semana:", tab_jornadas);
-    lbl_rapido->setStyleSheet("font-weight: bold; color: #38bdf8;");
+    lbl_rapido->setStyleSheet("font-weight: bold; color: palette(highlight);");
     bar_semana->addWidget(lbl_rapido);
 
     auto* btn_all_manha = new QPushButton("🌅 Toda Manhã", tab_jornadas);
@@ -143,8 +143,8 @@ void TurmaEditorDialog::setupUi() {
 
     // Resumo semanal
     lbl_resumo_semanal_ = new QLabel(tab_jornadas);
-    lbl_resumo_semanal_->setStyleSheet("font-size: 11px; padding: 6px; background-color: rgba(30, 41, 59, 0.7); "
-                                       "border: 1px solid #334155; border-radius: 4px; color: #cbd5e1;");
+    lbl_resumo_semanal_->setStyleSheet("font-size: 11px; padding: 6px; background-color: palette(base); "
+                                       "border: 1px solid palette(mid); border-radius: 4px;");
     lbl_resumo_semanal_->setWordWrap(true);
     layout_tab_j->addWidget(lbl_resumo_semanal_);
 
@@ -161,7 +161,7 @@ void TurmaEditorDialog::setupUi() {
     auto* lbl_sala_info = new QLabel(
         "A Seção 3.6 do modelo acadêmico define a política de sala permanente para aulas teóricas da turma durante a semana.<br>"
         "Você pode definir uma sala fixa específica no cadastro ou permitir que o otimizador escolha a melhor sala fixa permanente.", tab_sala);
-    lbl_sala_info->setStyleSheet("color: #94a3b8; font-size: 11px;");
+    lbl_sala_info->setStyleSheet("font-size: 11px;");
     lbl_sala_info->setWordWrap(true);
     layout_tab_sala->addWidget(lbl_sala_info);
 
@@ -279,7 +279,7 @@ QWidget* TurmaEditorDialog::createDayTab(int day_idx) {
     // Linha Superior: Checkbox do Dia e Botão Copiar
     auto* top_row = new QHBoxLayout();
     w.chk_dia_ativo = new QCheckBox(QString("Turma possui aulas na %1").arg(QString::fromStdString(model::dayToLongString(d))), tab_page);
-    w.chk_dia_ativo->setStyleSheet("font-weight: bold; font-size: 13px; color: #f8fafc;");
+    w.chk_dia_ativo->setStyleSheet("font-weight: bold; font-size: 13px;");
     w.chk_dia_ativo->setChecked(true);
     top_row->addWidget(w.chk_dia_ativo);
     top_row->addStretch();
@@ -304,7 +304,7 @@ QWidget* TurmaEditorDialog::createDayTab(int day_idx) {
     // Barra de Presets do Dia
     auto* presets_row = new QHBoxLayout();
     auto* lbl_pre_dia = new QLabel("Predefinir este dia:", w.content_panel);
-    lbl_pre_dia->setStyleSheet("color: #94a3b8;");
+    lbl_pre_dia->setStyleSheet("font-size: 11px;");
     presets_row->addWidget(lbl_pre_dia);
 
     auto* btn_p_manha = new QPushButton("🌅 Manhã", w.content_panel);
@@ -316,7 +316,7 @@ QWidget* TurmaEditorDialog::createDayTab(int day_idx) {
     btn_p_tarde->setMinimumHeight(28);
 
     auto* btn_p_integral = new QPushButton("🌅+☀️ Manhã e Tarde (Integral)", w.content_panel);
-    btn_p_integral->setStyleSheet("font-weight: bold; color: #38bdf8;");
+    btn_p_integral->setStyleSheet("font-weight: bold; color: palette(highlight);");
     btn_p_integral->setMinimumHeight(28);
 
     auto* btn_p_noite = new QPushButton("🌙 Noite", w.content_panel);
@@ -739,7 +739,7 @@ void TurmaEditorDialog::validateAllDays() {
             tab_dias_->setTabText(i, QString("%1 ⚪").arg(day_abbr));
             tab_dias_->setTabToolTip(i, QString("%1: Sem aulas (dia não letivo)").arg(QString::fromStdString(model::dayToLongString(d))));
             w.lbl_status->setText("⚠️ Turma não tem aula neste dia (dia não letivo).");
-            w.lbl_status->setStyleSheet("color: #94a3b8; font-style: italic;");
+            w.lbl_status->setStyleSheet("font-style: italic;");
             resumo_partes << QString("<b>%1</b>: Folga").arg(day_abbr);
             continue;
         }
@@ -790,14 +790,14 @@ void TurmaEditorDialog::validateAllDays() {
                                   .arg(blocos.size())
                                   .arg(blocos_desc.join(", "))
                                   .arg(dia_min));
-            w.lbl_status->setStyleSheet("color: #10b981; font-weight: bold;");
+            w.lbl_status->setStyleSheet("color: #16a34a; font-weight: bold;");
 
             resumo_partes << QString("<b>%1</b>: %2 %3 (%4m)").arg(day_abbr, icon_badge, badge, QString::number(dia_min));
         } else {
             tab_dias_->setTabText(i, QString("%1 ❌").arg(day_abbr));
             tab_dias_->setTabToolTip(i, QString("%1: Horário inconsistente").arg(QString::fromStdString(model::dayToLongString(d))));
             w.lbl_status->setText("❌ Inconsistência: Início < Intervalos ativos em ordem e sem sobreposição < Fim.");
-            w.lbl_status->setStyleSheet("color: #ef4444; font-weight: bold;");
+            w.lbl_status->setStyleSheet("color: #dc2626; font-weight: bold;");
             resumo_partes << QString("<b>%1</b>: ❌ Inválido").arg(day_abbr);
         }
     }

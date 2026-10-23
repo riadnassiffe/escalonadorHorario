@@ -6,7 +6,12 @@
 #include "ui/LessonEditorDialog.h"
 #include "ui/OptimizeDialog.h"
 #include "ui/ScheduleReportExporter.h"
+#include "ui/ModernTheme.h"
 #include "serialization/JsonSerialization.h"
+#include <QMenuBar>
+#include <QMenu>
+#include <QAction>
+#include <QActionGroup>
 #include <QToolBar>
 #include <QToolButton>
 #include <QPushButton>
@@ -32,6 +37,7 @@ void MainWindow::setupUi() {
     setWindowTitle("Escalonador Inteligente de Horários Escolares");
     resize(1300, 850);
 
+    setupMenuBar();
     setupToolBar();
 
     auto* central_widget = new QWidget(this);
@@ -64,6 +70,46 @@ void MainWindow::setupUi() {
     progress_bar_->setVisible(false);
     statusBar()->addPermanentWidget(progress_bar_);
     statusBar()->showMessage("Pronto para otimizar.");
+}
+
+void MainWindow::setupMenuBar() {
+    auto* menu_arquivo = menuBar()->addMenu("&Arquivo");
+    menu_arquivo->addAction("Novo Projeto", QKeySequence::New, this, &MainWindow::onNewProject);
+    menu_arquivo->addAction("Abrir JSON...", QKeySequence::Open, this, &MainWindow::onOpenFile);
+    menu_arquivo->addAction("Salvar JSON...", QKeySequence::Save, this, &MainWindow::onSaveFile);
+    menu_arquivo->addAction("Carregar Exemplo Padrão", this, &MainWindow::onLoadDefaultExample);
+    menu_arquivo->addSeparator();
+    menu_arquivo->addAction("Exportar Grade HTML...", this, &MainWindow::onExportHtml);
+    menu_arquivo->addAction("Exportar Grade CSV...", this, &MainWindow::onExportCsv);
+    menu_arquivo->addSeparator();
+    menu_arquivo->addAction("Sair", QKeySequence::Quit, this, &QWidget::close);
+
+    auto* menu_exibir = menuBar()->addMenu("&Exibir");
+    auto* menu_tema = menu_exibir->addMenu("🎨 &Tema Visual");
+
+    auto* grp_tema = new QActionGroup(this);
+    grp_tema->setExclusive(true);
+
+    auto add_theme_action = [this, menu_tema, grp_tema](const QString& title, ModernTheme::ThemeMode mode, bool checked = false) {
+        auto* act = menu_tema->addAction(title);
+        act->setCheckable(true);
+        act->setChecked(checked);
+        grp_tema->addAction(act);
+        connect(act, &QAction::triggered, this, [this, mode]() {
+            ModernTheme::setThemeMode(*qApp, mode);
+            refreshAllTables();
+            if (timetable_view_) {
+                timetable_view_->refreshView();
+            }
+            updateKpiBanner();
+        });
+        return act;
+    };
+
+    add_theme_action("Padrão do Sistema (KDE Plasma)", ModernTheme::ThemeMode::SystemKDE, true);
+    add_theme_action("KDE Breeze Nativo", ModernTheme::ThemeMode::Breeze, false);
+    add_theme_action("Qt Fusion", ModernTheme::ThemeMode::Fusion, false);
+    add_theme_action("Escuro Moderno (Slate Dark)", ModernTheme::ThemeMode::ModernDark, false);
 }
 
 void MainWindow::setupToolBar() {
@@ -115,31 +161,36 @@ void MainWindow::setupToolBar() {
 }
 
 void MainWindow::setupKpiBanner() {
-    auto* banner_card = new QWidget(this);
+    auto* banner_card = new QFrame(this);
+    banner_card->setFrameShape(QFrame::StyledPanel);
+    banner_card->setObjectName("kpiBannerCard");
     banner_card->setStyleSheet(
-        "background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1e293b, stop:1 #131c2e);"
-        "border: 1px solid #334155; border-radius: 8px; padding: 6px;");
+        "QFrame#kpiBannerCard { background-color: palette(base); border: 1px solid palette(mid); border-radius: 8px; padding: 4px; }");
 
     auto* layout = new QHBoxLayout(banner_card);
     layout->setContentsMargins(12, 6, 12, 6);
     layout->setSpacing(20);
 
-    auto make_kpi = [](const QString& label, QLabel*& val_label, const QString& init_val, const QString& color = "#38bdf8") {
+    auto make_kpi = [](const QString& label, QLabel*& val_label, const QString& init_val, const QString& color = "") {
         auto* box = new QVBoxLayout();
         box->setSpacing(2);
         val_label = new QLabel(init_val);
-        val_label->setStyleSheet(QString("font-size: 16px; font-weight: bold; color: %1;").arg(color));
+        if (color.isEmpty()) {
+            val_label->setStyleSheet("font-size: 15px; font-weight: bold; color: palette(highlight);");
+        } else {
+            val_label->setStyleSheet(QString("font-size: 15px; font-weight: bold; color: %1;").arg(color));
+        }
         auto* lbl = new QLabel(label);
-        lbl->setStyleSheet("font-size: 11px; color: #94a3b8; font-weight: 500;");
+        lbl->setStyleSheet("font-size: 11px; font-weight: 500;");
         box->addWidget(val_label);
         box->addWidget(lbl);
         return box;
     };
 
-    layout->addLayout(make_kpi("Status do Solver", lbl_kpi_status_, "NÃO EXECUTADO", "#94a3b8"));
+    layout->addLayout(make_kpi("Status do Solver", lbl_kpi_status_, "NÃO EXECUTADO", "#64748b"));
     layout->addLayout(make_kpi("Tempo de Resolução", lbl_kpi_tempo_, "0.0 ms"));
-    layout->addLayout(make_kpi("Aulas Alocadas", lbl_kpi_aulas_, "0 / 0", "#10b981"));
-    layout->addLayout(make_kpi("Janelas Professores (J)", lbl_kpi_janelas_, "0 min", "#f59e0b"));
+    layout->addLayout(make_kpi("Aulas Alocadas", lbl_kpi_aulas_, "0 / 0", "#16a34a"));
+    layout->addLayout(make_kpi("Janelas Professores (J)", lbl_kpi_janelas_, "0 min", "#d97706"));
     layout->addLayout(make_kpi("Dias Trabalhados (D)", lbl_kpi_dias_, "0"));
     layout->addLayout(make_kpi("Penalidade Pref. Dias (W)", lbl_kpi_pref_dias_, "0"));
     layout->addStretch();
@@ -149,13 +200,13 @@ void MainWindow::updateKpiBanner() {
     const auto& s = data_.grade().estatisticas();
     lbl_kpi_status_->setText(QString::fromStdString(s.status));
     if (s.status == "OPTIMAL") {
-        lbl_kpi_status_->setStyleSheet("font-size: 16px; font-weight: bold; color: #10b981;");
+        lbl_kpi_status_->setStyleSheet("font-size: 15px; font-weight: bold; color: #16a34a;");
     } else if (s.status == "FEASIBLE") {
-        lbl_kpi_status_->setStyleSheet("font-size: 16px; font-weight: bold; color: #38bdf8;");
+        lbl_kpi_status_->setStyleSheet("font-size: 15px; font-weight: bold; color: #0284c7;");
     } else if (s.status == "INFEASIBLE") {
-        lbl_kpi_status_->setStyleSheet("font-size: 16px; font-weight: bold; color: #ef4444;");
+        lbl_kpi_status_->setStyleSheet("font-size: 15px; font-weight: bold; color: #dc2626;");
     } else {
-        lbl_kpi_status_->setStyleSheet("font-size: 16px; font-weight: bold; color: #94a3b8;");
+        lbl_kpi_status_->setStyleSheet("font-size: 15px; font-weight: bold; color: #64748b;");
     }
 
     lbl_kpi_tempo_->setText(QString::number(s.tempo_execucao_ms, 'f', 1) + " ms");
@@ -638,12 +689,13 @@ void MainWindow::refreshDisciplinasTable() {
         table_disciplinas_->setItem(r, 1, new SmartTableWidgetItem(QString::fromStdString(d.nome())));
 
         auto* item_regime = new SmartTableWidgetItem(QString::fromStdString(d.regimeSemestreFormatado()));
+        bool is_dark = ModernTheme::isDarkTheme();
         if (d.regime() == model::RegimeDisciplina::ANUAL) {
-            item_regime->setForeground(QBrush(QColor(56, 189, 248))); // #38bdf8
+            item_regime->setForeground(QBrush(is_dark ? QColor(56, 189, 248) : QColor(2, 132, 199))); // #0284c7 / #38bdf8
         } else if (d.semestre() == model::SemestreLetivo::SEMESTRE_1) {
-            item_regime->setForeground(QBrush(QColor(251, 146, 60))); // #fb923c
+            item_regime->setForeground(QBrush(is_dark ? QColor(251, 146, 60) : QColor(217, 119, 6))); // #d97706 / #fb923c
         } else {
-            item_regime->setForeground(QBrush(QColor(52, 211, 153))); // #34d399
+            item_regime->setForeground(QBrush(is_dark ? QColor(52, 211, 153) : QColor(22, 163, 74))); // #16a34a / #34d399
         }
         table_disciplinas_->setItem(r, 2, item_regime);
 

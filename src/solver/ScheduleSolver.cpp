@@ -770,6 +770,19 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
         timetable.setEstatisticas(stats);
         timetable.addMensagemDiagnostico("[INVIABILIDADE] O solver CP-SAT determinou que o conjunto de restrições não possui solução viável.");
         timetable.addMensagemDiagnostico("Dica: Verifique a disponibilidade dos professores, salas compatíveis, ou flexibilize a jornada e limites diários.");
+
+        // Simulação heurística para apontar exatamente quais aulas encontram restrições conflitantes
+        auto diag_tt = solveGreedyHeuristic(data, nullptr);
+        bool header_added = false;
+        for (const auto& msg : diag_tt.mensagensDiagnostico()) {
+            if (msg.find("Não foi possível alocar a aula") != std::string::npos) {
+                if (!header_added) {
+                    timetable.addMensagemDiagnostico("[DIAGNÓSTICO] Aulas com restrições conflitantes na simulação de alocação:");
+                    header_added = true;
+                }
+                timetable.addMensagemDiagnostico(msg);
+            }
+        }
         if (callback) callback("Inviável: Sem solução para as restrições informadas.", 1.0);
     } else {
         timetable.setEstatisticas(stats);
@@ -1009,7 +1022,142 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
             timetable.addAllocatedLesson(std::move(aloc));
             alocadas_count++;
         } else {
-            timetable.addMensagemDiagnostico("[HEURÍSTICA] Não foi possível alocar a aula: " + aula->id() + " (" + aula->disciplinaNome() + ") sem violar restrições.");
+            std::string prof_nomes;
+            for (size_t p_i = 0; p_i < aula->professores().size(); ++p_i) {
+                if (p_i > 0) prof_nomes += ", ";
+                const auto* p = data.findProfessor(aula->professores()[p_i]);
+                prof_nomes += (p && !p->nome().empty()) ? p->nome() : aula->professores()[p_i];
+            }
+            if (prof_nomes.empty()) prof_nomes = "Não informado";
+
+            std::string turma_nomes;
+            for (size_t t_i = 0; t_i < aula->turmas().size(); ++t_i) {
+                if (t_i > 0) turma_nomes += ", ";
+                const auto* t = data.findTurma(aula->turmas()[t_i]);
+                turma_nomes += (t && !t->nome().empty()) ? t->nome() : aula->turmas()[t_i];
+            }
+            if (turma_nomes.empty()) turma_nomes = "Não informada";
+
+            std::vector<std::string> restricoes_quebradas;
+
+            if (cands.empty()) {
+                if (aula->professores().empty()) {
+                    restricoes_quebradas.push_back("Nenhum professor cadastrado/atribuído");
+                }
+                if (aula->turmas().empty()) {
+                    restricoes_quebradas.push_back("Nenhuma turma cadastrada/atribuída");
+                }
+                bool tem_sala = false;
+                for (const auto& sala : data.salas()) {
+                    if (aula->isTeorica() || sala.tipo() == aula->tipo() || !sala.isTeorica()) {
+                        tem_sala = true;
+                        break;
+                    }
+                }
+                if (!tem_sala) {
+                    restricoes_quebradas.push_back("Nenhuma sala cadastrada compatível com o tipo '" + aula->tipo() + "'");
+                }
+                if (aula->isPinned()) {
+                    restricoes_quebradas.push_back("Aula fixada em horário/dia inválido ou fora da jornada da turma");
+                }
+                if (restricoes_quebradas.empty()) {
+                    restricoes_quebradas.push_back("Sem candidatos viáveis no pré-processamento (incompatibilidade de jornada, turnos ou disponibilidade docente)");
+                }
+            } else {
+                std::set<std::string> profs_ocupados;
+                std::set<std::string> turmas_ocupadas;
+                std::set<std::string> turmas_limite;
+                std::set<std::string> salas_ocupadas;
+
+                for (const auto& c : cands) {
+                    int s = c.start_slot;
+                    int e = c.end_slot();
+
+                    for (const auto& p_id : aula->professores()) {
+                        if (overlaps(prof_ocup[{p_id, c.dia}], s, e)) {
+                            const auto* p = data.findProfessor(p_id);
+                            profs_ocupados.insert(p && !p->nome().empty() ? p->nome() : p_id);
+                        }
+                    }
+
+                    for (const auto& t_id : aula->turmas()) {
+                        if (overlaps(turma_ocup[{t_id, c.dia}], s, e)) {
+                            const auto* t = data.findTurma(t_id);
+                            turmas_ocupadas.insert(t && !t->nome().empty() ? t->nome() : t_id);
+                        }
+                        if (data.config().distribuir_disciplinas_na_semana) {
+                            const auto* disc = data.findDisciplina(aula->disciplinaId());
+                            int max_lim = (disc && disc->maxAulasPorDiaTurma() > 0) ? disc->maxAulasPorDiaTurma() : data.config().max_aulas_disciplina_dia_turma;
+                            int cnt = turma_disc_dia_count[{t_id, aula->disciplinaId(), c.dia}];
+                            if (cnt >= max_lim) {
+                                const auto* t = data.findTurma(t_id);
+                                turmas_limite.insert(t && !t->nome().empty() ? t->nome() : t_id);
+                            }
+                        }
+                    }
+
+                    for (const auto& sala_id : c.salas) {
+                        if (overlaps(sala_ocup[{sala_id, c.dia}], s, e)) {
+                            const auto* r = data.findSala(sala_id);
+                            salas_ocupadas.insert(r && !r->nome().empty() ? r->nome() : sala_id);
+                        }
+                    }
+                }
+
+                if (!profs_ocupados.empty()) {
+                    std::string s;
+                    for (const auto& name : profs_ocupados) {
+                        if (!s.empty()) s += ", ";
+                        s += name;
+                    }
+                    restricoes_quebradas.push_back("Choque de horário de professor: " + s + " (já possui aula alocada)");
+                }
+
+                if (!turmas_ocupadas.empty()) {
+                    std::string s;
+                    for (const auto& name : turmas_ocupadas) {
+                        if (!s.empty()) s += ", ";
+                        s += name;
+                    }
+                    restricoes_quebradas.push_back("Choque de horário de turma: " + s + " (turma já ocupada com outra aula)");
+                }
+
+                if (!turmas_limite.empty()) {
+                    std::string s;
+                    for (const auto& name : turmas_limite) {
+                        if (!s.empty()) s += ", ";
+                        s += name;
+                    }
+                    const auto* disc = data.findDisciplina(aula->disciplinaId());
+                    int max_lim = (disc && disc->maxAulasPorDiaTurma() > 0) ? disc->maxAulasPorDiaTurma() : data.config().max_aulas_disciplina_dia_turma;
+                    restricoes_quebradas.push_back("Limite diário da disciplina excedido na turma: " + s + " (máximo de " + std::to_string(max_lim) + " aulas/dia)");
+                }
+
+                if (!salas_ocupadas.empty()) {
+                    std::string s;
+                    for (const auto& name : salas_ocupadas) {
+                        if (!s.empty()) s += ", ";
+                        s += name;
+                    }
+                    restricoes_quebradas.push_back("Indisponibilidade de sala física: " + s + " (sala ocupada por outra aula)");
+                }
+
+                if (restricoes_quebradas.empty()) {
+                    restricoes_quebradas.push_back("Conflitos de horário em todos os candidatos admissíveis");
+                }
+            }
+
+            std::string restricoes_str;
+            for (size_t r_i = 0; r_i < restricoes_quebradas.size(); ++r_i) {
+                if (r_i > 0) restricoes_str += "; ";
+                restricoes_str += restricoes_quebradas[r_i];
+            }
+
+            std::string msg = "[HEURÍSTICA] Não foi possível alocar a aula: " + aula->id() + " (" + aula->disciplinaNome() + ")"
+                            + " | Professor: " + prof_nomes
+                            + " | Turma: " + turma_nomes
+                            + " | Restrições quebradas: " + restricoes_str;
+            timetable.addMensagemDiagnostico(msg);
         }
     }
 
