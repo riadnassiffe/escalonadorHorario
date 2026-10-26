@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(EscalonadorGemini LANGUAGES CXX)
+project(escalonadorHorarios LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -81,11 +81,11 @@ set(HEADERS
     include/ui/MainWindow.h
 )
 
-add_executable(EscalonadorGemini ${SOURCES} ${HEADERS})
+add_executable(escalonadorHorarios ${SOURCES} ${HEADERS})
 
-target_include_directories(EscalonadorGemini PRIVATE include)
+target_include_directories(escalonadorHorarios PRIVATE include)
 
-target_link_libraries(EscalonadorGemini PRIVATE
+target_link_libraries(escalonadorHorarios PRIVATE
     or-tools::or-tools
     nlohmann_json::nlohmann_json
     Qt6::Core

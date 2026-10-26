@@ -280,6 +280,8 @@ void TurmaEditorDialog::setupUi() {
 
         accept();
     });
+}
+
 /**
  * @brief Constrói a aba de configuração de horários e intervalos para um dia específico.
  * @param day_idx Índice do dia da semana (0 = Segunda, ..., 4 = Sexta).
@@ -498,6 +500,8 @@ QWidget* TurmaEditorDialog::createDayTab(int day_idx) {
     connect(w.time_int3_fim, &QTimeEdit::timeChanged, this, &TurmaEditorDialog::validateAllDays);
 
     return tab_page;
+}
+
 /**
  * @brief Aplica parâmetros padrão de horários e intervalos a um dia da semana.
  * @param day_idx Índice do dia (0 a 4).
@@ -620,6 +624,8 @@ void TurmaEditorDialog::applyPresetToDay(int day_idx, model::ShiftType preset_ty
     }
 
     validateAllDays();
+}
+
 /**
  * @brief Aplica a mesma predefinição de horários a todos os 5 dias úteis da semana.
  * @param preset_type Turno da predefinição.
@@ -680,6 +686,8 @@ void TurmaEditorDialog::copyDayScheduleToOthers(int source_day_idx) {
         }
         validateAllDays();
     }
+}
+
 /**
  * @brief Converte o estado dos controles gráficos de um dia em uma model::JornadaTurma.
  * @param w Estrutura de widgets do dia.
@@ -756,6 +764,8 @@ void TurmaEditorDialog::setWidgetsFromJornada(DayScheduleWidgets& w, const model
     }
     w.time_int3_ini->setEnabled(j.int3_ativo);
     w.time_int3_fim->setEnabled(j.int3_ativo);
+}
+
 /**
  * @brief Valida consistência de horários e intervalos de todos os dias e calcula tempo letivo semanal.
  */
@@ -851,6 +861,8 @@ void TurmaEditorDialog::validateAllDays() {
             combo_turno_->setCurrentIndex(idx);
         }
     }
+}
+
 /**
  * @brief Alterna o estado de seleção entre sala fixa predefinida e salas permitidas.
  */

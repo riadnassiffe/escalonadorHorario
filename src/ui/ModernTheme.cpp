@@ -403,6 +403,8 @@ static QString getDarkStyleSheet() {
             font-size: 12px;
         }
     )");
+}
+
 /**
  * @brief Retorna a folha de estilo QSS correspondente ao modo de tema configurado.
  * @param mode Modo de tema desejado.

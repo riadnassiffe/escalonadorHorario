@@ -512,7 +512,13 @@ void ProfessorEditorDialog::onSetDefaultMorning() {
         table_disp_->setCellWidget(r, 1, t_ini);
 
         auto* t_fim = new QTimeEdit(QTime(12, 0), table_disp_);
-     /**
+        t_fim->setDisplayFormat("HH:mm");
+        t_fim->setMinimumHeight(28);
+        table_disp_->setCellWidget(r, 2, t_fim);
+    }
+}
+
+/**
  * @brief Preenche a tabela com intervalos padrão para o turno da Tarde (13:00 às 18:00).
  */
 void ProfessorEditorDialog::onSetDefaultAfternoon() {

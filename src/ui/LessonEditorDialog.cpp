@@ -220,6 +220,8 @@ void LessonEditorDialog::setupUi() {
         }
         accept();
     });
+}
+
 /**
  * @brief Mostra ou oculta a seleção de salas alternativas conforme o tipo de ambiente (teórica vs laboratório).
  * @param index Índice do item selecionado.
