@@ -1,3 +1,8 @@
+/**
+ * @file MainWindow.cpp
+ * @brief Implementação da janela principal e controladores de interface da aplicação.
+ */
+
 #include "ui/MainWindow.h"
 #include "ui/SmartTableWidgetItem.h"
 #include "ui/ProfessorEditorDialog.h"
@@ -27,12 +32,19 @@
 
 namespace scheduler::ui {
 
+/**
+ * @brief Construtor da janela principal.
+ * @param parent Widget pai na hierarquia Qt.
+ */
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent) {
     setupUi();
     onLoadDefaultExample();
 }
 
+/**
+ * @brief Inicializa e organiza os componentes visuais principais, abas e banners.
+ */
 void MainWindow::setupUi() {
     setWindowTitle("Escalonador Inteligente de Horários Escolares");
     resize(1300, 850);
@@ -77,6 +89,9 @@ void MainWindow::setupUi() {
     statusBar()->showMessage("Pronto para otimizar.");
 }
 
+/**
+ * @brief Configura a barra de menus com opções de projeto, exportação e temas.
+ */
 void MainWindow::setupMenuBar() {
     auto* menu_arquivo = menuBar()->addMenu("&Arquivo");
     menu_arquivo->addAction("Novo Projeto", QKeySequence::New, this, &MainWindow::onNewProject);
@@ -117,6 +132,9 @@ void MainWindow::setupMenuBar() {
     add_theme_action("Escuro Moderno (Slate Dark)", ModernTheme::ThemeMode::ModernDark, false);
 }
 
+/**
+ * @brief Monta a barra de ferramentas superior com atalhos de otimização, arquivo e exportação.
+ */
 void MainWindow::setupToolBar() {
     auto* toolbar = addToolBar("Ações");
     toolbar->setMovable(false);
@@ -165,6 +183,9 @@ void MainWindow::setupToolBar() {
     toolbar->addWidget(btn_export_csv);
 }
 
+/**
+ * @brief Constrói o painel horizontal de cartões com os indicadores-chave de desempenho (KPIs).
+ */
 void MainWindow::setupKpiBanner() {
     auto* banner_card = new QFrame(this);
     banner_card->setFrameShape(QFrame::StyledPanel);
@@ -201,6 +222,9 @@ void MainWindow::setupKpiBanner() {
     layout->addStretch();
 }
 
+/**
+ * @brief Atualiza os valores e indicadores visuais dos KPIs a partir das estatísticas da grade atual.
+ */
 void MainWindow::updateKpiBanner() {
     const auto& s = data_.grade().estatisticas();
     lbl_kpi_status_->setText(QString::fromStdString(s.status));
@@ -221,6 +245,10 @@ void MainWindow::updateKpiBanner() {
     lbl_kpi_pref_dias_->setText(QString::number(s.penalidade_preferencia_dias_W));
 }
 
+/**
+ * @brief Constrói a aba de gerenciamento de professores, incluindo tabela, busca e ações CRUD.
+ * @return QWidget* da aba de professores.
+ */
 QWidget* MainWindow::createProfessoresTab() {
     auto* widget = new QWidget(this);
     auto* layout = new QVBoxLayout(widget);
@@ -261,6 +289,10 @@ QWidget* MainWindow::createProfessoresTab() {
     return widget;
 }
 
+/**
+ * @brief Constrói a aba de gerenciamento de turmas, jornadas e salas teóricas.
+ * @return QWidget* da aba de turmas.
+ */
 QWidget* MainWindow::createTurmasTab() {
     auto* widget = new QWidget(this);
     auto* layout = new QVBoxLayout(widget);
@@ -301,6 +333,10 @@ QWidget* MainWindow::createTurmasTab() {
     return widget;
 }
 
+/**
+ * @brief Constrói a aba de gerenciamento de salas e laboratórios disponíveis.
+ * @return QWidget* da aba de salas.
+ */
 QWidget* MainWindow::createSalasTab() {
     auto* widget = new QWidget(this);
     auto* layout = new QVBoxLayout(widget);
@@ -341,6 +377,10 @@ QWidget* MainWindow::createSalasTab() {
     return widget;
 }
 
+/**
+ * @brief Constrói a aba de gerenciamento de disciplinas curriculares e restrições pedagógicas.
+ * @return QWidget* da aba de disciplinas.
+ */
 QWidget* MainWindow::createDisciplinasTab() {
     auto* widget = new QWidget(this);
     auto* layout = new QVBoxLayout(widget);
@@ -381,6 +421,10 @@ QWidget* MainWindow::createDisciplinasTab() {
     return widget;
 }
 
+/**
+ * @brief Constrói a aba de diagnóstico e console de mensagens de resolução do solver.
+ * @return QWidget* da aba de logs.
+ */
 QWidget* MainWindow::createLogsTab() {
     auto* widget = new QWidget(this);
     auto* layout = new QVBoxLayout(widget);
@@ -399,6 +443,9 @@ QWidget* MainWindow::createLogsTab() {
     return widget;
 }
 
+/**
+ * @brief Reseta o estado atual e inicializa um novo projeto vazio.
+ */
 void MainWindow::onNewProject() {
     if (QMessageBox::question(this, "Novo Projeto", "Deseja iniciar um novo projeto limpo? Todos os dados não salvos serão perdidos.",
                               QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
@@ -410,6 +457,9 @@ void MainWindow::onNewProject() {
     }
 }
 
+/**
+ * @brief Abre diálogo para carregar um arquivo JSON contendo dados da instituição.
+ */
 void MainWindow::onOpenFile() {
     QString path = QFileDialog::getOpenFileName(this, "Abrir Arquivo JSON", "", "Arquivos JSON (*.json)");
     if (path.isEmpty()) return;
@@ -427,6 +477,9 @@ void MainWindow::onOpenFile() {
     }
 }
 
+/**
+ * @brief Abre diálogo para salvar os dados acadêmicos e grade atual em formato JSON.
+ */
 void MainWindow::onSaveFile() {
     QString path = QFileDialog::getSaveFileName(this, "Salvar Arquivo JSON", "escola_grade.json", "Arquivos JSON (*.json)");
     if (path.isEmpty()) return;
@@ -441,6 +494,9 @@ void MainWindow::onSaveFile() {
     }
 }
 
+/**
+ * @brief Carrega o cenário acadêmico demonstrativo padrão com 6 professores, 6 salas, 3 turmas e 19 disciplinas.
+ */
 void MainWindow::onLoadDefaultExample() {
     data_ = model::InstitutionData::criarExemploPadrao();
     refreshAllTables();
@@ -451,6 +507,9 @@ void MainWindow::onLoadDefaultExample() {
     statusBar()->showMessage("Cenário de exemplo carregado. Clique em '⚡ OTIMIZAR GRADE' para executar.", 5000);
 }
 
+/**
+ * @brief Exibe o diálogo de seleção do algoritmo e parâmetros e executa a otimização da grade.
+ */
 void MainWindow::onOptimize() {
     auto current_cfg = config_widget_->getConfig();
 
@@ -514,6 +573,9 @@ void MainWindow::onOptimize() {
     }
 }
 
+/**
+ * @brief Abre diálogo para salvar a grade e KPIs em formato HTML estilizado.
+ */
 void MainWindow::onExportHtml() {
     if (data_.grade().alocacoes().empty()) {
         QMessageBox::information(this, "Atenção", "Gere a grade primeiro antes de exportar o relatório.");
@@ -531,6 +593,9 @@ void MainWindow::onExportHtml() {
     }
 }
 
+/**
+ * @brief Abre diálogo para salvar as alocações da grade em arquivo CSV.
+ */
 void MainWindow::onExportCsv() {
     if (data_.grade().alocacoes().empty()) {
         QMessageBox::information(this, "Atenção", "Gere a grade primeiro antes de exportar os dados.");
@@ -548,6 +613,9 @@ void MainWindow::onExportCsv() {
     }
 }
 
+/**
+ * @brief Atualiza simultaneamente as 4 tabelas de cadastro no painel.
+ */
 void MainWindow::refreshAllTables() {
     refreshProfessoresTable();
     refreshTurmasTable();
@@ -555,6 +623,9 @@ void MainWindow::refreshAllTables() {
     refreshDisciplinasTable();
 }
 
+/**
+ * @brief Preenche a tabela de professores e atualiza contadores e ordenação.
+ */
 void MainWindow::refreshProfessoresTable() {
     table_professores_->setSortingEnabled(false);
     table_professores_->setRowCount(0);
@@ -588,6 +659,9 @@ void MainWindow::refreshProfessoresTable() {
     }
 }
 
+/**
+ * @brief Preenche a tabela de turmas com detalhes de jornada, intervalos e salas teóricas.
+ */
 void MainWindow::refreshTurmasTable() {
     table_turmas_->setSortingEnabled(false);
     table_turmas_->setRowCount(0);
@@ -658,6 +732,9 @@ void MainWindow::refreshTurmasTable() {
     }
 }
 
+/**
+ * @brief Preenche a tabela de salas e laboratórios com tipos e recursos disponíveis.
+ */
 void MainWindow::refreshSalasTable() {
     table_salas_->setSortingEnabled(false);
     table_salas_->setRowCount(0);
@@ -683,6 +760,9 @@ void MainWindow::refreshSalasTable() {
     }
 }
 
+/**
+ * @brief Preenche a tabela de disciplinas com detalhes de regime, duração e professores associados.
+ */
 void MainWindow::refreshDisciplinasTable() {
     table_disciplinas_->setSortingEnabled(false);
     table_disciplinas_->setRowCount(0);
@@ -730,6 +810,9 @@ void MainWindow::refreshDisciplinasTable() {
     }
 }
 
+/**
+ * @brief Abre o diálogo de cadastro para adicionar um novo professor à instituição.
+ */
 void MainWindow::onAddProfessor() {
     ProfessorEditorDialog dlg(this, nullptr, data_.nextProfessorId());
     if (dlg.exec() == QDialog::Accepted) {
@@ -739,6 +822,9 @@ void MainWindow::onAddProfessor() {
     }
 }
 
+/**
+ * @brief Abre o diálogo de edição para o professor atualmente selecionado na tabela.
+ */
 void MainWindow::onEditProfessor() {
     int r = table_professores_->currentRow();
     if (r < 0 || !table_professores_->item(r, 0)) return;
@@ -754,6 +840,9 @@ void MainWindow::onEditProfessor() {
     }
 }
 
+/**
+ * @brief Solicita confirmação e remove o(s) professor(es) selecionado(s) da instituição.
+ */
 void MainWindow::onRemoveProfessor() {
     auto selected_rows = table_professores_->selectionModel()->selectedRows();
     if (selected_rows.isEmpty()) {
@@ -810,6 +899,9 @@ void MainWindow::onRemoveProfessor() {
     }
 }
 
+/**
+ * @brief Abre o diálogo de cadastro para adicionar uma nova turma.
+ */
 void MainWindow::onAddTurma() {
     TurmaEditorDialog dlg(data_.salas(), this, nullptr, data_.nextTurmaId());
     if (dlg.exec() == QDialog::Accepted) {
@@ -819,6 +911,9 @@ void MainWindow::onAddTurma() {
     }
 }
 
+/**
+ * @brief Abre o diálogo de edição para a turma atualmente selecionada.
+ */
 void MainWindow::onEditTurma() {
     int r = table_turmas_->currentRow();
     if (r < 0 || !table_turmas_->item(r, 0)) return;
@@ -834,6 +929,9 @@ void MainWindow::onEditTurma() {
     }
 }
 
+/**
+ * @brief Solicita confirmação e remove a(s) turma(s) selecionada(s).
+ */
 void MainWindow::onRemoveTurma() {
     auto selected_rows = table_turmas_->selectionModel()->selectedRows();
     if (selected_rows.isEmpty()) {
@@ -890,6 +988,9 @@ void MainWindow::onRemoveTurma() {
     }
 }
 
+/**
+ * @brief Abre o diálogo de cadastro para adicionar uma nova sala ou laboratório.
+ */
 void MainWindow::onAddSala() {
     RoomEditorDialog dlg(this, nullptr, data_.nextSalaId());
     if (dlg.exec() == QDialog::Accepted) {
@@ -899,6 +1000,9 @@ void MainWindow::onAddSala() {
     }
 }
 
+/**
+ * @brief Abre o diálogo de edição para a sala atualmente selecionada.
+ */
 void MainWindow::onEditSala() {
     int r = table_salas_->currentRow();
     if (r < 0 || !table_salas_->item(r, 0)) return;
@@ -914,6 +1018,9 @@ void MainWindow::onEditSala() {
     }
 }
 
+/**
+ * @brief Solicita confirmação e remove a(s) sala(s) selecionada(s).
+ */
 void MainWindow::onRemoveSala() {
     auto selected_rows = table_salas_->selectionModel()->selectedRows();
     if (selected_rows.isEmpty()) {
@@ -970,6 +1077,9 @@ void MainWindow::onRemoveSala() {
     }
 }
 
+/**
+ * @brief Abre o diálogo de cadastro para adicionar uma nova disciplina curricular.
+ */
 void MainWindow::onAddDisciplina() {
     LessonEditorDialog dlg(data_.professores(), data_.turmas(), data_.salas(), this, nullptr, data_.nextDisciplinaId());
     if (dlg.exec() == QDialog::Accepted) {
@@ -979,6 +1089,9 @@ void MainWindow::onAddDisciplina() {
     }
 }
 
+/**
+ * @brief Abre o diálogo de edição para a disciplina atualmente selecionada.
+ */
 void MainWindow::onEditDisciplina() {
     int r = table_disciplinas_->currentRow();
     if (r < 0 || !table_disciplinas_->item(r, 0)) return;
@@ -994,6 +1107,9 @@ void MainWindow::onEditDisciplina() {
     }
 }
 
+/**
+ * @brief Solicita confirmação e remove a(s) disciplina(s) selecionada(s).
+ */
 void MainWindow::onRemoveDisciplina() {
     auto selected_rows = table_disciplinas_->selectionModel()->selectedRows();
     if (selected_rows.isEmpty()) {

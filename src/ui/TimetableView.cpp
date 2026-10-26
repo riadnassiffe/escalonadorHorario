@@ -1,3 +1,8 @@
+/**
+ * @file TimetableView.cpp
+ * @brief Implementação da visualização interativa e gestão visual da grade semanal.
+ */
+
 #include "ui/TimetableView.h"
 #include "ui/SmartTableWidgetItem.h"
 #include "ui/ModernTheme.h"
@@ -13,11 +18,19 @@
 
 namespace scheduler::ui {
 
+/**
+ * @brief Construtor da visão de grade horária.
+ * @param data Referência para a base de dados da instituição.
+ * @param parent Widget pai na hierarquia Qt.
+ */
 TimetableView::TimetableView(model::InstitutionData& data, QWidget* parent)
     : QWidget(parent), data_(data) {
     setupUi();
 }
 
+/**
+ * @brief Constrói a interface com barra de filtros, seletores de modo e grade interativa.
+ */
 void TimetableView::setupUi() {
     auto* main_layout = new QVBoxLayout(this);
     main_layout->setContentsMargins(12, 12, 12, 12);
@@ -115,6 +128,9 @@ void TimetableView::setupUi() {
     populateTargetCombo();
 }
 
+/**
+ * @brief Preenche o dropdown de seleção com as turmas, professores ou salas conforme o modo ativo.
+ */
 void TimetableView::populateTargetCombo() {
     combo_target_->blockSignals(true);
     combo_target_->clear();
@@ -141,22 +157,40 @@ void TimetableView::populateTargetCombo() {
     renderTimetable();
 }
 
+/**
+ * @brief Atualiza os alvos e redesenha a grade na tela.
+ */
 void TimetableView::refreshView() {
     populateTargetCombo();
 }
 
+/**
+ * @brief Slot acionado na mudança do tipo de visão (Turma, Professor ou Sala).
+ * @param index Novo índice do combo.
+ */
 void TimetableView::onViewTypeChanged(int /*index*/) {
     populateTargetCombo();
 }
 
+/**
+ * @brief Slot acionado na escolha de outro item no dropdown de entidade alvo.
+ * @param index Novo índice da entidade.
+ */
 void TimetableView::onTargetEntityChanged(int /*index*/) {
     renderTimetable();
 }
 
+/**
+ * @brief Slot acionado ao alterar o filtro de semestres letivos (1º, 2º ou Ambos).
+ * @param index Novo índice do semestre.
+ */
 void TimetableView::onSemestreFiltroChanged(int /*index*/) {
     renderTimetable();
 }
 
+/**
+ * @brief Renderiza visualmente as células da grade com os horários, intervalos e aulas alocadas.
+ */
 void TimetableView::renderTimetable() {
     table_->setRowCount(0);
 
@@ -481,6 +515,10 @@ void TimetableView::renderTimetable() {
     }
 }
 
+/**
+ * @brief Destaca as células cujas aulas correspondem ao texto digitado no campo de busca.
+ * @param query Texto pesquisado.
+ */
 void TimetableView::onSearchLessonChanged(const QString& query) {
     QString clean = removeAccents(query).trimmed().toLower();
     int matches = 0;
@@ -536,6 +574,10 @@ void TimetableView::onSearchLessonChanged(const QString& query) {
     }
 }
 
+/**
+ * @brief Abre o menu de contexto com ações de fixação, troca de sala e movimentação ao clicar na célula.
+ * @param pos Ponto do clique do mouse.
+ */
 void TimetableView::onCellContextMenu(const QPoint& pos) {
     auto* item = table_->itemAt(pos);
     if (!item) return;
@@ -644,6 +686,11 @@ void TimetableView::onCellContextMenu(const QPoint& pos) {
     menu.exec(table_->viewport()->mapToGlobal(pos));
 }
 
+/**
+ * @brief Abre o diálogo de movimentação rápida ao executar clique duplo em uma célula com aula.
+ * @param row Linha da célula.
+ * @param col Coluna da célula.
+ */
 void TimetableView::onCellDoubleClicked(int row, int col) {
     auto* item = table_->item(row, col);
     if (!item) return;
@@ -653,6 +700,10 @@ void TimetableView::onCellDoubleClicked(int row, int col) {
     }
 }
 
+/**
+ * @brief Abre o diálogo de movimentação manual de horário e sala para a aula indicada.
+ * @param aula_id ID da aula a movimentar.
+ */
 void TimetableView::moverAulaManual(const QString& aula_id) {
     std::string aid = aula_id.toStdString();
     auto* a_aloc = data_.grade().findAula(aid);
@@ -698,6 +749,10 @@ void TimetableView::moverAulaManual(const QString& aula_id) {
     }
 }
 
+/**
+ * @brief Abre o diálogo para alterar ou trocar (swap) a sala de aula da aula informada.
+ * @param aula_id ID da aula.
+ */
 void TimetableView::mudarSalaManual(const QString& aula_id) {
     std::string aid = aula_id.toStdString();
     auto* a_aloc = data_.grade().findAula(aid);
@@ -769,6 +824,13 @@ void TimetableView::mudarSalaManual(const QString& aula_id) {
     }
 }
 
+/**
+ * @brief Audita se a movimentação para um dia e horário gera choque com turmas, docentes ou salas.
+ * @param aid ID da aula a movimentar.
+ * @param dia Dia de destino pretendido.
+ * @param intervalo Intervalo de destino pretendido.
+ * @return Vetor de mensagens descrevendo conflitos encontrados.
+ */
 std::vector<std::string> TimetableView::verificarConflitosMovimentacao(
     const std::string& aid,
     model::DayOfWeek dia,
@@ -869,6 +931,12 @@ std::vector<std::string> TimetableView::verificarConflitosMovimentacao(
     return conflitos;
 }
 
+/**
+ * @brief Trata a soltura (drop) de uma aula arrastada sobre uma nova célula da grade.
+ * @param aula_id ID da aula arrastada.
+ * @param target_row Linha da célula de destino.
+ * @param target_col Coluna da célula de destino.
+ */
 void TimetableView::onLessonDropRequested(const QString& aula_id, int target_row, int target_col) {
     if (target_row < 0 || target_row >= static_cast<int>(row_intervals_.size())) return;
     if (target_col < 0 || target_col >= 5) return;

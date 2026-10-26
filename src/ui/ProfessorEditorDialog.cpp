@@ -1,3 +1,8 @@
+/**
+ * @file ProfessorEditorDialog.cpp
+ * @brief Implementação da janela de cadastro e edição de professores e suas disponibilidades.
+ */
+
 #include "ui/ProfessorEditorDialog.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -14,6 +19,12 @@
 
 namespace scheduler::ui {
 
+/**
+ * @brief Construtor do diálogo de edição de docente.
+ * @param parent Widget pai na hierarquia Qt.
+ * @param prof Ponteiro opcional para dados existentes do professor.
+ * @param default_id ID sugerido se for novo cadastro.
+ */
 ProfessorEditorDialog::ProfessorEditorDialog(QWidget* parent, const model::Professor* prof, const std::string& default_id)
     : QDialog(parent) {
     if (prof) {
@@ -34,6 +45,9 @@ ProfessorEditorDialog::ProfessorEditorDialog(QWidget* parent, const model::Profe
     }
 }
 
+/**
+ * @brief Constrói a interface com abas de dados básicos, preferências e grade semanal.
+ */
 void ProfessorEditorDialog::setupUi() {
     setMinimumWidth(750);
     setMinimumHeight(580);
@@ -350,6 +364,9 @@ void ProfessorEditorDialog::setupUi() {
     onSliderJanelaChanged();
 }
 
+/**
+ * @brief Atualiza os rótulos visuais de valor e descrição ao mover os sliders de dias da semana.
+ */
 void ProfessorEditorDialog::onSliderValueChanged() {
     for (size_t i = 0; i < 5; ++i) {
         int val = sliders_dias_[i]->value();
@@ -373,6 +390,9 @@ void ProfessorEditorDialog::onSliderValueChanged() {
     }
 }
 
+/**
+ * @brief Atualiza a descrição textual e cor do nível de aversão a janelas de horário.
+ */
 void ProfessorEditorDialog::onSliderJanelaChanged() {
     int val = slider_peso_janela_->value();
     lbl_val_peso_janela_->setText(QString::number(val));
@@ -394,6 +414,9 @@ void ProfessorEditorDialog::onSliderJanelaChanged() {
     }
 }
 
+/**
+ * @brief Marca todos os checkboxes de turnos de todos os dias da semana.
+ */
 void ProfessorEditorDialog::onSelectAllShifts() {
     for (size_t i = 0; i < 5; ++i) {
         for (size_t s = 0; s < 3; ++s) {
@@ -402,6 +425,9 @@ void ProfessorEditorDialog::onSelectAllShifts() {
     }
 }
 
+/**
+ * @brief Marca apenas os checkboxes do turno matutino para os dias úteis.
+ */
 void ProfessorEditorDialog::onSelectMorningOnly() {
     for (size_t i = 0; i < 5; ++i) {
         check_turnos_dias_[i][0]->setChecked(true);
@@ -410,6 +436,9 @@ void ProfessorEditorDialog::onSelectMorningOnly() {
     }
 }
 
+/**
+ * @brief Marca os turnos matutino e vespertino para os dias úteis.
+ */
 void ProfessorEditorDialog::onSelectMorningAfternoon() {
     for (size_t i = 0; i < 5; ++i) {
         check_turnos_dias_[i][0]->setChecked(true);
@@ -418,6 +447,9 @@ void ProfessorEditorDialog::onSelectMorningAfternoon() {
     }
 }
 
+/**
+ * @brief Insere uma nova linha vazia de intervalo na tabela de disponibilidade.
+ */
 void ProfessorEditorDialog::onAddInterval() {
     int row = table_disp_->rowCount();
     table_disp_->insertRow(row);
@@ -439,6 +471,9 @@ void ProfessorEditorDialog::onAddInterval() {
     table_disp_->setCellWidget(row, 2, time_fim);
 }
 
+/**
+ * @brief Remove a linha de intervalo atualmente selecionada na tabela.
+ */
 void ProfessorEditorDialog::onRemoveInterval() {
     int row = table_disp_->currentRow();
     if (row >= 0) {
@@ -448,10 +483,16 @@ void ProfessorEditorDialog::onRemoveInterval() {
     }
 }
 
+/**
+ * @brief Remove todas as linhas de intervalos de disponibilidade da tabela.
+ */
 void ProfessorEditorDialog::onClearAllIntervals() {
     table_disp_->setRowCount(0);
 }
 
+/**
+ * @brief Preenche a tabela com intervalos padrão para o turno da Manhã (07:00 às 12:00).
+ */
 void ProfessorEditorDialog::onSetDefaultMorning() {
     table_disp_->setRowCount(0);
     for (auto d : model::allDays()) {
@@ -471,12 +512,9 @@ void ProfessorEditorDialog::onSetDefaultMorning() {
         table_disp_->setCellWidget(r, 1, t_ini);
 
         auto* t_fim = new QTimeEdit(QTime(12, 0), table_disp_);
-        t_fim->setDisplayFormat("HH:mm");
-        t_fim->setMinimumHeight(28);
-        table_disp_->setCellWidget(r, 2, t_fim);
-    }
-}
-
+     /**
+ * @brief Preenche a tabela com intervalos padrão para o turno da Tarde (13:00 às 18:00).
+ */
 void ProfessorEditorDialog::onSetDefaultAfternoon() {
     table_disp_->setRowCount(0);
     for (auto d : model::allDays()) {
@@ -490,18 +528,21 @@ void ProfessorEditorDialog::onSetDefaultAfternoon() {
         combo->setCurrentIndex(combo->findData(static_cast<int>(d)));
         table_disp_->setCellWidget(r, 0, combo);
 
-        auto* t_ini = new QTimeEdit(QTime(13, 15), table_disp_);
+        auto* t_ini = new QTimeEdit(QTime(13, 0), table_disp_);
         t_ini->setDisplayFormat("HH:mm");
         t_ini->setMinimumHeight(28);
         table_disp_->setCellWidget(r, 1, t_ini);
 
-        auto* t_fim = new QTimeEdit(QTime(17, 30), table_disp_);
+        auto* t_fim = new QTimeEdit(QTime(18, 0), table_disp_);
         t_fim->setDisplayFormat("HH:mm");
         t_fim->setMinimumHeight(28);
         table_disp_->setCellWidget(r, 2, t_fim);
     }
 }
 
+/**
+ * @brief Preenche a tabela com intervalos padrão para o turno da Noite (18:30 às 22:30).
+ */
 void ProfessorEditorDialog::onSetDefaultNight() {
     table_disp_->setRowCount(0);
     for (auto d : model::allDays()) {
@@ -527,6 +568,9 @@ void ProfessorEditorDialog::onSetDefaultNight() {
     }
 }
 
+/**
+ * @brief Preenche a tabela com intervalos padrão para os turnos da Manhã e Tarde (07:00 às 18:00).
+ */
 void ProfessorEditorDialog::onSetDefaultAllDay() {
     table_disp_->setRowCount(0);
     for (auto d : model::allDays()) {
@@ -540,7 +584,7 @@ void ProfessorEditorDialog::onSetDefaultAllDay() {
         combo->setCurrentIndex(combo->findData(static_cast<int>(d)));
         table_disp_->setCellWidget(r, 0, combo);
 
-        auto* t_ini = new QTimeEdit(QTime(7, 30), table_disp_);
+        auto* t_ini = new QTimeEdit(QTime(7, 0), table_disp_);
         t_ini->setDisplayFormat("HH:mm");
         t_ini->setMinimumHeight(28);
         table_disp_->setCellWidget(r, 1, t_ini);
@@ -552,6 +596,9 @@ void ProfessorEditorDialog::onSetDefaultAllDay() {
     }
 }
 
+/**
+ * @brief Preenche a tabela com disponibilidade integral de 07:00 às 22:30 para todos os dias.
+ */
 void ProfessorEditorDialog::onSetDefaultWholeDay() {
     table_disp_->setRowCount(0);
     for (auto d : model::allDays()) {
@@ -577,6 +624,10 @@ void ProfessorEditorDialog::onSetDefaultWholeDay() {
     }
 }
 
+/**
+ * @brief Carrega os dados de um professor nos controles do formulário e nas abas de preferências.
+ * @param prof Professor com dados cadastrados.
+ */
 void ProfessorEditorDialog::loadProfessor(const model::Professor& prof) {
     id_ = prof.id();
     txt_nome_->setText(QString::fromStdString(prof.nome()));
@@ -627,6 +678,10 @@ void ProfessorEditorDialog::loadProfessor(const model::Professor& prof) {
     }
 }
 
+/**
+ * @brief Cria e retorna uma instância de model::Professor com os dados preenchidos no diálogo.
+ * @return model::Professor preenchida.
+ */
 model::Professor ProfessorEditorDialog::getProfessor() const {
     model::Professor prof(id_,
                           txt_nome_->text().trimmed().toStdString());

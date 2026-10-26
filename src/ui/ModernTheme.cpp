@@ -1,3 +1,8 @@
+/**
+ * @file ModernTheme.cpp
+ * @brief Implementação dos métodos de gerenciamento de temas e folhas de estilo QSS.
+ */
+
 #include "ui/ModernTheme.h"
 #include <QFont>
 #include <QStyleFactory>
@@ -7,14 +12,26 @@ namespace scheduler::ui {
 
 static ModernTheme::ThemeMode s_current_theme_mode = ModernTheme::ThemeMode::SystemKDE;
 
+/**
+ * @brief Aplica o tema padrão inicial à aplicação.
+ * @param app Referência para QApplication.
+ */
 void ModernTheme::applyTheme(QApplication& app) {
     setThemeMode(app, ThemeMode::SystemKDE);
 }
 
+/**
+ * @brief Obtém o modo de tema atualmente selecionado.
+ * @return Modo de tema ativo.
+ */
 ModernTheme::ThemeMode ModernTheme::currentThemeMode() {
     return s_current_theme_mode;
 }
 
+/**
+ * @brief Informa se o tema atual é escuro.
+ * @return true se o tema atual for escuro; false caso contrário.
+ */
 bool ModernTheme::isDarkTheme() {
     if (s_current_theme_mode == ThemeMode::ModernDark) {
         return true;
@@ -25,6 +42,11 @@ bool ModernTheme::isDarkTheme() {
     return false;
 }
 
+/**
+ * @brief Configura o estilo e a folha de estilo da aplicação conforme o modo escolhido.
+ * @param app Instância de QApplication.
+ * @param mode Modo de tema a aplicar.
+ */
 void ModernTheme::setThemeMode(QApplication& app, ThemeMode mode) {
     s_current_theme_mode = mode;
 
@@ -62,6 +84,10 @@ void ModernTheme::setThemeMode(QApplication& app, ThemeMode mode) {
     }
 }
 
+/**
+ * @brief Gera a folha de estilo QSS completa para o tema escuro moderno.
+ * @return QString com o código QSS do tema escuro.
+ */
 static QString getDarkStyleSheet() {
     return QString(R"(
         QWidget {
@@ -377,8 +403,11 @@ static QString getDarkStyleSheet() {
             font-size: 12px;
         }
     )");
-}
-
+/**
+ * @brief Retorna a folha de estilo QSS correspondente ao modo de tema configurado.
+ * @param mode Modo de tema desejado.
+ * @return QString contendo a folha de estilo QSS.
+ */
 QString ModernTheme::getStyleSheet(ThemeMode mode) {
     if (mode == ThemeMode::ModernDark) {
         return getDarkStyleSheet();

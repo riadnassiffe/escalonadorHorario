@@ -1,8 +1,20 @@
+/**
+ * @file Timetable.cpp
+ * @brief Implementação dos métodos de filtragem e busca da classe Timetable.
+ */
+
 #include "model/Timetable.h"
 #include <algorithm>
 
 namespace scheduler::model {
 
+/**
+ * @brief Filtra e retorna as aulas alocadas para uma turma em um dia da semana, ordenadas cronologicamente.
+ * @param turma_id Identificador da turma pesquisada.
+ * @param d Dia da semana filtrado.
+ * @param semestre_filtro Filtro semestral (0 = sem filtro, 1 = 1º sem, 2 = 2º sem).
+ * @return Vetor de AllocatedLesson ordenado pelo slot inicial.
+ */
 std::vector<AllocatedLesson> Timetable::aulasPorTurma(const std::string& turma_id, DayOfWeek d, int semestre_filtro) const {
     std::vector<AllocatedLesson> res;
     for (const auto& aula : alocacoes_) {
@@ -24,6 +36,13 @@ std::vector<AllocatedLesson> Timetable::aulasPorTurma(const std::string& turma_i
     return res;
 }
 
+/**
+ * @brief Filtra e retorna as aulas lecionadas por um professor em um dia da semana, ordenadas cronologicamente.
+ * @param prof_id Identificador do professor pesquisado.
+ * @param d Dia da semana filtrado.
+ * @param semestre_filtro Filtro semestral (0 = sem filtro, 1 = 1º sem, 2 = 2º sem).
+ * @return Vetor de AllocatedLesson ordenado pelo slot inicial.
+ */
 std::vector<AllocatedLesson> Timetable::aulasPorProfessor(const std::string& prof_id, DayOfWeek d, int semestre_filtro) const {
     std::vector<AllocatedLesson> res;
     for (const auto& aula : alocacoes_) {
@@ -45,6 +64,13 @@ std::vector<AllocatedLesson> Timetable::aulasPorProfessor(const std::string& pro
     return res;
 }
 
+/**
+ * @brief Filtra e retorna as aulas alocadas em uma sala em um dia da semana, ordenadas cronologicamente.
+ * @param sala_id Identificador da sala pesquisada.
+ * @param d Dia da semana filtrado.
+ * @param semestre_filtro Filtro semestral (0 = sem filtro, 1 = 1º sem, 2 = 2º sem).
+ * @return Vetor de AllocatedLesson ordenado pelo slot inicial.
+ */
 std::vector<AllocatedLesson> Timetable::aulasPorSala(const std::string& sala_id, DayOfWeek d, int semestre_filtro) const {
     std::vector<AllocatedLesson> res;
     for (const auto& aula : alocacoes_) {
@@ -66,6 +92,11 @@ std::vector<AllocatedLesson> Timetable::aulasPorSala(const std::string& sala_id,
     return res;
 }
 
+/**
+ * @brief Busca uma aula alocada na grade pelo seu ID.
+ * @param aula_id Identificador único da aula alocada.
+ * @return Ponteiro mutável para a AllocatedLesson encontrada, ou nullptr caso não exista.
+ */
 AllocatedLesson* Timetable::findAula(const std::string& aula_id) {
     for (auto& aula : alocacoes_) {
         if (aula.aula_id == aula_id) {

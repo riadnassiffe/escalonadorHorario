@@ -1,3 +1,8 @@
+/**
+ * @file LessonEditorDialog.h
+ * @brief Diálogo para cadastro e edição de disciplinas acadêmicas e parâmetros de alocação de aulas.
+ */
+
 #pragma once
 
 #include "model/Lesson.h"
@@ -14,10 +19,27 @@
 
 namespace scheduler::ui {
 
+/**
+ * @class LessonEditorDialog
+ * @brief Diálogo gráfico para inserção e edição completa de disciplinas curriculares.
+ *
+ * Configura nome, regime letivo (anual ou semestral), semestre de oferta, tipo de ambiente,
+ * duração de aula em minutos, quantidade de aulas semanais, professor responsável,
+ * turma destinatária, turnos permitidos, aulas consecutivas e salas/laboratórios alternativos.
+ */
 class LessonEditorDialog : public QDialog {
     Q_OBJECT
 
 public:
+    /**
+     * @brief Constrói a janela de diálogo para edição ou criação de disciplina.
+     * @param profs Vetor de professores disponíveis.
+     * @param turmas Vetor de turmas disponíveis.
+     * @param salas Vetor de salas e laboratórios disponíveis.
+     * @param parent Widget pai na hierarquia Qt.
+     * @param disc Ponteiro opcional para disciplina existente (nullptr cria nova disciplina).
+     * @param default_id ID sugerido se for novo registro.
+     */
     explicit LessonEditorDialog(const std::vector<model::Professor>& profs,
                                 const std::vector<model::Turma>& turmas,
                                 const std::vector<model::Room>& salas,
@@ -25,14 +47,35 @@ public:
                                 const model::Disciplina* disc = nullptr,
                                 const std::string& default_id = "");
 
+    /**
+     * @brief Constrói e retorna uma nova instância de model::Disciplina com os dados preenchidos.
+     * @return model::Disciplina configurada.
+     */
     model::Disciplina getDisciplina() const;
 
 private slots:
+    /**
+     * @brief Slot acionado na mudança do tipo de ambiente (teórica vs laboratório).
+     * @param index Novo índice selecionado no combobox.
+     */
     void onTipoChanged(int index);
+
+    /**
+     * @brief Slot acionado na alteração do regime (anual vs semestral).
+     * @param index Novo índice selecionado no combobox.
+     */
     void onRegimeChanged(int index);
 
 private:
+    /**
+     * @brief Inicializa e monta a interface do formulário e botões de ação.
+     */
     void setupUi();
+
+    /**
+     * @brief Carrega os dados de uma disciplina existente nos campos do formulário.
+     * @param disc Objeto model::Disciplina com os dados originais.
+     */
     void loadDisciplina(const model::Disciplina& disc);
 
     const std::vector<model::Professor>& profs_;

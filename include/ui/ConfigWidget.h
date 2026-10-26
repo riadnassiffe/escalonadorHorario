@@ -1,3 +1,8 @@
+/**
+ * @file ConfigWidget.h
+ * @brief Painel de preferências e parâmetros globais de otimização da grade horária.
+ */
+
 #pragma once
 
 #include "model/OptimizationConfig.h"
@@ -11,19 +16,46 @@
 
 namespace scheduler::ui {
 
+/**
+ * @class ConfigWidget
+ * @brief Widget de interface para configuração de pesos institucionais e opções do resolvedor.
+ *
+ * Oferece controles (sliders e comboboxes) para pesos de penalidade (janelas, concentração de dias,
+ * preferências de horários, turnos e dias da semana), modelo de preferência de dias (W vs D),
+ * e parâmetros computacionais (algoritmo, threads e timeout).
+ */
 class ConfigWidget : public QWidget {
     Q_OBJECT
 
 public:
+    /**
+     * @brief Constrói o painel de configurações.
+     * @param parent Widget pai na hierarquia Qt.
+     */
     explicit ConfigWidget(QWidget* parent = nullptr);
 
+    /**
+     * @brief Carrega os valores de uma estrutura OptimizationConfig nos controles da tela.
+     * @param cfg Estrutura com os parâmetros de otimização.
+     */
     void loadConfig(const model::OptimizationConfig& cfg);
+
+    /**
+     * @brief Constrói e retorna uma nova model::OptimizationConfig a partir dos controles ativos.
+     * @return model::OptimizationConfig preenchida.
+     */
     model::OptimizationConfig getConfig() const;
 
 private slots:
+    /**
+     * @brief Atualiza os rótulos numéricos ao lado dos sliders de ponderação.
+     */
     void updateSliderLabels();
 
 private:
+    /**
+     * @brief Constrói e posiciona todos os grupos de opções na interface.
+     */
     void setupUi();
 
     QSlider* slider_janelas_{nullptr};

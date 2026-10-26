@@ -1,3 +1,8 @@
+/**
+ * @file ConfigWidget.cpp
+ * @brief Implementação do painel de configuração e preferências globais do escalonador.
+ */
+
 #include "ui/ConfigWidget.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -6,10 +11,17 @@
 
 namespace scheduler::ui {
 
+/**
+ * @brief Construtor do widget de configurações.
+ * @param parent Widget pai na hierarquia Qt.
+ */
 ConfigWidget::ConfigWidget(QWidget* parent) : QWidget(parent) {
     setupUi();
 }
 
+/**
+ * @brief Constrói os grupos de pesos, parâmetros acadêmicos e do solver.
+ */
 void ConfigWidget::setupUi() {
     auto* main_layout = new QVBoxLayout(this);
     main_layout->setContentsMargins(16, 16, 16, 16);
@@ -150,6 +162,9 @@ void ConfigWidget::setupUi() {
     main_layout->addStretch();
 }
 
+/**
+ * @brief Atualiza o texto dos labels indicadores de valor ao lado de cada slider.
+ */
 void ConfigWidget::updateSliderLabels() {
     lbl_val_janelas_->setText(QString::number(slider_janelas_->value()));
     lbl_val_dias_->setText(QString::number(slider_dias_->value()));
@@ -159,6 +174,10 @@ void ConfigWidget::updateSliderLabels() {
     lbl_val_lacunas_turma_->setText(QString::number(slider_lacunas_turma_->value()));
 }
 
+/**
+ * @brief Carrega os valores contidos em model::OptimizationConfig para os campos da interface.
+ * @param cfg Estrutura com os valores de configuração.
+ */
 void ConfigWidget::loadConfig(const model::OptimizationConfig& cfg) {
     slider_janelas_->setValue(cfg.lambda_janelas);
     slider_dias_->setValue(cfg.lambda_dias);
@@ -190,6 +209,10 @@ void ConfigWidget::loadConfig(const model::OptimizationConfig& cfg) {
     updateSliderLabels();
 }
 
+/**
+ * @brief Extrai uma model::OptimizationConfig preenchida a partir dos controles da tela.
+ * @return model::OptimizationConfig com os valores ativos.
+ */
 model::OptimizationConfig ConfigWidget::getConfig() const {
     model::OptimizationConfig cfg;
     cfg.lambda_janelas = slider_janelas_->value();

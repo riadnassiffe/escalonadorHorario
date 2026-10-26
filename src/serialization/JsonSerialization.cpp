@@ -1,9 +1,19 @@
+/**
+ * @file JsonSerialization.cpp
+ * @brief Implementação dos métodos de serialização e desserialização JSON para todas as entidades.
+ */
+
 #include "serialization/JsonSerialization.h"
 #include <fstream>
 #include <iostream>
 
 namespace scheduler::serialization {
 
+/**
+ * @brief Serializa uma instância de Professor em objeto JSON.
+ * @param prof Professor a ser serializado.
+ * @return nlohmann::json com as propriedades do professor.
+ */
 nlohmann::json JsonSerialization::professorToJson(const model::Professor& prof) {
     nlohmann::json j;
     j["id"] = prof.id();
@@ -45,6 +55,11 @@ nlohmann::json JsonSerialization::professorToJson(const model::Professor& prof) 
     return j;
 }
 
+/**
+ * @brief Desserializa um objeto Professor a partir de um nó JSON.
+ * @param j Objeto JSON contendo os dados do docente.
+ * @return Instância restaurada de Professor.
+ */
 model::Professor JsonSerialization::professorFromJson(const nlohmann::json& j) {
     model::Professor prof;
     if (j.contains("id")) prof.setId(j["id"].get<std::string>());
@@ -100,6 +115,11 @@ model::Professor JsonSerialization::professorFromJson(const nlohmann::json& j) {
     return prof;
 }
 
+/**
+ * @brief Serializa uma instância de Room em objeto JSON.
+ * @param room Instância de Room.
+ * @return nlohmann::json com identificador, nome, capacidade e recursos da sala.
+ */
 nlohmann::json JsonSerialization::roomToJson(const model::Room& room) {
     nlohmann::json j;
     j["id"] = room.id();
@@ -110,6 +130,11 @@ nlohmann::json JsonSerialization::roomToJson(const model::Room& room) {
     return j;
 }
 
+/**
+ * @brief Desserializa um objeto Room a partir de um nó JSON.
+ * @param j Objeto JSON com as propriedades da sala.
+ * @return Instância restaurada de Room.
+ */
 model::Room JsonSerialization::roomFromJson(const nlohmann::json& j) {
     model::Room r;
     if (j.contains("id")) r.setId(j["id"].get<std::string>());
@@ -122,6 +147,11 @@ model::Room JsonSerialization::roomFromJson(const nlohmann::json& j) {
     return r;
 }
 
+/**
+ * @brief Serializa uma instância de Turma em objeto JSON.
+ * @param turma Instância de Turma.
+ * @return nlohmann::json com as configurações de jornada e sala teórica da turma.
+ */
 nlohmann::json JsonSerialization::turmaToJson(const model::Turma& turma) {
     nlohmann::json j;
     j["id"] = turma.id();
@@ -206,6 +236,11 @@ nlohmann::json JsonSerialization::turmaToJson(const model::Turma& turma) {
     return j;
 }
 
+/**
+ * @brief Desserializa um objeto Turma a partir de um nó JSON.
+ * @param j Objeto JSON contendo jornadas, exceções, turnos e salas da turma.
+ * @return Instância restaurada de Turma.
+ */
 model::Turma JsonSerialization::turmaFromJson(const nlohmann::json& j) {
     model::Turma t;
     if (j.contains("id")) t.setId(j["id"].get<std::string>());
@@ -301,6 +336,11 @@ model::Turma JsonSerialization::turmaFromJson(const nlohmann::json& j) {
     return t;
 }
 
+/**
+ * @brief Serializa uma instância de Disciplina em objeto JSON.
+ * @param disc Instância de Disciplina.
+ * @return nlohmann::json com as propriedades da disciplina.
+ */
 nlohmann::json JsonSerialization::disciplinaToJson(const model::Disciplina& disc) {
     nlohmann::json j;
     j["id"] = disc.id();
@@ -325,6 +365,11 @@ nlohmann::json JsonSerialization::disciplinaToJson(const model::Disciplina& disc
     return j;
 }
 
+/**
+ * @brief Desserializa um objeto Disciplina a partir de um nó JSON.
+ * @param j Objeto JSON contendo os dados da disciplina.
+ * @return Instância restaurada de Disciplina.
+ */
 model::Disciplina JsonSerialization::disciplinaFromJson(const nlohmann::json& j) {
     model::Disciplina d;
     if (j.contains("id")) d.setId(j["id"].get<std::string>());
@@ -363,6 +408,11 @@ model::Disciplina JsonSerialization::disciplinaFromJson(const nlohmann::json& j)
     return d;
 }
 
+/**
+ * @brief Serializa as configurações de otimização em objeto JSON.
+ * @param cfg Objeto OptimizationConfig.
+ * @return nlohmann::json com pesos, limites e algoritmos configurados.
+ */
 nlohmann::json JsonSerialization::configToJson(const model::OptimizationConfig& cfg) {
     nlohmann::json j;
     j["lambda_janelas"] = cfg.lambda_janelas;
@@ -384,6 +434,11 @@ nlohmann::json JsonSerialization::configToJson(const model::OptimizationConfig& 
     return j;
 }
 
+/**
+ * @brief Desserializa as configurações de otimização a partir de um nó JSON.
+ * @param j Objeto JSON contendo os parâmetros de otimização.
+ * @return Instância restaurada de OptimizationConfig.
+ */
 model::OptimizationConfig JsonSerialization::configFromJson(const nlohmann::json& j) {
     model::OptimizationConfig cfg;
     if (j.contains("algoritmo")) {
@@ -425,6 +480,11 @@ model::OptimizationConfig JsonSerialization::configFromJson(const nlohmann::json
     return cfg;
 }
 
+/**
+ * @brief Serializa uma grade horária Timetable em objeto JSON.
+ * @param tt Instância de Timetable.
+ * @return nlohmann::json contendo alocações, salas fixadas e estatísticas.
+ */
 nlohmann::json JsonSerialization::timetableToJson(const model::Timetable& tt) {
     nlohmann::json j;
     nlohmann::json alocs = nlohmann::json::array();
@@ -465,6 +525,11 @@ nlohmann::json JsonSerialization::timetableToJson(const model::Timetable& tt) {
     return j;
 }
 
+/**
+ * @brief Desserializa uma grade horária Timetable a partir de um nó JSON.
+ * @param j Objeto JSON contendo a grade.
+ * @return Instância restaurada de Timetable.
+ */
 model::Timetable JsonSerialization::timetableFromJson(const nlohmann::json& j) {
     model::Timetable tt;
     if (j.contains("alocacoes") && j["alocacoes"].is_array()) {
@@ -523,6 +588,11 @@ model::Timetable JsonSerialization::timetableFromJson(const nlohmann::json& j) {
     return tt;
 }
 
+/**
+ * @brief Serializa todos os dados de InstitutionData em um único documento JSON.
+ * @param data Instância de InstitutionData com todas as entidades e grade.
+ * @return Documento JSON consolidado.
+ */
 nlohmann::json JsonSerialization::toJson(const model::InstitutionData& data) {
     nlohmann::json j;
 
@@ -556,6 +626,11 @@ nlohmann::json JsonSerialization::toJson(const model::InstitutionData& data) {
     return j;
 }
 
+/**
+ * @brief Desserializa uma instância completa de InstitutionData a partir de um documento JSON.
+ * @param j Documento JSON contendo todas as seções institucionais.
+ * @return Instância restaurada de InstitutionData pronta para uso.
+ */
 model::InstitutionData JsonSerialization::fromJson(const nlohmann::json& j) {
     model::InstitutionData data;
 
@@ -590,6 +665,13 @@ model::InstitutionData JsonSerialization::fromJson(const nlohmann::json& j) {
     return data;
 }
 
+/**
+ * @brief Grava a base de dados da instituição em arquivo no disco com indentação formatada.
+ * @param filepath Caminho do arquivo a ser gravado.
+ * @param data Instância de InstitutionData a ser persistida.
+ * @param err Variável preenchida com a mensagem de erro caso a escrita falhe.
+ * @return true se o arquivo for salvo com sucesso, false caso contrário.
+ */
 bool JsonSerialization::salvarArquivo(const std::string& filepath,
                                       const model::InstitutionData& data,
                                       std::string& err) {
@@ -608,6 +690,13 @@ bool JsonSerialization::salvarArquivo(const std::string& filepath,
     }
 }
 
+/**
+ * @brief Lê um arquivo JSON do disco e carrega seu conteúdo em uma instância de InstitutionData.
+ * @param filepath Caminho do arquivo a ser lido.
+ * @param data Instância de InstitutionData que receberá os dados lidos.
+ * @param err Variável preenchida com a mensagem de erro caso ocorra falha.
+ * @return true se a leitura e parsing forem bem sucedidos, false caso contrário.
+ */
 bool JsonSerialization::carregarArquivo(const std::string& filepath,
                                         model::InstitutionData& data,
                                         std::string& err) {

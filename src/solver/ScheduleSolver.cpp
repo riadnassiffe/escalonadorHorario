@@ -1,3 +1,8 @@
+/**
+ * @file ScheduleSolver.cpp
+ * @brief Implementação dos algoritmos de resolução e otimização de grade horária.
+ */
+
 #include "solver/ScheduleSolver.h"
 #include "ortools/sat/cp_model.h"
 #include "ortools/sat/cp_model_solver.h"
@@ -14,6 +19,12 @@ namespace scheduler::solver {
 using namespace operations_research;
 using namespace operations_research::sat;
 
+/**
+ * @brief Resolve o escalonamento chamando o algoritmo configurado na instituição.
+ * @param data Conjunto de dados acadêmicos e configuração de otimização.
+ * @param callback Callback opcional para notificação de progresso e status.
+ * @return Grade horária gerada (Timetable) com as alocações e estatísticas.
+ */
 model::Timetable ScheduleSolver::solve(const model::InstitutionData& data,
                                        ProgressCallback callback) {
     switch (data.config().algoritmo) {
@@ -29,6 +40,16 @@ model::Timetable ScheduleSolver::solve(const model::InstitutionData& data,
     }
 }
 
+/**
+ * @brief Realiza auditoria pós-resolução para identificar choques de horário.
+ *
+ * Avalia pares de aulas alocadas no mesmo dia e intervalo de tempo sobreposto,
+ * verificando choques de professores, turmas ou salas no mesmo semestre letivo.
+ * Em caso de choques, adiciona mensagens de aviso detalhadas no diagnóstico da grade.
+ *
+ * @param data Dados acadêmicos da instituição.
+ * @param timetable Grade horária gerada a ser auditada e complementada com mensagens.
+ */
 static void auditarConflitosEntreAulas(const model::InstitutionData& data, model::Timetable& timetable) {
     const auto& alocs = timetable.alocacoes();
     auto time_overlaps = [](const model::TimeInterval& t1, const model::TimeInterval& t2) {
@@ -81,6 +102,16 @@ static void auditarConflitosEntreAulas(const model::InstitutionData& data, model
     }
 }
 
+/**
+ * @brief Resolve o escalonamento utilizando o solver CP-SAT do Google OR-Tools.
+ *
+ * Constrói modelo booleano com variáveis de alocação de candidatos e aplica
+ * restrições rígidas (hard constraints) e ponderações de otimização (soft constraints).
+ *
+ * @param data Dados acadêmicos e parâmetros de configuração.
+ * @param callback Callback opcional para progresso e cancelamento.
+ * @return Grade horária gerada.
+ */
 model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
                                            ProgressCallback callback) {
     model::Timetable timetable;
@@ -847,6 +878,16 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
     return timetable;
 }
 
+/**
+ * @brief Resolve o escalonamento utilizando heurística gulosa com ordenação de prioridade.
+ *
+ * Ordena as aulas por restrição (grau de dificuldade de alocação) e as aloca
+ * iterativamente nos melhores slots sem gerar choques duros com alocações anteriores.
+ *
+ * @param data Dados acadêmicos da instituição.
+ * @param callback Callback opcional para atualização de progresso.
+ * @return Grade horária gerada.
+ */
 model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionData& data,
                                                       ProgressCallback callback) {
     model::Timetable timetable;
@@ -1304,6 +1345,16 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
     return timetable;
 }
 
+/**
+ * @brief Resolve o problema via formulação linear inteira mista (MILP).
+ *
+ * Atualmente canaliza para o resolvedor CP-SAT discreto configurado para
+ * comportamento de programação linear/inteira com branch-and-cut.
+ *
+ * @param data Dados acadêmicos da instituição.
+ * @param callback Callback opcional para notificação de progresso.
+ * @return Grade horária gerada.
+ */
 model::Timetable ScheduleSolver::solveMilp(const model::InstitutionData& data,
                                            ProgressCallback callback) {
     if (callback) callback("MILP: Executando via formulação linear discreta...", 0.10);
@@ -1312,6 +1363,16 @@ model::Timetable ScheduleSolver::solveMilp(const model::InstitutionData& data,
     return tt;
 }
 
+/**
+ * @brief Resolve o problema via meta-heurística baseada em Algoritmo Genético.
+ *
+ * Amostra soluções candidatas ao longo de múltiplas gerações e preserva a melhor
+ * solução avaliada por uma função fitness ponderada.
+ *
+ * @param data Dados acadêmicos da instituição.
+ * @param callback Callback opcional para notificação de progresso.
+ * @return Grade horária de melhor pontuação encontrada.
+ */
 model::Timetable ScheduleSolver::solveGeneticAlgorithm(const model::InstitutionData& data,
                                                        ProgressCallback callback) {
     auto start_time = std::chrono::steady_clock::now();

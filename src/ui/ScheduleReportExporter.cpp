@@ -1,3 +1,8 @@
+/**
+ * @file ScheduleReportExporter.cpp
+ * @brief Implementação dos exportadores de relatórios de grade horária (HTML e CSV).
+ */
+
 #include "ui/ScheduleReportExporter.h"
 #include <fstream>
 #include <sstream>
@@ -6,6 +11,13 @@
 
 namespace scheduler::ui {
 
+/**
+ * @brief Exporta as alocações da grade em arquivo de texto com formato delimitado por ponto e vírgula (.csv).
+ * @param filepath Caminho do arquivo a ser gravado.
+ * @param data Dados acadêmicos da instituição.
+ * @param err Mensagem de erro caso a escrita falhe.
+ * @return true se exportou com sucesso; false caso contrário.
+ */
 bool ScheduleReportExporter::exportarCsv(const std::string& filepath,
                                          const model::InstitutionData& data,
                                          std::string& err) {
@@ -61,6 +73,12 @@ bool ScheduleReportExporter::exportarCsv(const std::string& filepath,
     }
 }
 
+/**
+ * @brief Gera a tabela semanal formatada em HTML para uma turma, incluindo aulas e recreios.
+ * @param data Dados da instituição.
+ * @param turma Turma cujos horários serão gerados.
+ * @return Fragmento HTML com a tabela.
+ */
 std::string ScheduleReportExporter::gerarTabelaHtmlTurma(const model::InstitutionData& data,
                                                         const model::Turma& turma) {
     std::ostringstream ss;
@@ -157,6 +175,12 @@ std::string ScheduleReportExporter::gerarTabelaHtmlTurma(const model::Institutio
     return ss.str();
 }
 
+/**
+ * @brief Gera a tabela semanal formatada em HTML para um professor.
+ * @param data Dados da instituição.
+ * @param prof Professor cujos horários serão gerados.
+ * @return Fragmento HTML com a tabela do docente.
+ */
 std::string ScheduleReportExporter::gerarTabelaHtmlProfessor(const model::InstitutionData& data,
                                                             const model::Professor& prof) {
     std::ostringstream ss;
@@ -227,6 +251,12 @@ std::string ScheduleReportExporter::gerarTabelaHtmlProfessor(const model::Instit
     return ss.str();
 }
 
+/**
+ * @brief Gera a tabela semanal formatada em HTML para uma sala ou laboratório.
+ * @param data Dados da instituição.
+ * @param sala Sala cujos horários serão gerados.
+ * @return Fragmento HTML com a tabela da sala.
+ */
 std::string ScheduleReportExporter::gerarTabelaHtmlSala(const model::InstitutionData& data,
                                                        const model::Room& sala) {
     std::ostringstream ss;
@@ -293,6 +323,13 @@ std::string ScheduleReportExporter::gerarTabelaHtmlSala(const model::Institution
     return ss.str();
 }
 
+/**
+ * @brief Exporta um relatório completo e responsivo da grade horária em HTML com visual moderno.
+ * @param filepath Caminho de saída do arquivo HTML.
+ * @param data Dados da instituição contendo a grade e estatísticas de resolução.
+ * @param err Mensagem de erro caso a criação falhe.
+ * @return true se o relatório foi gravado; false em caso de falha.
+ */
 bool ScheduleReportExporter::exportarHtml(const std::string& filepath,
                                           const model::InstitutionData& data,
                                           std::string& err) {

@@ -4,8 +4,24 @@
 #include <cctype>
 #include <cstdio>
 
+/**
+ * @file InstitutionData.cpp
+ * @brief Implementação dos métodos da classe InstitutionData e funções auxiliares.
+ */
+
 namespace {
 
+/**
+ * @brief Extrai o maior sufixo numérico de uma lista de identificadores com determinado prefixo.
+ *
+ * Percorre a lista de IDs, converte prefixos e IDs para minúsculas para comparação insensível
+ * a maiúsculas/minúsculas, localiza o prefixo e analisa os dígitos numéricos imediatamente
+ * seguintes, retornando o maior valor numérico encontrado.
+ *
+ * @param ids Lista de identificadores existentes (ex: {"P01", "P02", "P10"}).
+ * @param prefix Prefixo textual associado à entidade (ex: "p", "t", "s", "d").
+ * @return Maior valor numérico inteiro identificado nos sufixos, ou 0 se nenhum ID corresponder.
+ */
 int extractMaxNumericSuffix(const std::vector<std::string>& ids, const std::string& prefix) {
     int max_val = 0;
     std::string lower_prefix = prefix;
@@ -37,8 +53,19 @@ int extractMaxNumericSuffix(const std::vector<std::string>& ids, const std::stri
 
 namespace scheduler::model {
 
+/**
+ * @brief Construtor padrão da classe InstitutionData.
+ *
+ * Inicializa uma instância vazia do repositório de dados institucionais com
+ * as coleções de professores, salas, turmas, disciplinas e grade horária vazias.
+ */
 InstitutionData::InstitutionData() = default;
 
+/**
+ * @brief Adiciona um novo professor ou substitui o registro existente de mesmo identificador.
+ *
+ * @param prof Objeto do tipo Professor a ser adicionado ou atualizado no cadastro.
+ */
 void InstitutionData::addProfessor(Professor prof) {
     auto it = std::find_if(professores_.begin(), professores_.end(),
                            [&](const Professor& p) { return p.id() == prof.id(); });
@@ -49,6 +76,12 @@ void InstitutionData::addProfessor(Professor prof) {
     }
 }
 
+/**
+ * @brief Remove um professor do cadastro institucional a partir do seu identificador.
+ *
+ * @param id Identificador único (ID) do professor a ser removido.
+ * @return true se o professor foi localizado e removido com sucesso, ou false caso contrário.
+ */
 bool InstitutionData::removeProfessor(const std::string& id) {
     auto it = std::remove_if(professores_.begin(), professores_.end(),
                              [&](const Professor& p) { return p.id() == id; });
@@ -59,6 +92,12 @@ bool InstitutionData::removeProfessor(const std::string& id) {
     return false;
 }
 
+/**
+ * @brief Localiza um professor pelo seu identificador (somente leitura).
+ *
+ * @param id Identificador único (ID) do professor desejado.
+ * @return Ponteiro constante para o Professor correspondente, ou nullptr se não encontrado.
+ */
 const Professor* InstitutionData::findProfessor(const std::string& id) const {
     for (const auto& p : professores_) {
         if (p.id() == id) return &p;
@@ -66,6 +105,12 @@ const Professor* InstitutionData::findProfessor(const std::string& id) const {
     return nullptr;
 }
 
+/**
+ * @brief Localiza um professor pelo seu identificador para leitura e modificação.
+ *
+ * @param id Identificador único (ID) do professor desejado.
+ * @return Ponteiro para o Professor correspondente, ou nullptr se não encontrado.
+ */
 Professor* InstitutionData::findProfessor(const std::string& id) {
     for (auto& p : professores_) {
         if (p.id() == id) return &p;
@@ -73,6 +118,11 @@ Professor* InstitutionData::findProfessor(const std::string& id) {
     return nullptr;
 }
 
+/**
+ * @brief Adiciona uma nova sala ou substitui o registro existente de mesmo identificador.
+ *
+ * @param sala Objeto do tipo Room a ser adicionado ou atualizado no cadastro.
+ */
 void InstitutionData::addSala(Room sala) {
     auto it = std::find_if(salas_.begin(), salas_.end(),
                            [&](const Room& r) { return r.id() == sala.id(); });
@@ -83,6 +133,12 @@ void InstitutionData::addSala(Room sala) {
     }
 }
 
+/**
+ * @brief Remove uma sala do cadastro institucional a partir do seu identificador.
+ *
+ * @param id Identificador único (ID) da sala a ser removida.
+ * @return true se a sala foi localizada e removida com sucesso, ou false caso contrário.
+ */
 bool InstitutionData::removeSala(const std::string& id) {
     auto it = std::remove_if(salas_.begin(), salas_.end(),
                              [&](const Room& r) { return r.id() == id; });
@@ -93,6 +149,12 @@ bool InstitutionData::removeSala(const std::string& id) {
     return false;
 }
 
+/**
+ * @brief Localiza uma sala pelo seu identificador (somente leitura).
+ *
+ * @param id Identificador único (ID) da sala desejada.
+ * @return Ponteiro constante para o objeto Room correspondente, ou nullptr se não encontrado.
+ */
 const Room* InstitutionData::findSala(const std::string& id) const {
     for (const auto& r : salas_) {
         if (r.id() == id) return &r;
@@ -100,6 +162,12 @@ const Room* InstitutionData::findSala(const std::string& id) const {
     return nullptr;
 }
 
+/**
+ * @brief Localiza uma sala pelo seu identificador para leitura e modificação.
+ *
+ * @param id Identificador único (ID) da sala desejada.
+ * @return Ponteiro para o objeto Room correspondente, ou nullptr se não encontrado.
+ */
 Room* InstitutionData::findSala(const std::string& id) {
     for (auto& r : salas_) {
         if (r.id() == id) return &r;
@@ -107,6 +175,11 @@ Room* InstitutionData::findSala(const std::string& id) {
     return nullptr;
 }
 
+/**
+ * @brief Adiciona uma nova turma ou substitui o registro existente de mesmo identificador.
+ *
+ * @param turma Objeto do tipo Turma a ser adicionado ou atualizado no cadastro.
+ */
 void InstitutionData::addTurma(Turma turma) {
     auto it = std::find_if(turmas_.begin(), turmas_.end(),
                            [&](const Turma& t) { return t.id() == turma.id(); });
@@ -117,6 +190,12 @@ void InstitutionData::addTurma(Turma turma) {
     }
 }
 
+/**
+ * @brief Remove uma turma do cadastro institucional a partir do seu identificador.
+ *
+ * @param id Identificador único (ID) da turma a ser removida.
+ * @return true se a turma foi localizada e removida com sucesso, ou false caso contrário.
+ */
 bool InstitutionData::removeTurma(const std::string& id) {
     auto it = std::remove_if(turmas_.begin(), turmas_.end(),
                              [&](const Turma& t) { return t.id() == id; });
@@ -127,6 +206,12 @@ bool InstitutionData::removeTurma(const std::string& id) {
     return false;
 }
 
+/**
+ * @brief Localiza uma turma pelo seu identificador (somente leitura).
+ *
+ * @param id Identificador único (ID) da turma desejada.
+ * @return Ponteiro constante para a Turma correspondente, ou nullptr se não encontrada.
+ */
 const Turma* InstitutionData::findTurma(const std::string& id) const {
     for (const auto& t : turmas_) {
         if (t.id() == id) return &t;
@@ -134,6 +219,12 @@ const Turma* InstitutionData::findTurma(const std::string& id) const {
     return nullptr;
 }
 
+/**
+ * @brief Localiza uma turma pelo seu identificador para leitura e modificação.
+ *
+ * @param id Identificador único (ID) da turma desejada.
+ * @return Ponteiro para a Turma correspondente, ou nullptr se não encontrada.
+ */
 Turma* InstitutionData::findTurma(const std::string& id) {
     for (auto& t : turmas_) {
         if (t.id() == id) return &t;
@@ -141,6 +232,11 @@ Turma* InstitutionData::findTurma(const std::string& id) {
     return nullptr;
 }
 
+/**
+ * @brief Adiciona uma nova disciplina ou substitui o registro existente de mesmo identificador.
+ *
+ * @param disc Objeto do tipo Disciplina a ser adicionado ou atualizado no cadastro.
+ */
 void InstitutionData::addDisciplina(Disciplina disc) {
     auto it = std::find_if(disciplinas_.begin(), disciplinas_.end(),
                            [&](const Disciplina& d) { return d.id() == disc.id(); });
@@ -151,6 +247,12 @@ void InstitutionData::addDisciplina(Disciplina disc) {
     }
 }
 
+/**
+ * @brief Remove uma disciplina do cadastro institucional a partir do seu identificador.
+ *
+ * @param id Identificador único (ID) da disciplina a ser removida.
+ * @return true se a disciplina foi localizada e removida com sucesso, ou false caso contrário.
+ */
 bool InstitutionData::removeDisciplina(const std::string& id) {
     auto it = std::remove_if(disciplinas_.begin(), disciplinas_.end(),
                              [&](const Disciplina& d) { return d.id() == id; });
@@ -161,6 +263,12 @@ bool InstitutionData::removeDisciplina(const std::string& id) {
     return false;
 }
 
+/**
+ * @brief Localiza uma disciplina pelo seu identificador (somente leitura).
+ *
+ * @param id Identificador único (ID) da disciplina desejada.
+ * @return Ponteiro constante para a Disciplina correspondente, ou nullptr se não encontrada.
+ */
 const Disciplina* InstitutionData::findDisciplina(const std::string& id) const {
     for (const auto& d : disciplinas_) {
         if (d.id() == id) return &d;
@@ -168,6 +276,12 @@ const Disciplina* InstitutionData::findDisciplina(const std::string& id) const {
     return nullptr;
 }
 
+/**
+ * @brief Localiza uma disciplina pelo seu identificador para leitura e modificação.
+ *
+ * @param id Identificador único (ID) da disciplina desejada.
+ * @return Ponteiro para a Disciplina correspondente, ou nullptr se não encontrada.
+ */
 Disciplina* InstitutionData::findDisciplina(const std::string& id) {
     for (auto& d : disciplinas_) {
         if (d.id() == id) return &d;
@@ -175,6 +289,12 @@ Disciplina* InstitutionData::findDisciplina(const std::string& id) {
     return nullptr;
 }
 
+/**
+ * @brief Localiza uma ocorrência de aula pelo seu identificador (somente leitura).
+ *
+ * @param id Identificador único (ID) da ocorrência de aula (ex: "T01_MAT_1").
+ * @return Ponteiro constante para o objeto Lesson correspondente, ou nullptr se não encontrado.
+ */
 const Lesson* InstitutionData::findAula(const std::string& id) const {
     for (const auto& a : aulas_) {
         if (a.id() == id) return &a;
@@ -182,6 +302,12 @@ const Lesson* InstitutionData::findAula(const std::string& id) const {
     return nullptr;
 }
 
+/**
+ * @brief Localiza uma ocorrência de aula pelo seu identificador para leitura e modificação.
+ *
+ * @param id Identificador único (ID) da ocorrência de aula (ex: "T01_MAT_1").
+ * @return Ponteiro para o objeto Lesson correspondente, ou nullptr se não encontrado.
+ */
 Lesson* InstitutionData::findAula(const std::string& id) {
     for (auto& a : aulas_) {
         if (a.id() == id) return &a;
@@ -189,6 +315,16 @@ Lesson* InstitutionData::findAula(const std::string& id) {
     return nullptr;
 }
 
+/**
+ * @brief Gera a lista de ocorrências individuais de aulas (Lesson) a partir das disciplinas cadastradas.
+ *
+ * Percorre todas as disciplinas cadastradas, filtra conforme o escopo de semestre informado
+ * (SEMESTRE_1, SEMESTRE_2 ou TODAS_SEM_FILTRO), cria instâncias de Lesson para cada aula semanal
+ * necessária e opcionalmente preserva fixações manuais prévias (horário, dia e salas fixadas).
+ *
+ * @param preservar_fixadas Se true, preserva o estado de fixação (pinned) de ocorrências pré-existentes.
+ * @param escopo Escopo de semestre letivo a ser considerado na geração.
+ */
 void InstitutionData::gerarOcorrenciasAulas(bool preservar_fixadas, EscopoSemestreOtimizacao escopo) {
     std::vector<Lesson> novas_aulas;
 
@@ -240,6 +376,11 @@ void InstitutionData::gerarOcorrenciasAulas(bool preservar_fixadas, EscopoSemest
     aulas_ = std::move(novas_aulas);
 }
 
+/**
+ * @brief Limpa todos os dados armazenados na instituição.
+ *
+ * Remove todos os registros de professores, salas, turmas, disciplinas, ocorrências de aulas e a grade horária.
+ */
 void InstitutionData::clear() {
     professores_.clear();
     salas_.clear();
@@ -249,6 +390,11 @@ void InstitutionData::clear() {
     grade_.clear();
 }
 
+/**
+ * @brief Gera o próximo identificador sequencial livre para novos professores no formato "P01", "P02", etc.
+ *
+ * @return String com o novo identificador único de professor disponível.
+ */
 std::string InstitutionData::nextProfessorId() const {
     std::vector<std::string> ids;
     ids.reserve(professores_.size());
@@ -264,6 +410,11 @@ std::string InstitutionData::nextProfessorId() const {
     }
 }
 
+/**
+ * @brief Gera o próximo identificador sequencial livre para novas turmas no formato "T01", "T02", etc.
+ *
+ * @return String com o novo identificador único de turma disponível.
+ */
 std::string InstitutionData::nextTurmaId() const {
     std::vector<std::string> ids;
     ids.reserve(turmas_.size());
@@ -279,6 +430,11 @@ std::string InstitutionData::nextTurmaId() const {
     }
 }
 
+/**
+ * @brief Gera o próximo identificador sequencial livre para novas salas no formato "S01", "S02", etc.
+ *
+ * @return String com o novo identificador único de sala disponível.
+ */
 std::string InstitutionData::nextSalaId() const {
     std::vector<std::string> ids;
     ids.reserve(salas_.size());
@@ -294,6 +450,11 @@ std::string InstitutionData::nextSalaId() const {
     }
 }
 
+/**
+ * @brief Gera o próximo identificador sequencial livre para novas disciplinas no formato "D01", "D02", etc.
+ *
+ * @return String com o novo identificador único de disciplina disponível.
+ */
 std::string InstitutionData::nextDisciplinaId() const {
     std::vector<std::string> ids;
     ids.reserve(disciplinas_.size());
@@ -309,6 +470,16 @@ std::string InstitutionData::nextDisciplinaId() const {
     }
 }
 
+/**
+ * @brief Cria e inicializa uma instância de InstitutionData com o cenário acadêmico padrão.
+ *
+ * Carrega o conjunto completo de dados acadêmicos com 6 professores (com disponibilidades horárias
+ * e pesos diários de preferência), 6 salas de aula (teóricas e laboratórios), 3 turmas do ensino
+ * médio (com salas atribuídas e restrições) e diversas disciplinas anuais e semestrais.
+ * Ao final, executa a geração automática de ocorrências de aulas.
+ *
+ * @return Instância completa e configurada de InstitutionData pronta para uso ou simulação.
+ */
 InstitutionData InstitutionData::criarExemploPadrao() {
     InstitutionData data;
 

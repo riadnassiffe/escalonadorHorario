@@ -1,3 +1,8 @@
+/**
+ * @file OptimizeDialog.cpp
+ * @brief Implementação da janela de seleção e parametrização do resolvedor de horários.
+ */
+
 #include "ui/OptimizeDialog.h"
 #include "ui/ModernTheme.h"
 #include <QVBoxLayout>
@@ -9,11 +14,20 @@
 
 namespace scheduler::ui {
 
+/**
+ * @brief Construtor do diálogo de otimização de grade.
+ * @param current_config Configuração inicial de otimização.
+ * @param num_aulas_em_tela Número de aulas atualmente renderizadas na grade.
+ * @param parent Widget pai na hierarquia Qt.
+ */
 OptimizeDialog::OptimizeDialog(const model::OptimizationConfig& current_config, int num_aulas_em_tela, QWidget* parent)
     : QDialog(parent), initial_config_(current_config), num_aulas_em_tela_(num_aulas_em_tela) {
     setupUi();
 }
 
+/**
+ * @brief Monta a interface gráfica, campos de tempo, paralelismo, escopo e cartões informativos.
+ */
 void OptimizeDialog::setupUi() {
     setWindowTitle("Otimizar Grade - Seleção de Algoritmo");
     setMinimumWidth(560);
@@ -190,11 +204,19 @@ void OptimizeDialog::setupUi() {
     onAlgorithmChanged(combo_algorithm_->currentIndex());
 }
 
+/**
+ * @brief Slot acionado na mudança do algoritmo no combobox.
+ * @param index Índice do novo item selecionado.
+ */
 void OptimizeDialog::onAlgorithmChanged(int index) {
     auto algo = static_cast<model::SolverAlgorithm>(combo_algorithm_->itemData(index).toInt());
     updateAlgorithmDetails(algo);
 }
 
+/**
+ * @brief Atualiza a ficha técnica informativa do algoritmo (tipo, garantia, velocidade e limites).
+ * @param algo Algoritmo de resolução selecionado.
+ */
 void OptimizeDialog::updateAlgorithmDetails(model::SolverAlgorithm algo) {
     switch (algo) {
         case model::SolverAlgorithm::CP_SAT:
@@ -255,10 +277,18 @@ void OptimizeDialog::updateAlgorithmDetails(model::SolverAlgorithm algo) {
     }
 }
 
+/**
+ * @brief Retorna o algoritmo atualmente selecionado.
+ * @return model::SolverAlgorithm selecionado.
+ */
 model::SolverAlgorithm OptimizeDialog::getSelectedAlgorithm() const {
     return static_cast<model::SolverAlgorithm>(combo_algorithm_->currentData().toInt());
 }
 
+/**
+ * @brief Grava as opções selecionadas pelo usuário na estrutura de configuração fornecida.
+ * @param cfg Estrutura model::OptimizationConfig que será atualizada.
+ */
 void OptimizeDialog::updateConfig(model::OptimizationConfig& cfg) const {
     cfg.algoritmo = getSelectedAlgorithm();
     if (combo_escopo_semestre_) {

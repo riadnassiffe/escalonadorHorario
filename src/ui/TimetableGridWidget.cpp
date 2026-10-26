@@ -1,3 +1,8 @@
+/**
+ * @file TimetableGridWidget.cpp
+ * @brief Implementação dos eventos de arrastar e soltar da grade horária semanal.
+ */
+
 #include "ui/TimetableGridWidget.h"
 #include "ui/ModernTheme.h"
 #include <QMouseEvent>
@@ -11,6 +16,10 @@
 
 namespace scheduler::ui {
 
+/**
+ * @brief Construtor da tabela configurando suporte a recepção de arrasto.
+ * @param parent Widget pai na hierarquia Qt.
+ */
 TimetableGridWidget::TimetableGridWidget(QWidget* parent)
     : QTableWidget(parent) {
     setAcceptDrops(true);
@@ -18,6 +27,10 @@ TimetableGridWidget::TimetableGridWidget(QWidget* parent)
     setDragEnabled(false); // Usamos arrasto manual customizado para controle total do visual e dados
 }
 
+/**
+ * @brief Registra a posição inicial do ponteiro quando o botão esquerdo é pressionado.
+ * @param event Evento do mouse.
+ */
 void TimetableGridWidget::mousePressEvent(QMouseEvent* event) {
     if (event->button() == Qt::LeftButton) {
         drag_start_pos_ = event->pos();
@@ -25,6 +38,10 @@ void TimetableGridWidget::mousePressEvent(QMouseEvent* event) {
     QTableWidget::mousePressEvent(event);
 }
 
+/**
+ * @brief Inicia o arrasto (QDrag) com visualização em miniatura após deslocamento mínimo.
+ * @param event Evento de movimento do mouse.
+ */
 void TimetableGridWidget::mouseMoveEvent(QMouseEvent* event) {
     if (!(event->buttons() & Qt::LeftButton)) {
         QTableWidget::mouseMoveEvent(event);
@@ -90,6 +107,10 @@ void TimetableGridWidget::mouseMoveEvent(QMouseEvent* event) {
     drag->exec(Qt::MoveAction | Qt::CopyAction);
 }
 
+/**
+ * @brief Aceita o evento de entrada se o mime contiver dados de identificador de aula.
+ * @param event Evento de entrada de arrasto.
+ */
 void TimetableGridWidget::dragEnterEvent(QDragEnterEvent* event) {
     if (event->mimeData()->hasFormat("application/x-aula-id")) {
         event->acceptProposedAction();
@@ -98,6 +119,10 @@ void TimetableGridWidget::dragEnterEvent(QDragEnterEvent* event) {
     }
 }
 
+/**
+ * @brief Valida o movimento de arrasto sobre as células da grade, impedindo soltar sobre intervalos.
+ * @param event Evento de movimento de arrasto.
+ */
 void TimetableGridWidget::dragMoveEvent(QDragMoveEvent* event) {
     if (event->mimeData()->hasFormat("application/x-aula-id")) {
         auto* target_item = itemAt(event->position().toPoint());
@@ -115,6 +140,10 @@ void TimetableGridWidget::dragMoveEvent(QDragMoveEvent* event) {
     }
 }
 
+/**
+ * @brief Extrai a linha e coluna da célula receptora e emite lessonDropRequested.
+ * @param event Evento de soltura de arrasto.
+ */
 void TimetableGridWidget::dropEvent(QDropEvent* event) {
     if (event->mimeData()->hasFormat("application/x-aula-id")) {
         QString aula_id = QString::fromUtf8(event->mimeData()->data("application/x-aula-id"));
@@ -131,3 +160,4 @@ void TimetableGridWidget::dropEvent(QDropEvent* event) {
 }
 
 } // namespace scheduler::ui
+

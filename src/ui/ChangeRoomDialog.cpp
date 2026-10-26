@@ -1,3 +1,8 @@
+/**
+ * @file ChangeRoomDialog.cpp
+ * @brief Implementação do diálogo de alteração e permuta de salas de aula.
+ */
+
 #include "ui/ChangeRoomDialog.h"
 #include "ui/ModernTheme.h"
 #include <QVBoxLayout>
@@ -8,6 +13,12 @@
 
 namespace scheduler::ui {
 
+/**
+ * @brief Construtor do diálogo de alteração de sala.
+ * @param data Referência para os dados institucionais.
+ * @param aula_id ID da aula alocada.
+ * @param parent Widget pai na hierarquia Qt.
+ */
 ChangeRoomDialog::ChangeRoomDialog(model::InstitutionData& data,
                                    const std::string& aula_id,
                                    QWidget* parent)
@@ -15,6 +26,9 @@ ChangeRoomDialog::ChangeRoomDialog(model::InstitutionData& data,
     setupUi();
 }
 
+/**
+ * @brief Inicializa e posiciona os componentes visuais da janela.
+ */
 void ChangeRoomDialog::setupUi() {
     setWindowTitle("🏢 Alterar Sala de Aula");
     setMinimumWidth(520);
@@ -202,10 +216,17 @@ void ChangeRoomDialog::setupUi() {
     updateRoomStatus();
 }
 
+/**
+ * @brief Slot acionado na seleção de outra sala no combo box.
+ * @param index Índice da opção selecionada.
+ */
 void ChangeRoomDialog::onRoomChanged(int) {
     updateRoomStatus();
 }
 
+/**
+ * @brief Atualiza a análise de disponibilidade da sala selecionada e reflete no painel de status.
+ */
 void ChangeRoomDialog::updateRoomStatus() {
     conflicting_aula_id_.clear();
     btn_swap_->setVisible(false);
@@ -285,15 +306,26 @@ void ChangeRoomDialog::updateRoomStatus() {
     lbl_status_->setStyleSheet("background-color: rgba(22, 163, 74, 0.15); color: #16a34a; border: 1px solid rgba(22, 163, 74, 0.4);");
 }
 
+/**
+ * @brief Retorna o identificador da sala selecionada.
+ * @return String com o ID da sala.
+ */
 std::string ChangeRoomDialog::selectedRoomId() const {
     if (!combo_salas_ || combo_salas_->currentIndex() < 0) return {};
     return combo_salas_->currentData().toString().toStdString();
 }
 
+/**
+ * @brief Informa se a alocação deve ser fixada permanentemente na grade.
+ * @return true se fixado (pinned); false caso contrário.
+ */
 bool ChangeRoomDialog::isPinned() const {
     return chk_pin_ && chk_pin_->isChecked();
 }
 
+/**
+ * @brief Valida confirmação de alteração, exibindo aviso se a sala estiver compartilhada/conflitante.
+ */
 void ChangeRoomDialog::onConfirmClicked() {
     if (!conflicting_aula_id_.empty()) {
         auto resp = QMessageBox::warning(this, "Conflito de Sala",
@@ -306,6 +338,9 @@ void ChangeRoomDialog::onConfirmClicked() {
     accept();
 }
 
+/**
+ * @brief Executa a troca mútua entre as duas salas conflitantes e fecha o diálogo.
+ */
 void ChangeRoomDialog::onSwapClicked() {
     swap_requested_ = true;
     accept();

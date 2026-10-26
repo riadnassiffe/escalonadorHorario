@@ -1,3 +1,8 @@
+/**
+ * @file TableSearchSortBar.cpp
+ * @brief Implementação do componente de busca textual e ordenação de tabelas.
+ */
+
 #include "ui/TableSearchSortBar.h"
 #include "ui/SmartTableWidgetItem.h"
 #include <QHBoxLayout>
@@ -5,6 +10,10 @@
 
 namespace scheduler::ui {
 
+/**
+ * @brief Constrói os elementos de interface da barra de busca e ordenação.
+ * @param parent Widget pai na hierarquia Qt.
+ */
 TableSearchSortBar::TableSearchSortBar(QWidget* parent)
     : QWidget(parent) {
     auto* layout = new QHBoxLayout(this);
@@ -54,6 +63,14 @@ TableSearchSortBar::TableSearchSortBar(QWidget* parent)
     connect(btn_sort_order_, &QToolButton::clicked, this, &TableSearchSortBar::toggleSortOrder);
 }
 
+/**
+ * @brief Vincula a barra a uma QTableWidget e popula as colunas disponíveis para ordenação.
+ * @param table Tabela alvo.
+ * @param entitySingular Nome no singular da entidade.
+ * @param entityPlural Nome no plural da entidade.
+ * @param defaultSortColumn Coluna padrão selecionada.
+ * @param defaultOrder Sentido padrão de ordenação.
+ */
 void TableSearchSortBar::setupWithTable(QTableWidget* table,
                                         const QString& entitySingular,
                                         const QString& entityPlural,
@@ -101,6 +118,9 @@ void TableSearchSortBar::setupWithTable(QTableWidget* table,
     applyFilter(search_edit_->text());
 }
 
+/**
+ * @brief Re-aplica a ordenação e a busca textual ativa na tabela.
+ */
 void TableSearchSortBar::reapplyFilterAndSort() {
     if (!table_) return;
     int col = currentSortColumn();
@@ -110,19 +130,35 @@ void TableSearchSortBar::reapplyFilterAndSort() {
     applyFilter(search_edit_->text());
 }
 
+/**
+ * @brief Retorna o texto digitado no campo de busca.
+ * @return QString com o texto de busca.
+ */
 QString TableSearchSortBar::currentQuery() const {
     return search_edit_->text();
 }
 
+/**
+ * @brief Retorna a coluna atualmente selecionada no dropdown para ordenação.
+ * @return Índice lógico da coluna.
+ */
 int TableSearchSortBar::currentSortColumn() const {
     if (!combo_sort_column_ || combo_sort_column_->currentIndex() < 0) return 0;
     return combo_sort_column_->currentData().toInt();
 }
 
+/**
+ * @brief Retorna o sentido de ordenação atual (Ascendente ou Descendente).
+ * @return Qt::SortOrder corrente.
+ */
 Qt::SortOrder TableSearchSortBar::currentSortOrder() const {
     return current_sort_order_;
 }
 
+/**
+ * @brief Aplica filtro textual sobre todas as linhas da tabela, ocultando as não correspondentes.
+ * @param query Texto digitado pelo usuário.
+ */
 void TableSearchSortBar::applyFilter(const QString& query) {
     if (!table_) return;
 
@@ -151,6 +187,9 @@ void TableSearchSortBar::applyFilter(const QString& query) {
     updateCountLabel(visibleCount, totalCount);
 }
 
+/**
+ * @brief Aplica ordenação na tabela com base na coluna e direção selecionadas.
+ */
 void TableSearchSortBar::applySort() {
     if (!table_ || is_syncing_) return;
     is_syncing_ = true;
@@ -161,6 +200,9 @@ void TableSearchSortBar::applySort() {
     is_syncing_ = false;
 }
 
+/**
+ * @brief Alterna o sentido de ordenação entre A-Z e Z-A e dispara re-ordenação.
+ */
 void TableSearchSortBar::toggleSortOrder() {
     current_sort_order_ = (current_sort_order_ == Qt::AscendingOrder)
                               ? Qt::DescendingOrder
@@ -169,6 +211,10 @@ void TableSearchSortBar::toggleSortOrder() {
     applySort();
 }
 
+/**
+ * @brief Sincroniza a barra quando uma seção do cabeçalho da tabela for clicada.
+ * @param logicalIndex Índice lógico da seção clicada.
+ */
 void TableSearchSortBar::onHeaderSectionClicked(int logicalIndex) {
     if (!table_ || is_syncing_) return;
     is_syncing_ = true;
@@ -186,6 +232,11 @@ void TableSearchSortBar::onHeaderSectionClicked(int logicalIndex) {
     is_syncing_ = false;
 }
 
+/**
+ * @brief Atualiza o contador de registros visíveis e totais com estilização visual.
+ * @param visibleCount Quantidade de itens visíveis.
+ * @param totalCount Quantidade total de itens.
+ */
 void TableSearchSortBar::updateCountLabel(int visibleCount, int totalCount) {
     if (!lbl_count_) return;
 
@@ -207,6 +258,9 @@ void TableSearchSortBar::updateCountLabel(int visibleCount, int totalCount) {
     }
 }
 
+/**
+ * @brief Atualiza o texto e tooltip do botão de ordenação conforme a direção ativa.
+ */
 void TableSearchSortBar::updateOrderButtonState() {
     if (!btn_sort_order_) return;
     if (current_sort_order_ == Qt::AscendingOrder) {

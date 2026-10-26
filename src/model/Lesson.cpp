@@ -1,3 +1,8 @@
+/**
+ * @file Lesson.cpp
+ * @brief Unidade de compilação das classes Disciplina e Lesson.
+ */
+
 #include "model/Lesson.h"
 
 namespace scheduler::model {

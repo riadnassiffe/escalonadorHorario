@@ -1,3 +1,8 @@
+/**
+ * @file Preprocessor.cpp
+ * @brief Implementação dos algoritmos de validação prévia e geração de candidatos viáveis para as aulas.
+ */
+
 #include "solver/Preprocessor.h"
 #include <algorithm>
 #include <sstream>
@@ -5,6 +10,11 @@
 
 namespace scheduler::solver {
 
+/**
+ * @brief Executa validação de regras obrigatórias e consistência de jornadas antes da otimização.
+ * @param data Dados completos da instituição.
+ * @return ValidationResult com erros e alertas identificados.
+ */
 ValidationResult Preprocessor::validarDados(const model::InstitutionData& data) {
     ValidationResult res;
 
@@ -134,6 +144,14 @@ ValidationResult Preprocessor::validarDados(const model::InstitutionData& data) 
     return res;
 }
 
+/**
+ * @brief Verifica se a aula cabe inteiramente dentro de um dos blocos letivos da turma no dia informado.
+ * @param turma Turma a ser verificada.
+ * @param dia Dia da semana em questão.
+ * @param start_slot Slot inicial da aula.
+ * @param duration_slots Duração da aula em slots de 5 minutos.
+ * @return true se a aula couber em um bloco sem invadir intervalos ou limites.
+ */
 bool Preprocessor::turmaAcomodaAula(const model::Turma& turma, model::DayOfWeek dia,
                                     int start_slot, int duration_slots) {
     if (!turma.funcionaNoDia(dia)) return false;
@@ -151,6 +169,13 @@ bool Preprocessor::turmaAcomodaAula(const model::Turma& turma, model::DayOfWeek 
     return false;
 }
 
+/**
+ * @brief Valida se o horário de início e fim da aula está contido no intervalo do turno de trabalho.
+ * @param shift Turno verificado (MANHA, TARDE, NOITE, INTEGRAL).
+ * @param start_slot Slot inicial proposto.
+ * @param duration_slots Duração em slots da aula.
+ * @return true se os slots pertencerem ao turno.
+ */
 bool Preprocessor::shiftAcomodaAula(model::ShiftType shift, int start_slot, int duration_slots) {
     int end_slot = start_slot + duration_slots;
     switch (shift) {
@@ -170,6 +195,13 @@ bool Preprocessor::shiftAcomodaAula(model::ShiftType shift, int start_slot, int 
     return true;
 }
 
+/**
+ * @brief Gera todas as combinações viáveis (dia, horário, salas) para alocar uma aula específica.
+ * @param data Base de dados da instituição.
+ * @param aula Aula a ser avaliada.
+ * @param diagnostico_aula Vetor preenchido com diagnósticos caso a aula não possua candidatos viáveis.
+ * @return Vetor de CandidateAllocation gerados para a aula.
+ */
 std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
     const model::InstitutionData& data,
     const model::Lesson& aula,
@@ -404,6 +436,12 @@ std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
     return candidatos;
 }
 
+/**
+ * @brief Executa a geração de candidatos para todas as aulas da instituição.
+ * @param data Base de dados institucional.
+ * @param resultado Acumulador de erros caso alguma aula fique sem candidatos.
+ * @return Mapa associando cada aula_id à lista de suas alocações viáveis.
+ */
 std::map<std::string, std::vector<CandidateAllocation>> Preprocessor::gerarTodosCandidatos(
     const model::InstitutionData& data,
     ValidationResult& resultado) {

@@ -1,3 +1,8 @@
+/**
+ * @file RoomEditorDialog.cpp
+ * @brief Implementação do diálogo de edição e cadastro de salas e laboratórios.
+ */
+
 #include "ui/RoomEditorDialog.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -8,6 +13,12 @@
 
 namespace scheduler::ui {
 
+/**
+ * @brief Construtor do diálogo de sala.
+ * @param parent Widget pai na interface Qt.
+ * @param room Ponteiro opcional para a sala a ser editada.
+ * @param default_id ID padrão a sugerir se for inclusão de nova sala.
+ */
 RoomEditorDialog::RoomEditorDialog(QWidget* parent, const model::Room* room, const std::string& default_id)
     : QDialog(parent) {
     if (room) {
@@ -27,6 +38,9 @@ RoomEditorDialog::RoomEditorDialog(QWidget* parent, const model::Room* room, con
     }
 }
 
+/**
+ * @brief Monta o layout de campos e botões de confirmação.
+ */
 void RoomEditorDialog::setupUi() {
     setMinimumWidth(450);
     auto* main_layout = new QVBoxLayout(this);
@@ -75,6 +89,10 @@ void RoomEditorDialog::setupUi() {
     });
 }
 
+/**
+ * @brief Preenche os componentes com os dados da sala informada.
+ * @param room Sala com os dados para preenchimento.
+ */
 void RoomEditorDialog::loadRoom(const model::Room& room) {
     id_ = room.id();
     txt_nome_->setText(QString::fromStdString(room.nome()));
@@ -92,6 +110,10 @@ void RoomEditorDialog::loadRoom(const model::Room& room) {
     txt_recursos_->setText(recursos_str);
 }
 
+/**
+ * @brief Retorna uma nova instância de model::Room com os valores preenchidos.
+ * @return Objeto Room configurado.
+ */
 model::Room RoomEditorDialog::getRoom() const {
     model::Room r(id_,
                   txt_nome_->text().trimmed().toStdString(),
@@ -112,3 +134,4 @@ model::Room RoomEditorDialog::getRoom() const {
 }
 
 } // namespace scheduler::ui
+

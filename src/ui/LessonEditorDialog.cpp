@@ -1,3 +1,8 @@
+/**
+ * @file LessonEditorDialog.cpp
+ * @brief Implementação da janela de cadastro e edição de disciplinas e suas regras de alocação.
+ */
+
 #include "ui/LessonEditorDialog.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -9,6 +14,15 @@
 
 namespace scheduler::ui {
 
+/**
+ * @brief Construtor da janela de edição/criação de disciplina.
+ * @param profs Lista de professores cadastrados.
+ * @param turmas Lista de turmas cadastradas.
+ * @param salas Lista de salas disponíveis.
+ * @param parent Widget pai na hierarquia Qt.
+ * @param disc Ponteiro opcional para dados de disciplina existente.
+ * @param default_id ID sugerido se for novo cadastro de disciplina.
+ */
 LessonEditorDialog::LessonEditorDialog(const std::vector<model::Professor>& profs,
                                        const std::vector<model::Turma>& turmas,
                                        const std::vector<model::Room>& salas,
@@ -33,6 +47,9 @@ LessonEditorDialog::LessonEditorDialog(const std::vector<model::Professor>& prof
     }
 }
 
+/**
+ * @brief Constrói os campos do formulário, controles de regime, turnos e seleção de salas.
+ */
 void LessonEditorDialog::setupUi() {
     setMinimumWidth(550);
     auto* main_layout = new QVBoxLayout(this);
@@ -203,13 +220,19 @@ void LessonEditorDialog::setupUi() {
         }
         accept();
     });
-}
-
+/**
+ * @brief Mostra ou oculta a seleção de salas alternativas conforme o tipo de ambiente (teórica vs laboratório).
+ * @param index Índice do item selecionado.
+ */
 void LessonEditorDialog::onTipoChanged(int /*index*/) {
     bool is_teorica = (combo_tipo_->currentData().toString() == "TEORICA");
     widget_salas_alternativas_->setVisible(!is_teorica);
 }
 
+/**
+ * @brief Habilita ou desabilita o campo de semestre de oferta conforme o regime (anual vs semestral).
+ * @param index Índice do regime selecionado.
+ */
 void LessonEditorDialog::onRegimeChanged(int /*index*/) {
     bool is_anual = (combo_regime_->currentData().toString() == "ANUAL");
     if (is_anual) {
@@ -223,6 +246,10 @@ void LessonEditorDialog::onRegimeChanged(int /*index*/) {
     }
 }
 
+/**
+ * @brief Carrega os dados de uma disciplina existente nos campos do diálogo.
+ * @param disc Instância de model::Disciplina a ser carregada.
+ */
 void LessonEditorDialog::loadDisciplina(const model::Disciplina& disc) {
     id_ = disc.id();
     txt_nome_->setText(QString::fromStdString(disc.nome()));
@@ -282,6 +309,10 @@ void LessonEditorDialog::loadDisciplina(const model::Disciplina& disc) {
     onTipoChanged(combo_tipo_->currentIndex());
 }
 
+/**
+ * @brief Constrói e retorna uma nova model::Disciplina com os valores do formulário.
+ * @return model::Disciplina preenchida.
+ */
 model::Disciplina LessonEditorDialog::getDisciplina() const {
     model::RegimeDisciplina regime = model::stringToRegime(combo_regime_->currentData().toString().toStdString());
     model::SemestreLetivo semestre = model::stringToSemestre(combo_semestre_->currentData().toString().toStdString());

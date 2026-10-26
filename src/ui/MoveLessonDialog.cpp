@@ -1,3 +1,8 @@
+/**
+ * @file MoveLessonDialog.cpp
+ * @brief Implementação do diálogo para mover aulas e validar conflitos de grade.
+ */
+
 #include "ui/MoveLessonDialog.h"
 #include "ui/ModernTheme.h"
 #include <QVBoxLayout>
@@ -9,6 +14,13 @@
 
 namespace scheduler::ui {
 
+/**
+ * @brief Construtor da janela de movimentação manual de aula.
+ * @param data Base de dados da instituição.
+ * @param aula_id ID da aula a movimentar.
+ * @param available_slots Intervalos horários disponíveis.
+ * @param parent Widget pai na hierarquia Qt.
+ */
 MoveLessonDialog::MoveLessonDialog(model::InstitutionData& data,
                                    const std::string& aula_id,
                                    const std::vector<model::TimeInterval>& available_slots,
@@ -20,6 +32,9 @@ MoveLessonDialog::MoveLessonDialog(model::InstitutionData& data,
     updateValidationStatus();
 }
 
+/**
+ * @brief Constrói o layout, cartões informativos e controles de seleção de dia, horário e sala.
+ */
 void MoveLessonDialog::setupUi() {
     auto* main_layout = new QVBoxLayout(this);
     main_layout->setSpacing(14);
@@ -148,10 +163,18 @@ void MoveLessonDialog::setupUi() {
             this, &MoveLessonDialog::onSelectionChanged);
 }
 
+/**
+ * @brief Retorna o dia da semana selecionado.
+ * @return Dia da semana (model::DayOfWeek).
+ */
 model::DayOfWeek MoveLessonDialog::selectedDay() const {
     return static_cast<model::DayOfWeek>(combo_dia_->currentData().toInt());
 }
 
+/**
+ * @brief Retorna o intervalo horário selecionado.
+ * @return Intervalo de tempo (model::TimeInterval).
+ */
 model::TimeInterval MoveLessonDialog::selectedInterval() const {
     int idx = combo_horario_->currentData().toInt();
     if (idx >= 0 && idx < static_cast<int>(available_slots_.size())) {
@@ -160,15 +183,25 @@ model::TimeInterval MoveLessonDialog::selectedInterval() const {
     return model::TimeInterval();
 }
 
+/**
+ * @brief Retorna a sala de aula selecionada.
+ * @return ID da sala selecionada.
+ */
 std::string MoveLessonDialog::selectedRoomId() const {
     if (!combo_sala_ || combo_sala_->currentIndex() < 0) return {};
     return combo_sala_->currentData().toString().toStdString();
 }
 
+/**
+ * @brief Slot disparado ao alterar o dia, horário ou sala para revalidar conflitos.
+ */
 void MoveLessonDialog::onSelectionChanged() {
     updateValidationStatus();
 }
 
+/**
+ * @brief Executa validações de disponibilidade docente, de turma, de sala e intervalos de descanso.
+ */
 void MoveLessonDialog::updateValidationStatus() {
     auto target_day = selectedDay();
     auto target_inter = selectedInterval();

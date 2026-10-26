@@ -1,3 +1,8 @@
+/**
+ * @file TurmaEditorDialog.cpp
+ * @brief Implementação da janela de cadastro e edição de turmas, jornadas e salas associadas.
+ */
+
 #include "ui/TurmaEditorDialog.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -11,6 +16,13 @@
 
 namespace scheduler::ui {
 
+/**
+ * @brief Construtor da janela de edição/criação de turma.
+ * @param salas_disponiveis Lista de salas cadastradas na instituição.
+ * @param parent Widget pai na hierarquia Qt.
+ * @param turma Ponteiro opcional para dados de turma existente.
+ * @param default_id ID sugerido se for novo cadastro de turma.
+ */
 TurmaEditorDialog::TurmaEditorDialog(const std::vector<model::Room>& salas_disponiveis,
                                      QWidget* parent,
                                      const model::Turma* turma,
@@ -37,6 +49,9 @@ TurmaEditorDialog::TurmaEditorDialog(const std::vector<model::Room>& salas_dispo
     onSalaModeChanged();
 }
 
+/**
+ * @brief Monta a interface de dados da turma, abas por dia da semana e política de salas teóricas.
+ */
 void TurmaEditorDialog::setupUi() {
     setMinimumWidth(750);
     setMinimumHeight(580);
@@ -265,8 +280,11 @@ void TurmaEditorDialog::setupUi() {
 
         accept();
     });
-}
-
+/**
+ * @brief Constrói a aba de configuração de horários e intervalos para um dia específico.
+ * @param day_idx Índice do dia da semana (0 = Segunda, ..., 4 = Sexta).
+ * @return QWidget* contendo os campos de horários e predefinições do dia.
+ */
 QWidget* TurmaEditorDialog::createDayTab(int day_idx) {
     auto* tab_page = new QWidget(this);
     auto* tab_layout = new QVBoxLayout(tab_page);
@@ -480,8 +498,11 @@ QWidget* TurmaEditorDialog::createDayTab(int day_idx) {
     connect(w.time_int3_fim, &QTimeEdit::timeChanged, this, &TurmaEditorDialog::validateAllDays);
 
     return tab_page;
-}
-
+/**
+ * @brief Aplica parâmetros padrão de horários e intervalos a um dia da semana.
+ * @param day_idx Índice do dia (0 a 4).
+ * @param preset_type Tipo de turno da predefinição a ser carregada.
+ */
 void TurmaEditorDialog::applyPresetToDay(int day_idx, model::ShiftType preset_type) {
     if (day_idx < 0 || day_idx >= 5) return;
     auto& w = days_widgets_[day_idx];
@@ -599,14 +620,20 @@ void TurmaEditorDialog::applyPresetToDay(int day_idx, model::ShiftType preset_ty
     }
 
     validateAllDays();
-}
-
+/**
+ * @brief Aplica a mesma predefinição de horários a todos os 5 dias úteis da semana.
+ * @param preset_type Turno da predefinição.
+ */
 void TurmaEditorDialog::applyPresetToAllDays(model::ShiftType preset_type) {
     for (int i = 0; i < 5; ++i) {
         applyPresetToDay(i, preset_type);
     }
 }
 
+/**
+ * @brief Abre diálogo para replicar a grade do dia de origem para os outros dias selecionados.
+ * @param source_day_idx Índice do dia de origem cujos horários serão copiados.
+ */
 void TurmaEditorDialog::copyDayScheduleToOthers(int source_day_idx) {
     if (source_day_idx < 0 || source_day_idx >= 5) return;
     std::string src_name = model::dayToLongString(static_cast<model::DayOfWeek>(source_day_idx));
@@ -653,8 +680,11 @@ void TurmaEditorDialog::copyDayScheduleToOthers(int source_day_idx) {
         }
         validateAllDays();
     }
-}
-
+/**
+ * @brief Converte o estado dos controles gráficos de um dia em uma model::JornadaTurma.
+ * @param w Estrutura de widgets do dia.
+ * @return Instância de model::JornadaTurma correspondente.
+ */
 model::JornadaTurma TurmaEditorDialog::getJornadaFromWidgets(const DayScheduleWidgets& w) {
     try {
         std::string s_ini = w.time_inicio->time().toString("HH:mm").toStdString();
@@ -675,6 +705,11 @@ model::JornadaTurma TurmaEditorDialog::getJornadaFromWidgets(const DayScheduleWi
     }
 }
 
+/**
+ * @brief Atualiza os campos gráficos de um dia com os valores de uma model::JornadaTurma.
+ * @param w Estrutura de widgets do dia a atualizar.
+ * @param j Objeto JornadaTurma de origem.
+ */
 void TurmaEditorDialog::setWidgetsFromJornada(DayScheduleWidgets& w, const model::JornadaTurma& j) {
     const QSignalBlocker b_ini(w.time_inicio);
     const QSignalBlocker b_fim(w.time_fim);
@@ -721,8 +756,9 @@ void TurmaEditorDialog::setWidgetsFromJornada(DayScheduleWidgets& w, const model
     }
     w.time_int3_ini->setEnabled(j.int3_ativo);
     w.time_int3_fim->setEnabled(j.int3_ativo);
-}
-
+/**
+ * @brief Valida consistência de horários e intervalos de todos os dias e calcula tempo letivo semanal.
+ */
 void TurmaEditorDialog::validateAllDays() {
     int total_semana_min = 0;
     QStringList resumo_partes;
@@ -815,14 +851,19 @@ void TurmaEditorDialog::validateAllDays() {
             combo_turno_->setCurrentIndex(idx);
         }
     }
-}
-
+/**
+ * @brief Alterna o estado de seleção entre sala fixa predefinida e salas permitidas.
+ */
 void TurmaEditorDialog::onSalaModeChanged() {
     bool is_fixa = rad_sala_fixa_->isChecked();
     combo_sala_fixa_->setEnabled(is_fixa);
     list_salas_permitidas_->setEnabled(!is_fixa);
 }
 
+/**
+ * @brief Carrega os dados da turma informada em todos os componentes da interface.
+ * @param turma Turma cujos dados serão carregados.
+ */
 void TurmaEditorDialog::loadTurma(const model::Turma& turma) {
     id_ = turma.id();
     txt_nome_->setText(QString::fromStdString(turma.nome()));
@@ -855,6 +896,10 @@ void TurmaEditorDialog::loadTurma(const model::Turma& turma) {
     validateAllDays();
 }
 
+/**
+ * @brief Monta e retorna uma nova instância de model::Turma com os dados preenchidos.
+ * @return model::Turma configurada.
+ */
 model::Turma TurmaEditorDialog::getTurma() const {
     auto shift = static_cast<model::ShiftType>(combo_turno_->currentData().toInt());
     model::Turma t(id_,

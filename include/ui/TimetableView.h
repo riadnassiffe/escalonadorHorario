@@ -1,3 +1,8 @@
+/**
+ * @file TimetableView.h
+ * @brief Visualizador interativo e gerenciador da grade de horários gerada.
+ */
+
 #pragma once
 
 #include "model/InstitutionData.h"
@@ -10,38 +15,137 @@
 
 namespace scheduler::ui {
 
+/**
+ * @class TimetableView
+ * @brief Widget principal para visualização, filtragem e edição direta da grade horária semanal.
+ *
+ * Suporta três modos de perspectiva (por Turma, por Professor e por Sala), filtragem por semestre letivo,
+ * busca em tempo real de disciplinas/professores, menu de contexto com fixação (Pin),
+ * alteração de sala com verificação de conflitos, movimentação manual e suporte a Drag & Drop.
+ */
 class TimetableView : public QWidget {
     Q_OBJECT
 
 public:
+    /**
+     * @brief Constrói a visualização da grade horária.
+     * @param data Referência para o modelo de dados acadêmicos e grade.
+     * @param parent Widget pai na hierarquia Qt.
+     */
     explicit TimetableView(model::InstitutionData& data, QWidget* parent = nullptr);
 
+    /**
+     * @brief Recarrega os dados e redesenha completamente a grade na tela.
+     */
     void refreshView();
 
 signals:
+    /**
+     * @brief Emitido quando uma aula tem seu estado de fixação alterado pelo usuário.
+     * @param aula_id ID da aula.
+     * @param pinned true se foi fixada; false se desfixada.
+     */
     void lessonPinChanged(const QString& aula_id, bool pinned);
+
+    /**
+     * @brief Emitido após a movimentação bem-sucedida de uma aula.
+     * @param aula_id ID da aula movimentada.
+     * @param details Descrição textual da movimentação realizada.
+     */
     void lessonMoved(const QString& aula_id, const QString& details);
+
+    /**
+     * @brief Emitido quando qualquer alteração manual for realizada na grade.
+     */
     void timetableModified();
+
+    /**
+     * @brief Emitido quando for solicitada uma reotimização a partir da grade atual.
+     */
     void requestReoptimization();
 
 public slots:
+    /**
+     * @brief Trata a solicitação de soltura (drop) de uma aula em nova célula da tabela.
+     * @param aula_id ID da aula arrastada.
+     * @param target_row Linha da célula de destino.
+     * @param target_col Coluna da célula de destino.
+     */
     void onLessonDropRequested(const QString& aula_id, int target_row, int target_col);
+
+    /**
+     * @brief Abre o diálogo de movimentação manual de horário e sala para a aula informada.
+     * @param aula_id ID da aula a movimentar.
+     */
     void moverAulaManual(const QString& aula_id);
+
+    /**
+     * @brief Abre o diálogo específico para alteração ou permuta de salas para a aula.
+     * @param aula_id ID da aula.
+     */
     void mudarSalaManual(const QString& aula_id);
 
 private slots:
+    /**
+     * @brief Responde à mudança de perspectiva (Turma, Professor ou Sala).
+     * @param index Novo índice do tipo de visão.
+     */
     void onViewTypeChanged(int index);
+
+    /**
+     * @brief Responde à seleção de uma entidade específica no combo (ex: Turma 1A).
+     * @param index Novo índice da entidade selecionada.
+     */
     void onTargetEntityChanged(int index);
+
+    /**
+     * @brief Filtra a visualização entre 1º Semestre, 2º Semestre ou Ambos.
+     * @param index Índice do semestre selecionado.
+     */
     void onSemestreFiltroChanged(int index);
+
+    /**
+     * @brief Exibe o menu de contexto ao clicar com botão direito sobre uma célula.
+     * @param pos Coordenadas locais do clique.
+     */
     void onCellContextMenu(const QPoint& pos);
+
+    /**
+     * @brief Trata o clique duplo sobre uma célula para abrir movimentação rápida.
+     * @param row Linha da célula.
+     * @param col Coluna da célula.
+     */
     void onCellDoubleClicked(int row, int col);
+
+    /**
+     * @brief Filtra e destaca na grade as aulas que coincidem com o termo buscado.
+     * @param query Texto digitado no campo de busca.
+     */
     void onSearchLessonChanged(const QString& query);
 
 private:
+    /**
+     * @brief Inicializa e monta a barra de ferramentas superior, banner informativo e a grade.
+     */
     void setupUi();
+
+    /**
+     * @brief Preenche o combobox de entidades alvo de acordo com o modo de visualização atual.
+     */
     void populateTargetCombo();
+
+    /**
+     * @brief Constrói as linhas horárias, colunas de dias e renderiza os cartões de aula e intervalos.
+     */
     void renderTimetable();
 
+    /**
+     * @brief Verifica choques de turmas, docentes e salas ao mover uma aula para novo dia e horário.
+     * @param aid ID da aula candidata a ser movida.
+     * @param dia Novo dia pretendido.
+     * @param intervalo Novo intervalo de tempo pretendido.
+     * @return Vetor de strings com os conflitos detectados (vazio se livre).
+     */
     std::vector<std::string> verificarConflitosMovimentacao(const std::string& aid,
                                                             model::DayOfWeek dia,
                                                             const model::TimeInterval& intervalo) const;
@@ -59,4 +163,5 @@ private:
 };
 
 } // namespace scheduler::ui
+
 

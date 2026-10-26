@@ -1,3 +1,12 @@
+/**
+ * @file main.cpp
+ * @brief Ponto de entrada da aplicação do Escalonador de Horários Escolares.
+ *
+ * Suporta inicialização da interface gráfica Qt (GUI) completa com tema nativo do sistema/KDE Plasma,
+ * execução em modo headless / linha de comando para testes automatizados (--cli, --test, --benchmark),
+ * e geração de capturas de tela dos diálogos (--render-screenshots).
+ */
+
 #include "ui/MainWindow.h"
 #include "ui/ModernTheme.h"
 #include "ui/ProfessorEditorDialog.h"
@@ -13,6 +22,12 @@
 
 #include "ortools/linear_solver/linear_solver.h"
 
+/**
+ * @brief Função principal do programa.
+ * @param argc Quantidade de argumentos passados pela linha de comando.
+ * @param argv Vetor contendo os argumentos passados.
+ * @return Código de saída da execução (0 para sucesso, diferente de zero em caso de erro).
+ */
 int main(int argc, char* argv[]) {
     // Modo Headless / Teste via Linha de Comando
     if (argc > 1 && (std::string(argv[1]) == "--test" || std::string(argv[1]) == "--benchmark" || std::string(argv[1]) == "--cli")) {
