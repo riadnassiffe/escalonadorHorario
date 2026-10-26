@@ -29,6 +29,58 @@ model::Timetable ScheduleSolver::solve(const model::InstitutionData& data,
     }
 }
 
+static void auditarConflitosEntreAulas(const model::InstitutionData& data, model::Timetable& timetable) {
+    const auto& alocs = timetable.alocacoes();
+    auto time_overlaps = [](const model::TimeInterval& t1, const model::TimeInterval& t2) {
+        return std::max(t1.start_slot, t2.start_slot) < std::min(t1.end_slot, t2.end_slot);
+    };
+    auto semestres_conflitam = [](const model::AllocatedLesson& a1, const model::AllocatedLesson& a2) {
+        if (a1.regime == model::RegimeDisciplina::ANUAL || a2.regime == model::RegimeDisciplina::ANUAL) return true;
+        int s1 = (a1.semestre == model::SemestreLetivo::SEMESTRE_2 || a1.semestre_alocado == 2) ? 2 : 1;
+        int s2 = (a2.semestre == model::SemestreLetivo::SEMESTRE_2 || a2.semestre_alocado == 2) ? 2 : 1;
+        return s1 == s2;
+    };
+
+    std::vector<std::string> conflitos_detectados;
+
+    for (size_t i = 0; i < alocs.size(); ++i) {
+        for (size_t j = i + 1; j < alocs.size(); ++j) {
+            const auto& a1 = alocs[i];
+            const auto& a2 = alocs[j];
+            if (a1.dia == a2.dia && semestres_conflitam(a1, a2) && time_overlaps(a1.intervalo, a2.intervalo)) {
+                // Professor
+                for (const auto& p1 : a1.professores) {
+                    if (std::find(a2.professores.begin(), a2.professores.end(), p1) != a2.professores.end()) {
+                        const auto* p = data.findProfessor(p1);
+                        conflitos_detectados.push_back("Choque de Professor: Aula '" + a1.disciplina_nome + "' (" + a1.aula_id + ") conflita com aula '" + a2.disciplina_nome + "' (" + a2.aula_id + ") do Prof. " + (p ? p->nome() : p1) + " na " + model::dayToLongString(a1.dia) + " às " + a1.horarioFormatado() + ".");
+                    }
+                }
+                // Turma
+                for (const auto& t1 : a1.turmas) {
+                    if (std::find(a2.turmas.begin(), a2.turmas.end(), t1) != a2.turmas.end()) {
+                        const auto* t = data.findTurma(t1);
+                        conflitos_detectados.push_back("Choque de Turma: Aula '" + a1.disciplina_nome + "' (" + a1.aula_id + ") conflita com aula '" + a2.disciplina_nome + "' (" + a2.aula_id + ") da Turma " + (t ? t->nome() : t1) + " na " + model::dayToLongString(a1.dia) + " às " + a1.horarioFormatado() + ".");
+                    }
+                }
+                // Sala
+                for (const auto& r1 : a1.salas) {
+                    if (std::find(a2.salas.begin(), a2.salas.end(), r1) != a2.salas.end()) {
+                        const auto* r = data.findSala(r1);
+                        conflitos_detectados.push_back("Choque de Sala: Aula '" + a1.disciplina_nome + "' (" + a1.aula_id + ") conflita com aula '" + a2.disciplina_nome + "' (" + a2.aula_id + ") na Sala " + (r ? r->nome() : r1) + " na " + model::dayToLongString(a1.dia) + " às " + a1.horarioFormatado() + ".");
+                    }
+                }
+            }
+        }
+    }
+
+    if (!conflitos_detectados.empty()) {
+        timetable.addMensagemDiagnostico("[AUDITORIA DE GRADE] Foram detectados " + std::to_string(conflitos_detectados.size()) + " conflito(s) entre aulas alocadas:");
+        for (const auto& c : conflitos_detectados) {
+            timetable.addMensagemDiagnostico("  ⚠️ " + c);
+        }
+    }
+}
+
 model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
                                            ProgressCallback callback) {
     model::Timetable timetable;
@@ -791,6 +843,7 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
         if (callback) callback("Tempo limite atingido sem encontrar solução viável.", 1.0);
     }
 
+    auditarConflitosEntreAulas(data, timetable);
     return timetable;
 }
 
@@ -823,11 +876,20 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
 
     if (callback) callback("Executando Heurística Construtiva Gulosa...", 0.40);
 
-    struct SlotRange { int start; int end; };
+    struct SlotRange {
+        int start;
+        int end;
+        std::string aula_id;
+        std::string disciplina_nome;
+        std::string turma_nome;
+        std::string prof_nome;
+        std::string sala_nome;
+    };
     std::map<std::pair<std::string, model::DayOfWeek>, std::vector<SlotRange>> prof_ocup;
     std::map<std::pair<std::string, model::DayOfWeek>, std::vector<SlotRange>> turma_ocup;
     std::map<std::pair<std::string, model::DayOfWeek>, std::vector<SlotRange>> sala_ocup;
     std::map<std::tuple<std::string, std::string, model::DayOfWeek>, int> turma_disc_dia_count;
+    std::map<std::tuple<std::string, std::string, model::DayOfWeek>, std::vector<SlotRange>> turma_disc_dia_aulas;
     std::map<std::string, std::string> turma_base_sala;
 
     std::vector<const model::Lesson*> sorted_aulas;
@@ -989,17 +1051,39 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
             int s = best_cand->start_slot;
             int e = best_cand->end_slot();
 
-            for (const auto& p_id : aula->professores()) prof_ocup[{p_id, best_cand->dia}].push_back({s, e});
+            std::string prof_label;
+            for (size_t pi = 0; pi < aula->professores().size(); ++pi) {
+                if (pi > 0) prof_label += ", ";
+                const auto* p = data.findProfessor(aula->professores()[pi]);
+                prof_label += (p && !p->nome().empty() ? p->nome() : aula->professores()[pi]);
+            }
+            std::string turma_label;
+            for (size_t ti = 0; ti < aula->turmas().size(); ++ti) {
+                if (ti > 0) turma_label += ", ";
+                const auto* t = data.findTurma(aula->turmas()[ti]);
+                turma_label += (t && !t->nome().empty() ? t->nome() : aula->turmas()[ti]);
+            }
+            std::string sala_label;
+            for (size_t si = 0; si < best_cand->salas.size(); ++si) {
+                if (si > 0) sala_label += ", ";
+                const auto* r = data.findSala(best_cand->salas[si]);
+                sala_label += (r && !r->nome().empty() ? r->nome() : best_cand->salas[si]);
+            }
+
+            SlotRange range{s, e, aula->id(), aula->disciplinaNome(), turma_label, prof_label, sala_label};
+
+            for (const auto& p_id : aula->professores()) prof_ocup[{p_id, best_cand->dia}].push_back(range);
             for (const auto& t_id : aula->turmas()) {
-                turma_ocup[{t_id, best_cand->dia}].push_back({s, e});
+                turma_ocup[{t_id, best_cand->dia}].push_back(range);
                 turma_disc_dia_count[{t_id, aula->disciplinaId(), best_cand->dia}]++;
+                turma_disc_dia_aulas[{t_id, aula->disciplinaId(), best_cand->dia}].push_back(range);
                 if (aula->tipo() == "TEORICA" && !best_cand->salas.empty()) {
                     if (turma_base_sala.find(t_id) == turma_base_sala.end()) {
                         turma_base_sala[t_id] = best_cand->salas[0];
                     }
                 }
             }
-            for (const auto& sala_id : best_cand->salas) sala_ocup[{sala_id, best_cand->dia}].push_back({s, e});
+            for (const auto& sala_id : best_cand->salas) sala_ocup[{sala_id, best_cand->dia}].push_back(range);
 
             model::AllocatedLesson aloc;
             aloc.aula_id = aula->id();
@@ -1042,10 +1126,10 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
 
             if (cands.empty()) {
                 if (aula->professores().empty()) {
-                    restricoes_quebradas.push_back("Nenhum professor cadastrado/atribuído");
+                    restricoes_quebradas.push_back("Nenhum professor cadastrado/atribuído à aula");
                 }
                 if (aula->turmas().empty()) {
-                    restricoes_quebradas.push_back("Nenhuma turma cadastrada/atribuída");
+                    restricoes_quebradas.push_back("Nenhuma turma cadastrada/atribuída à aula");
                 }
                 bool tem_sala = false;
                 for (const auto& sala : data.salas()) {
@@ -1058,32 +1142,65 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
                     restricoes_quebradas.push_back("Nenhuma sala cadastrada compatível com o tipo '" + aula->tipo() + "'");
                 }
                 if (aula->isPinned()) {
-                    restricoes_quebradas.push_back("Aula fixada em horário/dia inválido ou fora da jornada da turma");
+                    bool pin_conflito = false;
+                    for (const auto& a_outra : data.grade().alocacoes()) {
+                        if (a_outra.aula_id != aula->id() && a_outra.dia == aula->pinnedDay()) {
+                            int s1 = aula->pinnedStartSlot();
+                            int e1 = s1 + aula->duracaoSlots();
+                            int s2 = a_outra.intervalo.start_slot;
+                            int e2 = a_outra.intervalo.end_slot;
+                            if (std::max(s1, s2) < std::min(e1, e2)) {
+                                for (const auto& p1 : aula->professores()) {
+                                    if (std::find(a_outra.professores.begin(), a_outra.professores.end(), p1) != a_outra.professores.end()) {
+                                        const auto* p = data.findProfessor(p1);
+                                        restricoes_quebradas.push_back("Aula fixada conflita com a aula '" + a_outra.disciplina_nome + "' (" + a_outra.aula_id + ") do Prof. " + (p ? p->nome() : p1) + " na " + model::dayToLongString(aula->pinnedDay()) + " às " + model::TimeInterval(s2, e2).toString());
+                                        pin_conflito = true;
+                                    }
+                                }
+                                for (const auto& t1 : aula->turmas()) {
+                                    if (std::find(a_outra.turmas.begin(), a_outra.turmas.end(), t1) != a_outra.turmas.end()) {
+                                        const auto* t = data.findTurma(t1);
+                                        restricoes_quebradas.push_back("Aula fixada conflita com a aula '" + a_outra.disciplina_nome + "' (" + a_outra.aula_id + ") da Turma " + (t ? t->nome() : t1) + " na " + model::dayToLongString(aula->pinnedDay()) + " às " + model::TimeInterval(s2, e2).toString());
+                                        pin_conflito = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (!pin_conflito) {
+                        restricoes_quebradas.push_back("Aula fixada em horário/dia inválido ou fora da jornada da turma");
+                    }
                 }
                 if (restricoes_quebradas.empty()) {
                     restricoes_quebradas.push_back("Sem candidatos viáveis no pré-processamento (incompatibilidade de jornada, turnos ou disponibilidade docente)");
                 }
             } else {
-                std::set<std::string> profs_ocupados;
-                std::set<std::string> turmas_ocupadas;
-                std::set<std::string> turmas_limite;
-                std::set<std::string> salas_ocupadas;
+                std::set<std::string> choques_prof;
+                std::set<std::string> choques_turma;
+                std::set<std::string> choques_limite;
+                std::set<std::string> choques_sala;
 
                 for (const auto& c : cands) {
                     int s = c.start_slot;
                     int e = c.end_slot();
 
                     for (const auto& p_id : aula->professores()) {
-                        if (overlaps(prof_ocup[{p_id, c.dia}], s, e)) {
-                            const auto* p = data.findProfessor(p_id);
-                            profs_ocupados.insert(p && !p->nome().empty() ? p->nome() : p_id);
+                        for (const auto& occ : prof_ocup[{p_id, c.dia}]) {
+                            if (std::max(occ.start, s) < std::min(occ.end, e)) {
+                                choques_prof.insert("A aula '" + aula->disciplinaNome() + "' (" + aula->id() + ") conflita com a aula '" + occ.disciplina_nome + "' (" + occ.aula_id +
+                                    ") do Prof. " + (occ.prof_nome.empty() ? p_id : occ.prof_nome) + " na " + model::dayToLongString(c.dia) +
+                                    " às " + model::TimeInterval(occ.start, occ.end).toString());
+                            }
                         }
                     }
 
                     for (const auto& t_id : aula->turmas()) {
-                        if (overlaps(turma_ocup[{t_id, c.dia}], s, e)) {
-                            const auto* t = data.findTurma(t_id);
-                            turmas_ocupadas.insert(t && !t->nome().empty() ? t->nome() : t_id);
+                        for (const auto& occ : turma_ocup[{t_id, c.dia}]) {
+                            if (std::max(occ.start, s) < std::min(occ.end, e)) {
+                                choques_turma.insert("A aula '" + aula->disciplinaNome() + "' (" + aula->id() + ") conflita com a aula '" + occ.disciplina_nome + "' (" + occ.aula_id +
+                                    ") da Turma " + (occ.turma_nome.empty() ? t_id : occ.turma_nome) + " na " + model::dayToLongString(c.dia) +
+                                    " às " + model::TimeInterval(occ.start, occ.end).toString());
+                            }
                         }
                         if (data.config().distribuir_disciplinas_na_semana) {
                             const auto* disc = data.findDisciplina(aula->disciplinaId());
@@ -1091,55 +1208,40 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
                             int cnt = turma_disc_dia_count[{t_id, aula->disciplinaId(), c.dia}];
                             if (cnt >= max_lim) {
                                 const auto* t = data.findTurma(t_id);
-                                turmas_limite.insert(t && !t->nome().empty() ? t->nome() : t_id);
+                                std::string t_name = (t && !t->nome().empty() ? t->nome() : t_id);
+                                std::string aulas_alocadas_str;
+                                for (const auto& occ : turma_disc_dia_aulas[{t_id, aula->disciplinaId(), c.dia}]) {
+                                    if (!aulas_alocadas_str.empty()) aulas_alocadas_str += ", ";
+                                    aulas_alocadas_str += "'" + occ.disciplina_nome + "' (" + occ.aula_id + " às " + model::TimeInterval(occ.start, occ.end).toString() + ")";
+                                }
+                                choques_limite.insert("A aula '" + aula->disciplinaNome() + "' (" + aula->id() + ") excede o limite diário (" + std::to_string(max_lim) + " aulas/dia) na Turma " + t_name +
+                                    " na " + model::dayToLongString(c.dia) + " (aulas já alocadas hoje: " + aulas_alocadas_str + ")");
                             }
                         }
                     }
 
                     for (const auto& sala_id : c.salas) {
-                        if (overlaps(sala_ocup[{sala_id, c.dia}], s, e)) {
-                            const auto* r = data.findSala(sala_id);
-                            salas_ocupadas.insert(r && !r->nome().empty() ? r->nome() : sala_id);
+                        for (const auto& occ : sala_ocup[{sala_id, c.dia}]) {
+                            if (std::max(occ.start, s) < std::min(occ.end, e)) {
+                                choques_sala.insert("A aula '" + aula->disciplinaNome() + "' (" + aula->id() + ") conflita com a aula '" + occ.disciplina_nome + "' (" + occ.aula_id +
+                                    ") na Sala " + (occ.sala_nome.empty() ? sala_id : occ.sala_nome) + " na " + model::dayToLongString(c.dia) +
+                                    " às " + model::TimeInterval(occ.start, occ.end).toString());
+                            }
                         }
                     }
                 }
 
-                if (!profs_ocupados.empty()) {
-                    std::string s;
-                    for (const auto& name : profs_ocupados) {
-                        if (!s.empty()) s += ", ";
-                        s += name;
-                    }
-                    restricoes_quebradas.push_back("Choque de horário de professor: " + s + " (já possui aula alocada)");
+                for (const auto& item : choques_prof) {
+                    restricoes_quebradas.push_back("Choque de horário de professor: " + item);
                 }
-
-                if (!turmas_ocupadas.empty()) {
-                    std::string s;
-                    for (const auto& name : turmas_ocupadas) {
-                        if (!s.empty()) s += ", ";
-                        s += name;
-                    }
-                    restricoes_quebradas.push_back("Choque de horário de turma: " + s + " (turma já ocupada com outra aula)");
+                for (const auto& item : choques_turma) {
+                    restricoes_quebradas.push_back("Choque de horário de turma: " + item);
                 }
-
-                if (!turmas_limite.empty()) {
-                    std::string s;
-                    for (const auto& name : turmas_limite) {
-                        if (!s.empty()) s += ", ";
-                        s += name;
-                    }
-                    const auto* disc = data.findDisciplina(aula->disciplinaId());
-                    int max_lim = (disc && disc->maxAulasPorDiaTurma() > 0) ? disc->maxAulasPorDiaTurma() : data.config().max_aulas_disciplina_dia_turma;
-                    restricoes_quebradas.push_back("Limite diário da disciplina excedido na turma: " + s + " (máximo de " + std::to_string(max_lim) + " aulas/dia)");
+                for (const auto& item : choques_limite) {
+                    restricoes_quebradas.push_back("Limite diário de disciplina: " + item);
                 }
-
-                if (!salas_ocupadas.empty()) {
-                    std::string s;
-                    for (const auto& name : salas_ocupadas) {
-                        if (!s.empty()) s += ", ";
-                        s += name;
-                    }
-                    restricoes_quebradas.push_back("Indisponibilidade de sala física: " + s + " (sala ocupada por outra aula)");
+                for (const auto& item : choques_sala) {
+                    restricoes_quebradas.push_back("Choque de sala física: " + item);
                 }
 
                 if (restricoes_quebradas.empty()) {
@@ -1147,16 +1249,15 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
                 }
             }
 
-            std::string restricoes_str;
-            for (size_t r_i = 0; r_i < restricoes_quebradas.size(); ++r_i) {
-                if (r_i > 0) restricoes_str += "; ";
-                restricoes_str += restricoes_quebradas[r_i];
-            }
-
-            std::string msg = "[HEURÍSTICA] Não foi possível alocar a aula: " + aula->id() + " (" + aula->disciplinaNome() + ")"
+            std::string msg = "❌ Não foi possível alocar a aula: '" + aula->disciplinaNome() + "' (" + aula->id() + ")"
                             + " | Professor: " + prof_nomes
-                            + " | Turma: " + turma_nomes
-                            + " | Restrições quebradas: " + restricoes_str;
+                            + " | Turma: " + turma_nomes;
+            if (!restricoes_quebradas.empty()) {
+                msg += "\n   ↳ Conflita com as seguintes aulas / restrições:";
+                for (const auto& r : restricoes_quebradas) {
+                    msg += "\n     • " + r;
+                }
+            }
             timetable.addMensagemDiagnostico(msg);
         }
     }
@@ -1198,6 +1299,7 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
         timetable.addMensagemDiagnostico("[WARM-START] Distribuição de disciplinas atual da tela utilizada como base de prioridade.");
     }
 
+    auditarConflitosEntreAulas(data, timetable);
     timetable.setEstatisticas(stats);
     return timetable;
 }
@@ -1252,6 +1354,8 @@ model::Timetable ScheduleSolver::solveGeneticAlgorithm(const model::InstitutionD
     stats.tempo_execucao_ms = elapsed;
     best_timetable.setEstatisticas(stats);
     best_timetable.addMensagemDiagnostico("[GENÉTICO] Otimização concluída após " + std::to_string(num_geracoes) + " gerações (" + std::to_string(static_cast<int>(elapsed)) + " ms).");
+
+    auditarConflitosEntreAulas(data, best_timetable);
 
     if (callback) callback("Algoritmo Genético concluído com sucesso!", 1.0);
     return best_timetable;

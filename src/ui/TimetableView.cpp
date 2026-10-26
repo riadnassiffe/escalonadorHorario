@@ -811,7 +811,7 @@ std::vector<std::string> TimetableView::verificarConflitosMovimentacao(
         for (const auto& a : data_.grade().alocacoes()) {
             if (a.aula_id != aid && a.dia == dia && semestres_conflitam(*a_aloc, a) && time_overlaps(a.intervalo, intervalo)) {
                 if (std::find(a.turmas.begin(), a.turmas.end(), t_id) != a.turmas.end()) {
-                    conflitos.push_back("Choque de turma: A turma " + (t ? t->nome() : t_id) + " já possui a aula '" + a.disciplina_nome + "' neste mesmo horário.");
+                    conflitos.push_back("Choque de turma: A aula '" + a_aloc->disciplina_nome + "' (" + aid + ") conflita com a aula '" + a.disciplina_nome + "' (" + a.aula_id + ") da Turma " + (t ? t->nome() : t_id) + ".");
                 }
             }
         }
@@ -819,17 +819,20 @@ std::vector<std::string> TimetableView::verificarConflitosMovimentacao(
         // Limite diário de aulas da disciplina na turma
         if (data_.config().distribuir_disciplinas_na_semana) {
             int count_dia = 0;
+            std::string alocadas_str;
             for (const auto& a : data_.grade().alocacoes()) {
                 if (a.aula_id != aid && a.dia == dia && a.disciplina_id == a_aloc->disciplina_id && semestres_conflitam(*a_aloc, a)) {
                     if (std::find(a.turmas.begin(), a.turmas.end(), t_id) != a.turmas.end()) {
                         count_dia++;
+                        if (!alocadas_str.empty()) alocadas_str += ", ";
+                        alocadas_str += "'" + a.disciplina_nome + "' (" + a.aula_id + " às " + a.horarioFormatado() + ")";
                     }
                 }
             }
             const auto* disc = data_.findDisciplina(a_aloc->disciplina_id);
             int max_lim = (disc && disc->maxAulasPorDiaTurma() > 0) ? disc->maxAulasPorDiaTurma() : data_.config().max_aulas_disciplina_dia_turma;
             if (count_dia + 1 > max_lim) {
-                conflitos.push_back("Limite diário: A turma " + (t ? t->nome() : t_id) + " excederá o limite de " + std::to_string(max_lim) + " aulas/dia desta disciplina.");
+                conflitos.push_back("Limite diário: A aula '" + a_aloc->disciplina_nome + "' (" + aid + ") excederá o limite de " + std::to_string(max_lim) + " aulas/dia na Turma " + (t ? t->nome() : t_id) + " (aulas já alocadas hoje: " + alocadas_str + ").");
             }
         }
     }
@@ -845,7 +848,7 @@ std::vector<std::string> TimetableView::verificarConflitosMovimentacao(
         for (const auto& a : data_.grade().alocacoes()) {
             if (a.aula_id != aid && a.dia == dia && semestres_conflitam(*a_aloc, a) && time_overlaps(a.intervalo, intervalo)) {
                 if (std::find(a.professores.begin(), a.professores.end(), p_id) != a.professores.end()) {
-                    conflitos.push_back("Choque de professor: O Prof. " + (p ? p->nome() : p_id) + " já possui a aula '" + a.disciplina_nome + "' alocada neste mesmo horário.");
+                    conflitos.push_back("Choque de professor: A aula '" + a_aloc->disciplina_nome + "' (" + aid + ") conflita com a aula '" + a.disciplina_nome + "' (" + a.aula_id + ") do Prof. " + (p ? p->nome() : p_id) + ".");
                 }
             }
         }
@@ -857,7 +860,7 @@ std::vector<std::string> TimetableView::verificarConflitosMovimentacao(
         for (const auto& a : data_.grade().alocacoes()) {
             if (a.aula_id != aid && a.dia == dia && semestres_conflitam(*a_aloc, a) && time_overlaps(a.intervalo, intervalo)) {
                 if (std::find(a.salas.begin(), a.salas.end(), sala_id) != a.salas.end()) {
-                    conflitos.push_back("Choque de sala: A sala " + (s ? s->nome() : sala_id) + " já está ocupada pela aula '" + a.disciplina_nome + "' neste mesmo horário.");
+                    conflitos.push_back("Choque de sala: A aula '" + a_aloc->disciplina_nome + "' (" + aid + ") conflita com a aula '" + a.disciplina_nome + "' (" + a.aula_id + ") na Sala " + (s ? s->nome() : sala_id) + ".");
                 }
             }
         }
@@ -983,7 +986,14 @@ void TimetableView::onLessonDropRequested(const QString& aula_id, int target_row
     a_model->setPinnedStartSlot(a_aloc->intervalo.start_slot);
     a_model->setPinnedRooms(a_aloc->salas);
 
-    data_.grade().addMensagemDiagnostico("[MANUAL] Aula " + aid + " (" + a_aloc->disciplina_nome + ") movida manualmente para " + model::dayToLongString(target_day) + " às " + a_aloc->intervalo.toString() + ".");
+    std::string diag_entry = "[MANUAL] Aula '" + a_aloc->disciplina_nome + "' (" + aid + ") movida manualmente para " + model::dayToLongString(target_day) + " às " + a_aloc->intervalo.toString() + ".";
+    if (!conflitos.empty()) {
+        diag_entry += "\n   ↳ Conflito(s) confirmado(s) pelo usuário:";
+        for (const auto& c : conflitos) {
+            diag_entry += "\n     • " + c;
+        }
+    }
+    data_.grade().addMensagemDiagnostico(diag_entry);
 
     renderTimetable();
     emit timetableModified();
