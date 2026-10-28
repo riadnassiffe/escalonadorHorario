@@ -138,11 +138,25 @@ void ConfigWidget::setupUi() {
     chk_sincronizar_anuais_->setChecked(true);
     form_solver->addRow("", chk_sincronizar_anuais_);
 
+    auto* lay_tempo = new QHBoxLayout();
+    lay_tempo->setSpacing(12);
+
     spin_tempo_limite_ = new QDoubleSpinBox(grp_solver);
     spin_tempo_limite_->setRange(1.0, 3600.0);
     spin_tempo_limite_->setValue(30.0);
     spin_tempo_limite_->setSuffix(" segundos");
-    form_solver->addRow("Tempo Limite de Otimização:", spin_tempo_limite_);
+
+    chk_sem_limite_tempo_ = new QCheckBox("Sem restrição de tempo", grp_solver);
+    chk_sem_limite_tempo_->setToolTip("Executa o solver sem tempo limite máximo.");
+
+    connect(chk_sem_limite_tempo_, &QCheckBox::toggled, this, [this](bool checked) {
+        spin_tempo_limite_->setEnabled(!checked);
+    });
+
+    lay_tempo->addWidget(spin_tempo_limite_);
+    lay_tempo->addWidget(chk_sem_limite_tempo_);
+    lay_tempo->addStretch();
+    form_solver->addRow("Tempo Limite de Otimização:", lay_tempo);
 
     spin_threads_ = new QSpinBox(grp_solver);
     spin_threads_->setRange(1, 64);
@@ -202,6 +216,10 @@ void ConfigWidget::loadConfig(const model::OptimizationConfig& cfg) {
     chk_sincronizar_anuais_->setChecked(cfg.sincronizar_anuais_entre_semestres);
 
     spin_tempo_limite_->setValue(cfg.tempo_limite_segundos);
+    if (chk_sem_limite_tempo_) {
+        chk_sem_limite_tempo_->setChecked(cfg.sem_limite_tempo);
+        spin_tempo_limite_->setEnabled(!cfg.sem_limite_tempo);
+    }
     spin_threads_->setValue(cfg.num_threads);
     chk_log_solver_->setChecked(cfg.log_search_progress);
     chk_usar_distribuicao_como_entrada_->setChecked(cfg.usar_distribuicao_como_entrada);
@@ -237,6 +255,7 @@ model::OptimizationConfig ConfigWidget::getConfig() const {
     cfg.sincronizar_anuais_entre_semestres = chk_sincronizar_anuais_->isChecked();
 
     cfg.tempo_limite_segundos = spin_tempo_limite_->value();
+    cfg.sem_limite_tempo = chk_sem_limite_tempo_ ? chk_sem_limite_tempo_->isChecked() : false;
     cfg.num_threads = spin_threads_->value();
     cfg.log_search_progress = chk_log_solver_->isChecked();
     cfg.usar_distribuicao_como_entrada = chk_usar_distribuicao_como_entrada_->isChecked();

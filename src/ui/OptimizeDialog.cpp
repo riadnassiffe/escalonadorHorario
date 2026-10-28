@@ -146,11 +146,29 @@ void OptimizeDialog::setupUi() {
     chk_sincronizar_anuais_->setChecked(initial_config_.sincronizar_anuais_entre_semestres);
     form_params->addRow("", chk_sincronizar_anuais_);
 
+    auto* lay_time = new QHBoxLayout();
+    lay_time->setSpacing(12);
+
     spin_time_limit_ = new QDoubleSpinBox(grp_params);
     spin_time_limit_->setRange(1.0, 3600.0);
     spin_time_limit_->setValue(initial_config_.tempo_limite_segundos);
     spin_time_limit_->setSuffix(" segundos");
-    form_params->addRow("Tempo Limite:", spin_time_limit_);
+
+    chk_sem_limite_tempo_ = new QCheckBox("Sem restrição de tempo", grp_params);
+    chk_sem_limite_tempo_->setChecked(initial_config_.sem_limite_tempo);
+    chk_sem_limite_tempo_->setToolTip("Executa o solver sem tempo limite máximo, buscando até a convergência ou prova de viabilidade/inviabilidade.");
+
+    connect(chk_sem_limite_tempo_, &QCheckBox::toggled, this, [this](bool checked) {
+        auto algo = getSelectedAlgorithm();
+        if (algo != model::SolverAlgorithm::GREEDY_HEURISTIC) {
+            spin_time_limit_->setEnabled(!checked);
+        }
+    });
+
+    lay_time->addWidget(spin_time_limit_);
+    lay_time->addWidget(chk_sem_limite_tempo_);
+    lay_time->addStretch();
+    form_params->addRow("Tempo Limite:", lay_time);
 
     spin_threads_ = new QSpinBox(grp_params);
     spin_threads_->setRange(1, 64);
@@ -228,7 +246,8 @@ void OptimizeDialog::updateAlgorithmDetails(model::SolverAlgorithm algo) {
             lbl_algo_type_->setText("Exato (CP-SAT)");
             lbl_algo_guarantee_->setText("Ótimo Global");
             lbl_algo_speed_->setText("Médio / Equilibrado");
-            spin_time_limit_->setEnabled(true);
+            chk_sem_limite_tempo_->setEnabled(true);
+            spin_time_limit_->setEnabled(!chk_sem_limite_tempo_->isChecked());
             spin_threads_->setEnabled(true);
             chk_log_->setEnabled(true);
             break;
@@ -242,6 +261,7 @@ void OptimizeDialog::updateAlgorithmDetails(model::SolverAlgorithm algo) {
             lbl_algo_type_->setText("Heurístico Construtivo");
             lbl_algo_guarantee_->setText("Subótimo / Rápido");
             lbl_algo_speed_->setText("Instantâneo (< 0.1s)");
+            chk_sem_limite_tempo_->setEnabled(false);
             spin_time_limit_->setEnabled(false);
             spin_threads_->setEnabled(false);
             chk_log_->setEnabled(false);
@@ -256,7 +276,8 @@ void OptimizeDialog::updateAlgorithmDetails(model::SolverAlgorithm algo) {
             lbl_algo_type_->setText("Programação Linear (MILP)");
             lbl_algo_guarantee_->setText("Ótimo Global");
             lbl_algo_speed_->setText("Moderado");
-            spin_time_limit_->setEnabled(true);
+            chk_sem_limite_tempo_->setEnabled(true);
+            spin_time_limit_->setEnabled(!chk_sem_limite_tempo_->isChecked());
             spin_threads_->setEnabled(true);
             chk_log_->setEnabled(true);
             break;
@@ -270,7 +291,8 @@ void OptimizeDialog::updateAlgorithmDetails(model::SolverAlgorithm algo) {
             lbl_algo_type_->setText("Meta-heurística Estocástica");
             lbl_algo_guarantee_->setText("Aproximado / Heurístico");
             lbl_algo_speed_->setText("Iterativo");
-            spin_time_limit_->setEnabled(true);
+            chk_sem_limite_tempo_->setEnabled(true);
+            spin_time_limit_->setEnabled(!chk_sem_limite_tempo_->isChecked());
             spin_threads_->setEnabled(true);
             chk_log_->setEnabled(false);
             break;
@@ -298,6 +320,9 @@ void OptimizeDialog::updateConfig(model::OptimizationConfig& cfg) const {
         cfg.sincronizar_anuais_entre_semestres = chk_sincronizar_anuais_->isChecked();
     }
     cfg.tempo_limite_segundos = spin_time_limit_->value();
+    if (chk_sem_limite_tempo_) {
+        cfg.sem_limite_tempo = chk_sem_limite_tempo_->isChecked();
+    }
     cfg.num_threads = spin_threads_->value();
     cfg.log_search_progress = chk_log_->isChecked();
     if (chk_usar_grade_atual_) {

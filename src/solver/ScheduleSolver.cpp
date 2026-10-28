@@ -759,7 +759,9 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
 
     // 7. Parâmetros e Resolução
     SatParameters params;
-    params.set_max_time_in_seconds(data.config().tempo_limite_segundos);
+    if (!data.config().sem_limite_tempo && data.config().tempo_limite_segundos > 0.0) {
+        params.set_max_time_in_seconds(data.config().tempo_limite_segundos);
+    }
     params.set_num_workers(data.config().num_threads);
     params.set_log_search_progress(data.config().log_search_progress);
 
@@ -869,9 +871,15 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
         if (callback) callback("Inviável: Sem solução para as restrições informadas.", 1.0);
     } else {
         timetable.setEstatisticas(stats);
-        timetable.addMensagemDiagnostico("[TEMPO_LIMITE] O tempo limite de resolução foi atingido antes de encontrar uma solução viável completa.");
-        timetable.addMensagemDiagnostico("Dica: Aumente o tempo limite ou utilize a Heurística Gulosa para gerar uma solução inicial rápida.");
-        if (callback) callback("Tempo limite atingido sem encontrar solução viável.", 1.0);
+        if (data.config().sem_limite_tempo) {
+            timetable.addMensagemDiagnostico("[BUSCA_INTERROMPIDA] O solver CP-SAT finalizou a busca sem encontrar uma solução viável completa.");
+            timetable.addMensagemDiagnostico("Dica: Verifique a disponibilidade dos professores, salas compatíveis ou flexibilize restrições.");
+            if (callback) callback("Busca finalizada sem encontrar solução viável.", 1.0);
+        } else {
+            timetable.addMensagemDiagnostico("[TEMPO_LIMITE] O tempo limite de resolução foi atingido antes de encontrar uma solução viável completa.");
+            timetable.addMensagemDiagnostico("Dica: Aumente o tempo limite, selecione 'Sem restrição de tempo' ou utilize a Heurística Gulosa para gerar uma solução inicial rápida.");
+            if (callback) callback("Tempo limite atingido sem encontrar solução viável.", 1.0);
+        }
     }
 
     auditarConflitosEntreAulas(data, timetable);

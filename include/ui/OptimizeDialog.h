@@ -77,6 +77,7 @@ private:
     QLabel* lbl_algo_speed_{nullptr};
 
     QDoubleSpinBox* spin_time_limit_{nullptr};
+    QCheckBox* chk_sem_limite_tempo_{nullptr};
     QSpinBox* spin_threads_{nullptr};
     QCheckBox* chk_log_{nullptr};
 

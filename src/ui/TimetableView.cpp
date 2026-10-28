@@ -8,9 +8,11 @@
 #include "ui/ModernTheme.h"
 #include "ui/MoveLessonDialog.h"
 #include "ui/ChangeRoomDialog.h"
+#include "ui/AddLessonToScheduleDialog.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLineEdit>
+#include <QPushButton>
 #include <QHeaderView>
 #include <QMenu>
 #include <QMessageBox>
@@ -92,6 +94,20 @@ void TimetableView::setupUi() {
     lbl_search_count_->setVisible(false);
     top_panel->addWidget(lbl_search_count_);
 
+    top_panel->addSpacing(10);
+
+    btn_add_lesson_ = new QPushButton("➕ Alocar Disciplina...", this);
+    btn_add_lesson_->setObjectName("btnPrimary");
+    btn_add_lesson_->setCursor(Qt::PointingHandCursor);
+    btn_add_lesson_->setToolTip("Adiciona uma ocorrência de disciplina manualmente na grade semanal");
+    top_panel->addWidget(btn_add_lesson_);
+
+    btn_clear_timetable_ = new QPushButton("🗑️ Limpar Grade...", this);
+    btn_clear_timetable_->setObjectName("btnSecondary");
+    btn_clear_timetable_->setCursor(Qt::PointingHandCursor);
+    btn_clear_timetable_->setToolTip("Remove todas as alocações da grade semanal para iniciar uma nova configuração inicial");
+    top_panel->addWidget(btn_clear_timetable_);
+
     main_layout->addLayout(top_panel);
 
     // Tabela da Grade Semanal com Drag & Drop
@@ -124,6 +140,10 @@ void TimetableView::setupUi() {
             this, &TimetableView::onLessonDropRequested);
     connect(search_lesson_, &QLineEdit::textChanged,
             this, &TimetableView::onSearchLessonChanged);
+    connect(btn_add_lesson_, &QPushButton::clicked, this, [this]() {
+        alocarAulaManual(-1, -1);
+    });
+    connect(btn_clear_timetable_, &QPushButton::clicked, this, &TimetableView::limparGradeCompleta);
 
     populateTargetCombo();
 }
@@ -582,8 +602,29 @@ void TimetableView::onCellContextMenu(const QPoint& pos) {
     auto* item = table_->itemAt(pos);
     if (!item) return;
 
+    int row = table_->rowAt(pos.y());
+    int col = table_->columnAt(pos.x());
     QString aula_id = item->data(Qt::UserRole).toString();
-    if (aula_id.isEmpty()) return;
+
+    // Se clicou em célula vazia (ou sem aula alocada)
+    if (aula_id.isEmpty()) {
+        QString text = item->text();
+        // Não oferecer alocação se for dia não letivo ("—")
+        if (text == "—") return;
+
+        QMenu menu(this);
+        auto* add_act = menu.addAction("➕ Alocar Disciplina Neste Horário...");
+        connect(add_act, &QAction::triggered, [this, row, col]() {
+            alocarAulaManual(row, col);
+        });
+
+        menu.addSeparator();
+        auto* clear_act = menu.addAction("🗑️ Limpar Toda a Grade...");
+        connect(clear_act, &QAction::triggered, this, &TimetableView::limparGradeCompleta);
+
+        menu.exec(table_->viewport()->mapToGlobal(pos));
+        return;
+    }
 
     std::string aid = aula_id.toStdString();
     auto* aula_aloc = data_.grade().findAula(aid);
@@ -600,6 +641,13 @@ void TimetableView::onCellContextMenu(const QPoint& pos) {
     auto* room_act = menu.addAction("🏢 Alterar Sala de Aula...");
     connect(room_act, &QAction::triggered, [this, aula_id]() {
         mudarSalaManual(aula_id);
+    });
+
+    menu.addSeparator();
+
+    auto* add_act = menu.addAction("➕ Alocar Outra Disciplina na Grade...");
+    connect(add_act, &QAction::triggered, [this]() {
+        alocarAulaManual(-1, -1);
     });
 
     menu.addSeparator();
@@ -683,11 +731,15 @@ void TimetableView::onCellContextMenu(const QPoint& pos) {
         renderTimetable();
     });
 
+    menu.addSeparator();
+    auto* clear_act = menu.addAction("🗑️ Limpar Toda a Grade...");
+    connect(clear_act, &QAction::triggered, this, &TimetableView::limparGradeCompleta);
+
     menu.exec(table_->viewport()->mapToGlobal(pos));
 }
 
 /**
- * @brief Abre o diálogo de movimentação rápida ao executar clique duplo em uma célula com aula.
+ * @brief Abre o diálogo de movimentação rápida ou alocação manual ao executar clique duplo em uma célula.
  * @param row Linha da célula.
  * @param col Coluna da célula.
  */
@@ -697,6 +749,11 @@ void TimetableView::onCellDoubleClicked(int row, int col) {
     QString aid = item->data(Qt::UserRole).toString();
     if (!aid.isEmpty()) {
         moverAulaManual(aid);
+    } else {
+        QString text = item->text();
+        if (!text.startsWith("☕") && text != "—") {
+            alocarAulaManual(row, col);
+        }
     }
 }
 
@@ -821,6 +878,128 @@ void TimetableView::mudarSalaManual(const QString& aula_id) {
         renderTimetable();
         emit timetableModified();
         emit lessonMoved(QString::fromStdString(aid), QString("Sala alterada para %1").arg(QString::fromStdString(sala_nova_nome)));
+    }
+}
+
+/**
+ * @brief Abre o diálogo de alocação manual de disciplina na grade horária.
+ * @param row Linha da célula da tabela selecionada (-1 se nenhuma).
+ * @param col Coluna da célula da tabela selecionada (-1 se nenhuma).
+ */
+void TimetableView::alocarAulaManual(int row, int col) {
+    if (data_.disciplinas().empty()) {
+        QMessageBox::information(this, "Sem Disciplinas",
+            "Nenhuma disciplina cadastrada na instituição.\nCadastre primeiro as disciplinas na aba '📚 Disciplinas' para poder alocá-las na grade.");
+        return;
+    }
+
+    model::DayOfWeek default_day = model::DayOfWeek::SEG;
+    model::TimeInterval default_interval;
+    if (col >= 0 && col < static_cast<int>(model::allDays().size())) {
+        default_day = model::allDays()[col];
+    }
+    if (row >= 0 && row < static_cast<int>(row_intervals_.size())) {
+        default_interval = row_intervals_[row];
+    }
+
+    std::string def_turma, def_prof, def_sala;
+    int mode = combo_view_type_->currentData().toInt();
+    std::string target_id = combo_target_->currentData().toString().toStdString();
+    if (mode == 0) def_turma = target_id;
+    else if (mode == 1) def_prof = target_id;
+    else if (mode == 2) def_sala = target_id;
+
+    AddLessonToScheduleDialog dlg(data_, this, default_day, default_interval, def_turma, def_prof, def_sala);
+    if (dlg.exec() == QDialog::Accepted) {
+        auto aloc = dlg.allocatedLesson();
+        bool pinned = dlg.isPinned();
+        std::string aid = aloc.aula_id;
+
+        // Se a ocorrência já existia alocada na grade, removemos a alocação anterior para atualizar
+        auto& alocs = data_.grade().alocacoes();
+        alocs.erase(std::remove_if(alocs.begin(), alocs.end(), [&](const model::AllocatedLesson& a) {
+            return a.aula_id == aid;
+        }), alocs.end());
+
+        // Adiciona a nova alocação na grade
+        aloc.is_pinned = pinned;
+        data_.grade().addAllocatedLesson(aloc);
+
+        // Assegura consistência com a lista de ocorrências Lesson em data_.aulas()
+        auto* a_model = data_.findAula(aid);
+        if (!a_model) {
+            const auto* disc = data_.findDisciplina(aloc.disciplina_id);
+            if (disc) {
+                model::Lesson nova_aula(aid, disc->id(), disc->nome(), disc->tipo(),
+                                        disc->duracaoMinutos(), disc->professores(), disc->turmas(),
+                                        disc->regime(), disc->semestre());
+                nova_aula.setTurnosPermitidos(disc->turnosPermitidos());
+                nova_aula.setSalasAlternativas(disc->salasAlternativas());
+                if (pinned) {
+                    nova_aula.setPinned(true);
+                    nova_aula.setPinnedDay(aloc.dia);
+                    nova_aula.setPinnedStartSlot(aloc.intervalo.start_slot);
+                    nova_aula.setPinnedRooms(aloc.salas);
+                }
+                data_.aulas().push_back(std::move(nova_aula));
+            }
+        } else {
+            if (pinned) {
+                a_model->setPinned(true);
+                a_model->setPinnedDay(aloc.dia);
+                a_model->setPinnedStartSlot(aloc.intervalo.start_slot);
+                a_model->setPinnedRooms(aloc.salas);
+            } else {
+                a_model->unpin();
+            }
+        }
+
+        // Atualiza métricas estatísticas da grade
+        auto stats = data_.grade().estatisticas();
+        stats.total_aulas_alocadas = static_cast<int>(data_.grade().alocacoes().size());
+        data_.grade().setEstatisticas(stats);
+
+        data_.grade().addMensagemDiagnostico("[MANUAL] Aula " + aid + " (" + aloc.disciplina_nome + ") alocada manualmente na grade em " +
+                                             aloc.diaString() + " às " + aloc.horarioFormatado() + (pinned ? " [FIXADA]" : "") + ".");
+
+        renderTimetable();
+        emit timetableModified();
+        emit lessonMoved(QString::fromStdString(aid), QString("Alocada manualmente em %1 %2")
+            .arg(QString::fromStdString(aloc.diaString()), QString::fromStdString(aloc.horarioFormatado())));
+    }
+}
+
+/**
+ * @brief Limpa todas as alocações da grade horária permitindo reiniciar a montagem da grade.
+ */
+void TimetableView::limparGradeCompleta() {
+    if (data_.grade().alocacoes().empty()) {
+        QMessageBox::information(this, "Grade Vazia", "A grade horária já está vazia.");
+        return;
+    }
+
+    auto resp = QMessageBox::question(this, "Limpar Grade Horária",
+        QString("Deseja realmente remover todas as %1 aulas alocadas na grade semanal?\n\n"
+                "• Todas as aulas voltarão para o estado não alocado.\n"
+                "• As fixações manuais (pins) na grade serão liberadas.\n"
+                "• A estrutura de turmas, professores, salas e disciplinas será mantida intacta.")
+            .arg(data_.grade().alocacoes().size()),
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+
+    if (resp == QMessageBox::Yes) {
+        data_.grade().alocacoes().clear();
+        for (auto& a : data_.aulas()) {
+            a.unpin();
+        }
+        auto stats = data_.grade().estatisticas();
+        stats.total_aulas_alocadas = 0;
+        stats.status = "NAO_EXECUTADO";
+        data_.grade().setEstatisticas(stats);
+        data_.grade().addMensagemDiagnostico("[MANUAL] Grade horária limpa completamente pelo usuário.");
+
+        renderTimetable();
+        emit timetableModified();
+        QMessageBox::information(this, "Grade Limpa", "A grade horária foi limpa com sucesso. Agora você pode alocar disciplinas manualmente para compor uma grade inicial.");
     }
 }
 

@@ -11,6 +11,7 @@
 #include <QComboBox>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPushButton>
 #include <vector>
 
 namespace scheduler::ui {
@@ -85,6 +86,18 @@ public slots:
      */
     void mudarSalaManual(const QString& aula_id);
 
+    /**
+     * @brief Abre o diálogo de alocação manual de disciplina na grade horária.
+     * @param row Linha da célula da tabela selecionada (-1 se nenhuma).
+     * @param col Coluna da célula da tabela selecionada (-1 se nenhuma).
+     */
+    void alocarAulaManual(int row = -1, int col = -1);
+
+    /**
+     * @brief Limpa todas as alocações da grade horária permitindo reiniciar a montagem da grade.
+     */
+    void limparGradeCompleta();
+
 private slots:
     /**
      * @brief Responde à mudança de perspectiva (Turma, Professor ou Sala).
@@ -158,6 +171,8 @@ private:
     QLineEdit* search_lesson_{nullptr};
     QLabel* lbl_search_count_{nullptr};
     TimetableGridWidget* table_{nullptr};
+    QPushButton* btn_add_lesson_{nullptr};
+    QPushButton* btn_clear_timetable_{nullptr};
 
     std::vector<model::TimeInterval> row_intervals_;
 };

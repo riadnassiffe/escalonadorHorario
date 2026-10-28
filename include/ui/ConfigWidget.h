@@ -85,6 +85,7 @@ private:
     QComboBox* combo_escopo_semestre_{nullptr};
     QCheckBox* chk_sincronizar_anuais_{nullptr};
     QDoubleSpinBox* spin_tempo_limite_{nullptr};
+    QCheckBox* chk_sem_limite_tempo_{nullptr};
     QSpinBox* spin_threads_{nullptr};
     QCheckBox* chk_log_solver_{nullptr};
     QCheckBox* chk_usar_distribuicao_como_entrada_{nullptr};

@@ -104,6 +104,45 @@ void MainWindow::setupMenuBar() {
     menu_arquivo->addSeparator();
     menu_arquivo->addAction("Sair", QKeySequence::Quit, this, &QWidget::close);
 
+    auto* menu_grade = menuBar()->addMenu("&Grade");
+    auto* act_alocar = menu_grade->addAction("➕ Alocar Disciplina Manualmente...", this, [this]() {
+        tab_widget_->setCurrentWidget(timetable_view_);
+        timetable_view_->alocarAulaManual(-1, -1);
+    });
+    act_alocar->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_M));
+
+    menu_grade->addSeparator();
+    menu_grade->addAction("📌 Fixar Todas as Aulas da Grade", this, [this]() {
+        for (auto& aloc : data_.grade().alocacoes()) {
+            auto* a_model = data_.findAula(aloc.aula_id);
+            if (a_model) {
+                a_model->setPinned(true);
+                a_model->setPinnedDay(aloc.dia);
+                a_model->setPinnedStartSlot(aloc.intervalo.start_slot);
+                a_model->setPinnedRooms(aloc.salas);
+                aloc.is_pinned = true;
+            }
+        }
+        timetable_view_->refreshView();
+        updateKpiBanner();
+    });
+    menu_grade->addAction("🔓 Desafixar Todas as Aulas da Grade", this, [this]() {
+        for (auto& aloc : data_.grade().alocacoes()) {
+            auto* a_model = data_.findAula(aloc.aula_id);
+            if (a_model) {
+                a_model->unpin();
+                aloc.is_pinned = false;
+            }
+        }
+        timetable_view_->refreshView();
+        updateKpiBanner();
+    });
+    menu_grade->addSeparator();
+    menu_grade->addAction("🗑️ Limpar Toda a Grade...", this, [this]() {
+        timetable_view_->limparGradeCompleta();
+        updateKpiBanner();
+    });
+
     auto* menu_exibir = menuBar()->addMenu("&Exibir");
     auto* menu_tema = menu_exibir->addMenu("🎨 &Tema Visual");
 
@@ -529,6 +568,11 @@ void MainWindow::onOptimize() {
     txt_logs_->appendPlainText("--------------------------------------------------");
     txt_logs_->appendPlainText("[ESCOPO] Escopo de Otimização: " + QString::fromStdString(model::escopoSemestreToString(current_cfg.escopo_semestre)));
     txt_logs_->appendPlainText("[OTIMIZAÇÃO] Algoritmo selecionado: " + QString::fromStdString(algo_name));
+    if (current_cfg.sem_limite_tempo) {
+        txt_logs_->appendPlainText("[PARÂMETRO] Tempo limite: Sem restrição de tempo (ilimitado)");
+    } else {
+        txt_logs_->appendPlainText(QString("[PARÂMETRO] Tempo limite: %1 s").arg(current_cfg.tempo_limite_segundos));
+    }
     if (current_cfg.usar_distribuicao_como_entrada && !data_.grade().alocacoes().empty()) {
         txt_logs_->appendPlainText(QString("[ENTRADA] Distribuição atual da tela (%1 aulas) fornecida como entrada / Warm Start.")
             .arg(data_.grade().alocacoes().size()));

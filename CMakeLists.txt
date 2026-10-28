@@ -40,6 +40,7 @@ set(SOURCES
     src/ui/TimetableView.cpp
     src/ui/MoveLessonDialog.cpp
     src/ui/ChangeRoomDialog.cpp
+    src/ui/AddLessonToScheduleDialog.cpp
     src/ui/ProfessorEditorDialog.cpp
     src/ui/TurmaEditorDialog.cpp
     src/ui/RoomEditorDialog.cpp
@@ -71,6 +72,7 @@ set(HEADERS
     include/ui/TimetableView.h
     include/ui/MoveLessonDialog.h
     include/ui/ChangeRoomDialog.h
+    include/ui/AddLessonToScheduleDialog.h
     include/ui/ProfessorEditorDialog.h
     include/ui/TurmaEditorDialog.h
     include/ui/RoomEditorDialog.h
