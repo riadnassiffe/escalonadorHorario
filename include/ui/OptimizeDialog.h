@@ -78,6 +78,8 @@ private:
 
     QDoubleSpinBox* spin_time_limit_{nullptr};
     QCheckBox* chk_sem_limite_tempo_{nullptr};
+    QSpinBox* spin_mem_limit_{nullptr};
+    QCheckBox* chk_sem_limite_memoria_{nullptr};
     QSpinBox* spin_threads_{nullptr};
     QCheckBox* chk_log_{nullptr};
 

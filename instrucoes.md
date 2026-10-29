@@ -956,9 +956,19 @@ Uma possível representação em JSON:
   "lambda_preferencias": 3,
   "lambda_lacunas_turma": 2,
   "lambda_preferencia_dias": 7,
-  "modelo_preferencia_dias": "POR_DIA_TRABALHADO"
+  "modelo_preferencia_dias": "POR_DIA_TRABALHADO",
+  "tempo_limite_segundos": 300.0,
+  "max_memoria_mb": 2048,
+  "sem_limite_memoria": false,
+  "num_threads": 8
 }
 ```
+
+Além dos pesos de otimização ($\lambda_i$), a configuração inclui parâmetros de execução do solver:
+- `tempo_limite_segundos`: tempo máximo de busca antes de interromper a otimização.
+- `max_memoria_mb`: teto máximo de memória RAM alocada para os algoritmos de otimização (configura `SatParameters::set_max_memory_in_mb` no CP-SAT).
+- `sem_limite_memoria`: flag booleana que, quando `true`, remove qualquer teto artificial de consumo de memória pelo solver.
+- `num_threads`: número de threads simultâneas para busca paralela.
 
 Esses pesos **institucionais** ($\lambda_i$) são valores ilustrativos e precisam ser calibrados considerando as unidades de cada penalidade. Os pesos **individuais** dos professores ($\omega_{p,d}$) ficam no cadastro de cada professor e representam suas preferências de segunda a sexta. As restrições obrigatórias permanecem inalteradas.
 

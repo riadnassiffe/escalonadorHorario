@@ -139,14 +139,23 @@ cmake --build build -j$(nproc)
 
 ### 4. Executar em Modo de Teste Automatizado / CLI
 
-O executável possui suporte direto a execução em linha de comando para validação rápida e integração contínua (CI):
+O executável possui suporte direto a execução em linha de comando para validação rápida, benchmarks e integração contínua (CI):
 
 ```bash
 # Executa com o cenário acadêmico padrão:
 ./build/EscalonadorGemini --test
+
+# Executa definindo algoritmo, limite de tempo e teto de memória RAM (em MB):
+./build/EscalonadorGemini --test --cpsat --time-limit 30 --max-memory 4096
 
 # Ou com um arquivo JSON específico:
 ./build/EscalonadorGemini --test examples/exemplo_instituicao.json
 ```
 
 Ao finalizar, os relatórios `grade_horarios.html` e `grade_horarios.csv` são gerados automaticamente.
+
+### 5. Parâmetros de Recursos e Memória
+
+- **Limite Máximo de Memória RAM (`max_memoria_mb`)**: Permite limitar a quantidade máxima de memória a ser consumida pelo solver (padrão: 2048 MB = 2 GB), evitando esgotamento de recursos em instâncias extensas.
+- **Opção Sem Restrição (`sem_limite_memoria`)**: Desativa a trava de memória para permitir uso livre da memória disponível no sistema.
+- **Configuração**: Ajustável diretamente na aba de parâmetros do sistema, no diálogo de execução de otimização, via JSON institucional ou por linha de comando (`--max-memory <MB>` / `--unlimited-memory`).

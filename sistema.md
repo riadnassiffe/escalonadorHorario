@@ -542,6 +542,7 @@ $$\begin{cases}
 | **H8** | Limite de Carga Diária do Docente | **Rígida (*Hard*)** | Docente $\times$ Dia | Campo "Carga Máx. Diária" no docente |
 | **H9** | Acoplamento Anual Intersemestral | **Rígida (*Hard*)** | Disciplina Anual | Seleção do regime na disciplina |
 | **H10**| Disponibilidade Docente e Turno | **Rígida (*Hard*)** | Docente e Turma | Abas de Horários do Docente e Turma |
+| **H11**| Início da 1ª Aula no Início da Jornada | **Rígida (*Hard*)** | Turma $\times$ Dia | Imposição matemática ($T^{ini}$) |
 | <span style="color: #0284c7;">*O1*</span> | <span style="color: #0284c7;">*Preenchimento Integral da Jornada*</span> | <span style="color: #0284c7;">***Opcional (Hard)***</span> | *Turma $\times$ Dia* | *Checkbox no painel de parâmetros* |
 | <span style="color: #0284c7;">*O2*</span> | <span style="color: #0284c7;">*Máximo de Aulas Diárias da Disciplina*</span>| <span style="color: #0284c7;">***Opcional (Hard/Soft)***</span>| *Disciplina $\times$ Turma* | *Campo no cadastro da disciplina* |
 | <span style="color: #0284c7;">*O3*</span> | <span style="color: #0284c7;">*Aulas Consecutivas em Bloco*</span> | <span style="color: #0284c7;">***Opcional (Hard)***</span> | *Disciplina* | *Checkbox "Blocos consecutivos"* |
@@ -553,6 +554,18 @@ $$\begin{cases}
 | <span style="color: #0284c7;">*O9*</span> | <span style="color: #0284c7;">*Minimização de Custos de Horários*</span> | <span style="color: #0284c7;">***Opcional (Soft)***</span> | *Aula $\times$ Horário* | *Peso global $\lambda_3$ no painel* |
 | <span style="color: #0284c7;">*O10*</span>| <span style="color: #0284c7;">*Estabilidade em Relação à Grade Atual*</span> | <span style="color: #0284c7;">***Opcional (Soft)***</span> | *Grade Vigente* | *Opção "Usar distribuição como entrada"* |
 | <span style="color: #0284c7;">*O11*</span>| <span style="color: #0284c7;">*Priorização de Salas Ideais*</span> | <span style="color: #0284c7;">***Opcional (Soft)***</span> | *Aula $\times$ Sala* | *Ordem de preferência de salas alternativas* |
+
+---
+
+### 12.4. Parâmetros Computacionais de Recursos e Memória
+
+Para garantir previsibilidade e estabilidade na execução em diferentes servidores e estações de trabalho, o escalonador oferece controle fino de recursos:
+
+* **Teto Máximo de Memória RAM (`max_memoria_mb`)**: Limita a memória alocada dinamicamente pelo solver (padrão: 2048 MB = 2 GB), acionando `SatParameters::set_max_memory_in_mb` no motor Google OR-Tools CP-SAT.
+* **Execução Sem Restrição de Memória (`sem_limite_memoria`)**: Desativa o teto numérico, permitindo que o solver utilize toda a memória livre do sistema operacional.
+* **Limite de Tempo Computacional (`tempo_limite_segundos`)**: Tempo limite para convergência ou entrega da melhor solução viável encontrada (*anytime algorithm*).
+* **Paralelismo (`num_threads`)**: Quantidade de núcleos de CPU alocados em paralelo para busca cooperativa com diferentes estratégias de busca e LNS (*Large Neighborhood Search*).
+* **Interface e CLI**: Configuráveis interativamente na aba de parâmetros, no diálogo de otimização, via arquivo JSON ou na linha de comando (`--max-memory <MB>`, `--unlimited-memory`, `--time-limit <s0>`).
 
 ---
 

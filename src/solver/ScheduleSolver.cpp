@@ -801,6 +801,9 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
     if (!data.config().sem_limite_tempo && data.config().tempo_limite_segundos > 0.0) {
         params.set_max_time_in_seconds(data.config().tempo_limite_segundos);
     }
+    if (!data.config().sem_limite_memoria && data.config().max_memoria_mb > 0) {
+        params.set_max_memory_in_mb(data.config().max_memoria_mb);
+    }
     params.set_num_workers(data.config().num_threads);
     params.set_log_search_progress(data.config().log_search_progress);
 

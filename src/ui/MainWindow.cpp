@@ -573,6 +573,11 @@ void MainWindow::onOptimize() {
     } else {
         txt_logs_->appendPlainText(QString("[PARÂMETRO] Tempo limite: %1 s").arg(current_cfg.tempo_limite_segundos));
     }
+    if (current_cfg.sem_limite_memoria || current_cfg.max_memoria_mb <= 0) {
+        txt_logs_->appendPlainText("[PARÂMETRO] Limite de memória: Sem restrição (ilimitado)");
+    } else {
+        txt_logs_->appendPlainText(QString("[PARÂMETRO] Limite de memória: %1 MB").arg(current_cfg.max_memoria_mb));
+    }
     if (current_cfg.usar_distribuicao_como_entrada && !data_.grade().alocacoes().empty()) {
         txt_logs_->appendPlainText(QString("[ENTRADA] Distribuição atual da tela (%1 aulas) fornecida como entrada / Warm Start.")
             .arg(data_.grade().alocacoes().size()));

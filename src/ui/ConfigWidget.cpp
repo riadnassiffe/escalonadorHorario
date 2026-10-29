@@ -158,6 +158,27 @@ void ConfigWidget::setupUi() {
     lay_tempo->addStretch();
     form_solver->addRow("Tempo Limite de Otimização:", lay_tempo);
 
+    auto* lay_mem = new QHBoxLayout();
+    lay_mem->setSpacing(12);
+
+    spin_max_memoria_ = new QSpinBox(grp_solver);
+    spin_max_memoria_->setRange(256, 131072);
+    spin_max_memoria_->setSingleStep(256);
+    spin_max_memoria_->setValue(2048);
+    spin_max_memoria_->setSuffix(" MB");
+
+    chk_sem_limite_memoria_ = new QCheckBox("Sem restrição de memória", grp_solver);
+    chk_sem_limite_memoria_->setToolTip("Executa o solver sem impor limite máximo explícito de memória RAM.");
+
+    connect(chk_sem_limite_memoria_, &QCheckBox::toggled, this, [this](bool checked) {
+        spin_max_memoria_->setEnabled(!checked);
+    });
+
+    lay_mem->addWidget(spin_max_memoria_);
+    lay_mem->addWidget(chk_sem_limite_memoria_);
+    lay_mem->addStretch();
+    form_solver->addRow("Limite de Memória RAM:", lay_mem);
+
     spin_threads_ = new QSpinBox(grp_solver);
     spin_threads_->setRange(1, 64);
     spin_threads_->setValue(4);
@@ -220,6 +241,11 @@ void ConfigWidget::loadConfig(const model::OptimizationConfig& cfg) {
         chk_sem_limite_tempo_->setChecked(cfg.sem_limite_tempo);
         spin_tempo_limite_->setEnabled(!cfg.sem_limite_tempo);
     }
+    spin_max_memoria_->setValue(cfg.max_memoria_mb > 0 ? cfg.max_memoria_mb : 2048);
+    if (chk_sem_limite_memoria_) {
+        chk_sem_limite_memoria_->setChecked(cfg.sem_limite_memoria);
+        spin_max_memoria_->setEnabled(!cfg.sem_limite_memoria);
+    }
     spin_threads_->setValue(cfg.num_threads);
     chk_log_solver_->setChecked(cfg.log_search_progress);
     chk_usar_distribuicao_como_entrada_->setChecked(cfg.usar_distribuicao_como_entrada);
@@ -256,6 +282,8 @@ model::OptimizationConfig ConfigWidget::getConfig() const {
 
     cfg.tempo_limite_segundos = spin_tempo_limite_->value();
     cfg.sem_limite_tempo = chk_sem_limite_tempo_ ? chk_sem_limite_tempo_->isChecked() : false;
+    cfg.max_memoria_mb = spin_max_memoria_->value();
+    cfg.sem_limite_memoria = chk_sem_limite_memoria_ ? chk_sem_limite_memoria_->isChecked() : false;
     cfg.num_threads = spin_threads_->value();
     cfg.log_search_progress = chk_log_solver_->isChecked();
     cfg.usar_distribuicao_como_entrada = chk_usar_distribuicao_como_entrada_->isChecked();

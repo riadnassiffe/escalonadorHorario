@@ -170,6 +170,31 @@ void OptimizeDialog::setupUi() {
     lay_time->addStretch();
     form_params->addRow("Tempo Limite:", lay_time);
 
+    auto* lay_mem = new QHBoxLayout();
+    lay_mem->setSpacing(12);
+
+    spin_mem_limit_ = new QSpinBox(grp_params);
+    spin_mem_limit_->setRange(256, 131072);
+    spin_mem_limit_->setSingleStep(256);
+    spin_mem_limit_->setValue(initial_config_.max_memoria_mb > 0 ? initial_config_.max_memoria_mb : 2048);
+    spin_mem_limit_->setSuffix(" MB");
+
+    chk_sem_limite_memoria_ = new QCheckBox("Sem restrição de memória", grp_params);
+    chk_sem_limite_memoria_->setChecked(initial_config_.sem_limite_memoria);
+    chk_sem_limite_memoria_->setToolTip("Executa o solver sem impor teto explícito de memória RAM.");
+
+    connect(chk_sem_limite_memoria_, &QCheckBox::toggled, this, [this](bool checked) {
+        auto algo = getSelectedAlgorithm();
+        if (algo != model::SolverAlgorithm::GREEDY_HEURISTIC) {
+            spin_mem_limit_->setEnabled(!checked);
+        }
+    });
+
+    lay_mem->addWidget(spin_mem_limit_);
+    lay_mem->addWidget(chk_sem_limite_memoria_);
+    lay_mem->addStretch();
+    form_params->addRow("Limite de Memória:", lay_mem);
+
     spin_threads_ = new QSpinBox(grp_params);
     spin_threads_->setRange(1, 64);
     spin_threads_->setValue(initial_config_.num_threads);
@@ -248,6 +273,8 @@ void OptimizeDialog::updateAlgorithmDetails(model::SolverAlgorithm algo) {
             lbl_algo_speed_->setText("Médio / Equilibrado");
             chk_sem_limite_tempo_->setEnabled(true);
             spin_time_limit_->setEnabled(!chk_sem_limite_tempo_->isChecked());
+            chk_sem_limite_memoria_->setEnabled(true);
+            spin_mem_limit_->setEnabled(!chk_sem_limite_memoria_->isChecked());
             spin_threads_->setEnabled(true);
             chk_log_->setEnabled(true);
             break;
@@ -263,6 +290,8 @@ void OptimizeDialog::updateAlgorithmDetails(model::SolverAlgorithm algo) {
             lbl_algo_speed_->setText("Instantâneo (< 0.1s)");
             chk_sem_limite_tempo_->setEnabled(false);
             spin_time_limit_->setEnabled(false);
+            chk_sem_limite_memoria_->setEnabled(false);
+            spin_mem_limit_->setEnabled(false);
             spin_threads_->setEnabled(false);
             chk_log_->setEnabled(false);
             break;
@@ -278,6 +307,8 @@ void OptimizeDialog::updateAlgorithmDetails(model::SolverAlgorithm algo) {
             lbl_algo_speed_->setText("Moderado");
             chk_sem_limite_tempo_->setEnabled(true);
             spin_time_limit_->setEnabled(!chk_sem_limite_tempo_->isChecked());
+            chk_sem_limite_memoria_->setEnabled(true);
+            spin_mem_limit_->setEnabled(!chk_sem_limite_memoria_->isChecked());
             spin_threads_->setEnabled(true);
             chk_log_->setEnabled(true);
             break;
@@ -293,6 +324,8 @@ void OptimizeDialog::updateAlgorithmDetails(model::SolverAlgorithm algo) {
             lbl_algo_speed_->setText("Iterativo");
             chk_sem_limite_tempo_->setEnabled(true);
             spin_time_limit_->setEnabled(!chk_sem_limite_tempo_->isChecked());
+            chk_sem_limite_memoria_->setEnabled(true);
+            spin_mem_limit_->setEnabled(!chk_sem_limite_memoria_->isChecked());
             spin_threads_->setEnabled(true);
             chk_log_->setEnabled(false);
             break;
@@ -322,6 +355,10 @@ void OptimizeDialog::updateConfig(model::OptimizationConfig& cfg) const {
     cfg.tempo_limite_segundos = spin_time_limit_->value();
     if (chk_sem_limite_tempo_) {
         cfg.sem_limite_tempo = chk_sem_limite_tempo_->isChecked();
+    }
+    cfg.max_memoria_mb = spin_mem_limit_->value();
+    if (chk_sem_limite_memoria_) {
+        cfg.sem_limite_memoria = chk_sem_limite_memoria_->isChecked();
     }
     cfg.num_threads = spin_threads_->value();
     cfg.log_search_progress = chk_log_->isChecked();

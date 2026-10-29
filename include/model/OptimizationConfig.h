@@ -175,6 +175,8 @@ struct OptimizationConfig {
     // Parâmetros de execução do solver
     double tempo_limite_segundos{30.0}; ///< Tempo limite máximo de execução da busca em segundos.
     bool sem_limite_tempo{false};       ///< Se true, executa o solver sem restrição de tempo de busca.
+    int max_memoria_mb{2048};           ///< Limite máximo de memória RAM em megabytes (MB) a ser consumida pelos algoritmos (padrão: 2048 MB = 2 GB).
+    bool sem_limite_memoria{false};     ///< Se true, executa o solver sem restrição explícita de memória RAM.
     int num_threads{4};                  ///< Quantidade de threads de CPU utilizadas em paralelo.
     bool log_search_progress{false};    ///< Se true, imprime o log interno de progresso do solver.
 

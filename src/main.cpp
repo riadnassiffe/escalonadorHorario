@@ -29,6 +29,24 @@
  * @return Código de saída da execução (0 para sucesso, diferente de zero em caso de erro).
  */
 int main(int argc, char* argv[]) {
+    // Ajuda via Linha de Comando
+    if (argc > 1 && (std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h")) {
+        std::cout << "Uso: " << argv[0] << " [OPÇÕES] [ARQUIVO.json]\n\n"
+                  << "Opções de Execução:\n"
+                  << "  --cli, --test, --benchmark   Executa em modo linha de comando (sem GUI)\n"
+                  << "  --greedy                     Utiliza Heurística Gulosa\n"
+                  << "  --cpsat                      Utiliza CP-SAT (Google OR-Tools)\n"
+                  << "  --milp                       Utiliza MILP (SCIP/HiGHS)\n"
+                  << "  --genetic                    Utiliza Algoritmo Genético\n"
+                  << "  --max-memory <MB>            Define teto de consumo de memória RAM em MB (ex: 2048)\n"
+                  << "  --unlimited-memory           Executa sem limite imposto de memória\n"
+                  << "  --time-limit <SEG>           Define tempo limite de resolução em segundos\n"
+                  << "  --warmstart-chain            Testa encadeamento guloso -> CP-SAT / Genético\n"
+                  << "  --render-screenshots         Gera capturas de tela dos diálogos da interface\n"
+                  << "  --help, -h                   Exibe esta mensagem de ajuda\n";
+        return 0;
+    }
+
     // Modo Headless / Teste via Linha de Comando
     if (argc > 1 && (std::string(argv[1]) == "--test" || std::string(argv[1]) == "--benchmark" || std::string(argv[1]) == "--cli")) {
         std::cout << "===========================================================" << std::endl;
@@ -45,6 +63,10 @@ int main(int argc, char* argv[]) {
         std::string filename;
         for (int i = 2; i < argc; ++i) {
             std::string arg = argv[i];
+            if (arg == "--max-memory" || arg == "--time-limit") {
+                ++i;
+                continue;
+            }
             if (!arg.empty() && arg.rfind("--", 0) != 0) {
                 filename = arg;
                 break;
@@ -77,7 +99,20 @@ int main(int argc, char* argv[]) {
             else if (arg == "--genetic") data.config().algoritmo = scheduler::model::SolverAlgorithm::GENETIC_ALGORITHM;
             else if (arg == "--milp") data.config().algoritmo = scheduler::model::SolverAlgorithm::MILP;
             else if (arg == "--cpsat") data.config().algoritmo = scheduler::model::SolverAlgorithm::CP_SAT;
+            else if (arg == "--max-memory" && i + 1 < argc) {
+                data.config().max_memoria_mb = std::stoi(argv[++i]);
+            } else if (arg.rfind("--max-memory=", 0) == 0) {
+                data.config().max_memoria_mb = std::stoi(arg.substr(13));
+            } else if (arg == "--unlimited-memory") {
+                data.config().sem_limite_memoria = true;
+            } else if (arg == "--time-limit" && i + 1 < argc) {
+                data.config().tempo_limite_segundos = std::stod(argv[++i]);
+            } else if (arg.rfind("--time-limit=", 0) == 0) {
+                data.config().tempo_limite_segundos = std::stod(arg.substr(13));
+            }
         }
+
+        std::cout << "Limite de memória RAM: " << (data.config().sem_limite_memoria || data.config().max_memoria_mb <= 0 ? "Sem restrição (ilimitado)" : std::to_string(data.config().max_memoria_mb) + " MB") << std::endl;
 
         if (warmstart_chain) {
             std::cout << "\n[TESTE ENCADINHAMENTO] 1. Executando Heurística Gulosa para gerar distribuição inicial..." << std::endl;
