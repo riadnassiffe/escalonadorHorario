@@ -385,7 +385,7 @@ $$\min \quad Z = \sum_{k} \lambda_k \cdot \Phi_k(x, y, z)$$
 $$\text{sujeito a:}$$
 
 $$\begin{cases}
-\text{Restrições Rígidas (H1 a H10)} & \implies \text{Obrigatórias em todas as resoluções} \\
+\text{Restrições Rígidas (H1 a H11)} & \implies \text{Obrigatórias em todas as resoluções} \\
 \color{#0284c7}{\text{\textit{Restrições Opcionais e Critérios Flexíveis (O1 a O11)}}} & \implies \color{#0284c7}{\text{\textit{Configuradas via Interface / Painel de Parâmetros}}}
 \end{cases}$$
 
@@ -451,6 +451,12 @@ $$\begin{cases}
 * **Classificação**: **Restrição Rígida (*Hard*)**
 * **Descrição**: Professores só lecionam nos intervalos horários em que se declararam disponíveis. Aulas de uma turma devem estar contidas no turno em que ela funciona.
 * **Garantia**: Garantida por construção no espaço viável $C_a$.
+
+#### [H11] Início Obrigatório da Primeira Aula no Início da Jornada da Turma
+* **Classificação**: **Restrição Rígida (*Hard*)**
+* **Descrição**: Toda turma com aulas em determinado dia letivo deve obrigatoriamente iniciar suas atividades escolares no horário de início de sua jornada ($T^{ini}_{t,d}$). Aulas posteriores no mesmo dia só podem ocorrer se houver uma aula alocada no início da jornada. Essa restrição elimina simetrias de deslocamento temporal e acelera expressivamente a velocidade de convergência e desempenho do solver.
+* **Equação**:
+  $$x_{a, d, b, r} \le \sum_{a' \in A \,:\, t \in T_{a'}} \sum_{\substack{(d, b', r') \in C_{a'} \\ b' = T^{ini}_{t, d}}} x_{a', d, b', r'}, \quad \forall t \in T, \; \forall d \in \text{dias}(t), \; \forall a \in A \text{ com } t \in T_a, \; \forall (d, b, r) \in C_a \text{ com } b > T^{ini}_{t, d}$$
 
 ---
 

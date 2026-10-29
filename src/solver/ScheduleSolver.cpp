@@ -358,6 +358,45 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
         add_turma_no_overlap(vars_turma_dia, "int");
     }
 
+    // 5.4b Início obrigatório da primeira aula no início da jornada da turma (seção 3.5 / [H11]):
+    // Toda turma que possuir aulas alocadas em um dia letivo deve obrigatoriamente
+    // ter sua primeira aula iniciando no slot inicial da jornada (T_ini).
+    auto add_turma_inicio_obrigatorio = [&](const std::map<std::pair<std::string, model::DayOfWeek>, std::vector<CandItem>>& map_vars) {
+        for (const auto& turma : data.turmas()) {
+            for (auto dia : turma.diasLetivos()) {
+                auto it = map_vars.find({turma.id(), dia});
+                if (it == map_vars.end() || it->second.empty()) continue;
+
+                auto jornada = turma.jornadaParaDia(dia);
+                int t_ini = jornada.jornada_total.start_slot;
+
+                LinearExpr sum_start;
+                std::vector<BoolVar> later_vars;
+
+                for (const auto& item : it->second) {
+                    if (item.cand->start_slot == t_ini) {
+                        sum_start += item.var;
+                    } else if (item.cand->start_slot > t_ini) {
+                        later_vars.push_back(item.var);
+                    }
+                }
+
+                // Para cada aula que inicia após t_ini, ela só pode ser alocada no dia
+                // se houver uma aula iniciando exatamente no horário inicial da jornada (t_ini).
+                for (const auto& var_later : later_vars) {
+                    cp_model.AddLessOrEqual(var_later, sum_start);
+                }
+            }
+        }
+    };
+
+    if (is_multi_sem) {
+        add_turma_inicio_obrigatorio(vars_turma_dia_s1);
+        add_turma_inicio_obrigatorio(vars_turma_dia_s2);
+    } else {
+        add_turma_inicio_obrigatorio(vars_turma_dia);
+    }
+
     // 5.5 Carga máxima diária do professor (seção 3.9)
     for (const auto& prof : data.professores()) {
         if (prof.cargaMaximaDiariaMinutos() > 0) {
@@ -1032,6 +1071,23 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
                     int cnt = turma_disc_dia_count[{t_id, aula->disciplinaId(), c.dia}];
                     if (cnt > 0) {
                         penalty -= 400.0; // Bônus forte para agrupar as aulas no mesmo dia
+                    }
+                }
+            }
+
+            // Início prioritário da primeira aula no início da jornada da turma (T_ini)
+            for (const auto& t_id : aula->turmas()) {
+                const auto* t = data.findTurma(t_id);
+                if (t) {
+                    auto j = t->jornadaParaDia(c.dia);
+                    int t_ini = j.jornada_total.start_slot;
+                    const auto& existing = turma_ocup[{t_id, c.dia}];
+                    if (existing.empty()) {
+                        if (c.start_slot == t_ini) {
+                            penalty -= 1000.0; // Forte incentivo para a primeira aula iniciar no início da jornada
+                        } else {
+                            penalty += 800.0; // Desestimula iniciar o dia fora do horário inicial
+                        }
                     }
                 }
             }

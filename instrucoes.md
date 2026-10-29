@@ -378,6 +378,24 @@ $$
 
 Essa equação é redundante quando o pré-processamento estiver correto, mas pode servir como validação independente.
 
+#### 3.5.1. Início obrigatório da primeira aula no início da jornada da turma
+
+Para maximizar o desempenho computacional e eliminar simetrias desnecessárias na exploração da árvore de busca, o modelo impõe que, em todo dia letivo em que uma turma possua aulas agendadas, a **primeira aula do dia deve obrigatoriamente iniciar no início da jornada** ($T^{ini}_{g,d}$).
+
+Formalmente, para cada turma $g$, dia $d \in D_g$ e qualquer aula agendada em horário posterior $t > T^{ini}_{g,d}$:
+
+$$
+\boxed{
+x_{a,d,t,b} \le \sum_{a': g \in G_{a'}} \sum_{\substack{(d, T^{ini}_{g,d}, b') \in C_{a'}}} x_{a', d, T^{ini}_{g,d}, b'}
+}
+\qquad \forall a: g \in G_a, \; (d,t,b) \in C_a \text{ com } t > T^{ini}_{g,d}
+$$
+
+**Propriedades fundamentais desta formulação:**
+1. **Consistência Discente:** Em dias com atividades escolares, os alunos iniciam pontualmente no primeiro horário do seu turno ($T^{ini}$), proibindo chegadas tardias com horários vagos no início da manhã ou da tarde.
+2. **Flexibilidade para Dias Livres:** Se a turma não tiver aulas em determinado dia (ex.: turmas modulares ou semipresenciais), o somatório à direita avalia em 0 e todas as variáveis de horário posterior são forçadas a 0.
+3. **Poda e Desempenho:** Reduz drasticamente a combinatorialidade e o tempo de resolução do solver CP-SAT, impedindo a exploração de grades com deslocamentos temporais ociosos no início da jornada.
+
 ### 3.6. Sala teórica fixa durante toda a semana
 
 Para cada turma $g$, deve existir **exatamente uma sala teórica designada**:
