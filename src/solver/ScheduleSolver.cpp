@@ -165,7 +165,15 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
     std::map<std::pair<std::string, model::DayOfWeek>, std::vector<CandItem>> vars_sala_dia;
 
     // Particionamento semestral para resolução multi-semestre integrada (seção 6)
-    bool is_multi_sem = (data.config().escopo_semestre == model::EscopoSemestreOtimizacao::AMBOS_INTEGRADO);
+    bool has_semestrais = false;
+    for (const auto& a : data.aulas()) {
+        if (a.isSemestral() || a.semestre() != model::SemestreLetivo::AMBOS) {
+            has_semestrais = true;
+            break;
+        }
+    }
+    bool is_multi_sem = (data.config().escopo_semestre == model::EscopoSemestreOtimizacao::AMBOS_INTEGRADO ||
+                        (data.config().escopo_semestre == model::EscopoSemestreOtimizacao::TODAS_SEM_FILTRO && has_semestrais));
     std::map<std::pair<std::string, model::DayOfWeek>, std::vector<CandItem>> vars_prof_dia_s1;
     std::map<std::pair<std::string, model::DayOfWeek>, std::vector<CandItem>> vars_prof_dia_s2;
     std::map<std::pair<std::string, model::DayOfWeek>, std::vector<CandItem>> vars_turma_dia_s1;
@@ -398,39 +406,58 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
     }
 
     // 5.5 Carga máxima diária do professor (seção 3.9)
-    for (const auto& prof : data.professores()) {
-        if (prof.cargaMaximaDiariaMinutos() > 0) {
-            for (auto dia : model::allDays()) {
-                const auto& items = vars_prof_dia[{prof.id(), dia}];
-                LinearExpr minutos_dia;
-                for (const auto& item : items) {
-                    minutos_dia += item.cand->duration_minutes * item.var;
+    auto add_prof_carga_max = [&](const std::map<std::pair<std::string, model::DayOfWeek>, std::vector<CandItem>>& map_vars) {
+        for (const auto& prof : data.professores()) {
+            if (prof.cargaMaximaDiariaMinutos() > 0) {
+                for (auto dia : model::allDays()) {
+                    auto it = map_vars.find({prof.id(), dia});
+                    if (it == map_vars.end()) continue;
+                    LinearExpr minutos_dia;
+                    for (const auto& item : it->second) {
+                        minutos_dia += item.cand->duration_minutes * item.var;
+                    }
+                    cp_model.AddLessOrEqual(minutos_dia, prof.cargaMaximaDiariaMinutos());
                 }
-                cp_model.AddLessOrEqual(minutos_dia, prof.cargaMaximaDiariaMinutos());
             }
         }
+    };
+    if (is_multi_sem) {
+        add_prof_carga_max(vars_prof_dia_s1);
+        add_prof_carga_max(vars_prof_dia_s2);
+    } else {
+        add_prof_carga_max(vars_prof_dia);
     }
 
     // 5.6 Preenchimento integral opcional da jornada (seção 3.10)
     if (data.config().preenchimento_integral_jornada) {
-        for (const auto& turma : data.turmas()) {
-            for (auto dia : turma.diasLetivos()) {
-                auto jornada = turma.jornadaParaDia(dia);
-                auto blocos = jornada.blocosLetivos();
-                const auto& items = vars_turma_dia[{turma.id(), dia}];
+        auto add_preenchimento_integral = [&](const std::map<std::pair<std::string, model::DayOfWeek>, std::vector<CandItem>>& map_vars) {
+            for (const auto& turma : data.turmas()) {
+                for (auto dia : turma.diasLetivos()) {
+                    auto jornada = turma.jornadaParaDia(dia);
+                    auto blocos = jornada.blocosLetivos();
+                    auto it = map_vars.find({turma.id(), dia});
+                    if (it == map_vars.end()) continue;
+                    const auto& items = it->second;
 
-                for (const auto& bloco : blocos) {
-                    for (int k = bloco.start_slot; k < bloco.end_slot; ++k) {
-                        LinearExpr slot_occupancy;
-                        for (const auto& item : items) {
-                            if (item.cand->start_slot <= k && k < item.cand->end_slot()) {
-                                slot_occupancy += item.var;
+                    for (const auto& bloco : blocos) {
+                        for (int k = bloco.start_slot; k < bloco.end_slot; ++k) {
+                            LinearExpr slot_occupancy;
+                            for (const auto& item : items) {
+                                if (item.cand->start_slot <= k && k < item.cand->end_slot()) {
+                                    slot_occupancy += item.var;
+                                }
                             }
+                            cp_model.AddEquality(slot_occupancy, 1);
                         }
-                        cp_model.AddEquality(slot_occupancy, 1);
                     }
                 }
             }
+        };
+        if (is_multi_sem) {
+            add_preenchimento_integral(vars_turma_dia_s1);
+            add_preenchimento_integral(vars_turma_dia_s2);
+        } else {
+            add_preenchimento_integral(vars_turma_dia);
         }
     }
 
@@ -961,7 +988,7 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
         model::TimetableStatistics stats;
         stats.status = "INFEASIBLE";
         timetable.setEstatisticas(stats);
-        for (const auto& err : val_res.errors) timetable.addMensagemDiagnostico("[INVIABILIDADE] " + err);
+        for (const auto& err : val_res.errors) timetable.addMensagemDiagnostico("[ERRO] " + err);
         return timetable;
     }
 
@@ -970,6 +997,7 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
     struct SlotRange {
         int start;
         int end;
+        int semester{3}; // 1 = 1º Sem, 2 = 2º Sem, 3 = Anual / Ambos
         std::string aula_id;
         std::string disciplina_nome;
         std::string turma_nome;
@@ -998,9 +1026,16 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
     int alocadas_count = 0;
     int total_aulas = static_cast<int>(sorted_aulas.size());
 
-    auto overlaps = [](const std::vector<SlotRange>& ranges, int s, int e) {
+    auto semestres_conflitam = [](int s1, int s2) {
+        if (s1 == 3 || s2 == 3) return true;
+        return s1 == s2;
+    };
+
+    auto overlaps = [&](const std::vector<SlotRange>& ranges, int s, int e, int sem) {
         for (const auto& r : ranges) {
-            if (std::max(r.start, s) < std::min(r.end, e)) return true;
+            if (semestres_conflitam(r.semester, sem)) {
+                if (std::max(r.start, s) < std::min(r.end, e)) return true;
+            }
         }
         return false;
     };
@@ -1014,6 +1049,7 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
 
     for (int i = 0; i < total_aulas; ++i) {
         const auto* aula = sorted_aulas[i];
+        int aula_sem = aula->isAnual() ? 3 : ((aula->semestre() == model::SemestreLetivo::SEMESTRE_2 || aula->semestreAtivo() == 2) ? 2 : 1);
         if (callback && i % 5 == 0) {
             double prog = 0.40 + 0.50 * (static_cast<double>(i) / total_aulas);
             callback("Alocando aula " + std::to_string(i + 1) + " de " + std::to_string(total_aulas) + "...", prog);
@@ -1044,7 +1080,7 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
 
             bool conflict = false;
             for (const auto& p_id : aula->professores()) {
-                if (overlaps(prof_ocup[{p_id, c.dia}], s, e)) {
+                if (overlaps(prof_ocup[{p_id, c.dia}], s, e, aula_sem)) {
                     conflict = true;
                     break;
                 }
@@ -1052,7 +1088,7 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
             if (conflict) continue;
 
             for (const auto& t_id : aula->turmas()) {
-                if (overlaps(turma_ocup[{t_id, c.dia}], s, e)) {
+                if (overlaps(turma_ocup[{t_id, c.dia}], s, e, aula_sem)) {
                     conflict = true;
                     break;
                 }
@@ -1085,7 +1121,14 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
                     auto j = t->jornadaParaDia(c.dia);
                     int t_ini = j.jornada_total.start_slot;
                     const auto& existing = turma_ocup[{t_id, c.dia}];
-                    if (existing.empty()) {
+                    bool existing_in_sem = false;
+                    for (const auto& r : existing) {
+                        if (semestres_conflitam(r.semester, aula_sem)) {
+                            existing_in_sem = true;
+                            break;
+                        }
+                    }
+                    if (!existing_in_sem) {
                         if (c.start_slot == t_ini) {
                             penalty -= 1000.0; // Forte incentivo para a primeira aula iniciar no início da jornada
                         } else {
@@ -1096,7 +1139,7 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
             }
 
             for (const auto& sala_id : c.salas) {
-                if (overlaps(sala_ocup[{sala_id, c.dia}], s, e)) {
+                if (overlaps(sala_ocup[{sala_id, c.dia}], s, e, aula_sem)) {
                     conflict = true;
                     break;
                 }
@@ -1116,7 +1159,7 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
                 if (!existing.empty() && p && p->pesoJanela() > 0) {
                     std::vector<SlotRange> existing_shift;
                     for (const auto& r : existing) {
-                        if (model::slotToShift(r.start) == c_shift) {
+                        if (semestres_conflitam(r.semester, aula_sem) && model::slotToShift(r.start) == c_shift) {
                             existing_shift.push_back(r);
                         }
                     }
@@ -1163,22 +1206,22 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
             for (size_t pi = 0; pi < aula->professores().size(); ++pi) {
                 if (pi > 0) prof_label += ", ";
                 const auto* p = data.findProfessor(aula->professores()[pi]);
-                prof_label += (p && !p->nome().empty() ? p->nome() : aula->professores()[pi]);
+                prof_label += (p && !p->nome().empty()) ? p->nome() : aula->professores()[pi];
             }
             std::string turma_label;
             for (size_t ti = 0; ti < aula->turmas().size(); ++ti) {
                 if (ti > 0) turma_label += ", ";
                 const auto* t = data.findTurma(aula->turmas()[ti]);
-                turma_label += (t && !t->nome().empty() ? t->nome() : aula->turmas()[ti]);
+                turma_label += (t && !t->nome().empty()) ? t->nome() : aula->turmas()[ti];
             }
             std::string sala_label;
             for (size_t si = 0; si < best_cand->salas.size(); ++si) {
                 if (si > 0) sala_label += ", ";
                 const auto* r = data.findSala(best_cand->salas[si]);
-                sala_label += (r && !r->nome().empty() ? r->nome() : best_cand->salas[si]);
+                sala_label += (r && !r->nome().empty()) ? r->nome() : best_cand->salas[si];
             }
 
-            SlotRange range{s, e, aula->id(), aula->disciplinaNome(), turma_label, prof_label, sala_label};
+            SlotRange range{s, e, aula_sem, aula->id(), aula->disciplinaNome(), turma_label, prof_label, sala_label};
 
             for (const auto& p_id : aula->professores()) prof_ocup[{p_id, best_cand->dia}].push_back(range);
             for (const auto& t_id : aula->turmas()) {
@@ -1207,7 +1250,7 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
             aloc.regime = aula->regime();
             aloc.semestre = aula->semestre();
             if (aula->isAnual()) {
-                aloc.semestre_alocado = 3;
+                aloc.semestre_alocado = (data.config().escopo_semestre == model::EscopoSemestreOtimizacao::SEMESTRE_2) ? 2 : (data.config().escopo_semestre == model::EscopoSemestreOtimizacao::SEMESTRE_1 ? 1 : 3);
             } else {
                 aloc.semestre_alocado = (aula->semestre() == model::SemestreLetivo::SEMESTRE_2 || aula->semestreAtivo() == 2) ? 2 : 1;
             }

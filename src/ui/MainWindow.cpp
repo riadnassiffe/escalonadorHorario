@@ -350,8 +350,8 @@ QWidget* MainWindow::createTurmasTab() {
     btn_bar->addStretch();
 
     table_turmas_ = new QTableWidget(widget);
-    table_turmas_->setColumnCount(6);
-    table_turmas_->setHorizontalHeaderLabels({"ID", "Nome", "Turno", "Jornada", "Intervalos Obrigatórios (2)", "Sala Teórica"});
+    table_turmas_->setColumnCount(7);
+    table_turmas_->setHorizontalHeaderLabels({"ID", "Nome", "Turno", "Jornada", "Intervalos Obrigatórios (2)", "Sala Teórica", "Carga Semanal (S1 / S2 / Disp)"});
     table_turmas_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     table_turmas_->setSelectionBehavior(QAbstractItemView::SelectRows);
     table_turmas_->setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -774,6 +774,54 @@ void MainWindow::refreshTurmasTable() {
             ? QString::fromStdString(t.salaTeoricaId() + " (Fixa)")
             : QString("A escolher (%1)").arg(t.salasTeoricasPermitidas().size());
         table_turmas_->setItem(r, 5, new SmartTableWidgetItem(sala));
+
+        // Calcular carga horária semanal da turma por semestre vs disponível
+        int min_disp = 0;
+        for (auto d : model::allDays()) {
+            if (t.funcionaNoDia(d)) {
+                for (const auto& bl : t.jornadaParaDia(d).blocosLetivos()) {
+                    min_disp += bl.durationMinutes();
+                }
+            }
+        }
+
+        int min_s1 = 0;
+        int min_s2 = 0;
+        for (const auto& d : data_.disciplinas()) {
+            const auto& t_ids = d.turmas();
+            if (std::find(t_ids.begin(), t_ids.end(), t.id()) != t_ids.end()) {
+                int dur = d.duracaoMinutos() * d.aulasSemanais();
+                if (d.isAnual()) {
+                    min_s1 += dur;
+                    min_s2 += dur;
+                } else if (d.semestre() == model::SemestreLetivo::SEMESTRE_1) {
+                    min_s1 += dur;
+                } else if (d.semestre() == model::SemestreLetivo::SEMESTRE_2) {
+                    min_s2 += dur;
+                }
+            }
+        }
+
+        QString carga_str = QString("1º: %1m | 2º: %2m (Disp: %3m)")
+            .arg(min_s1).arg(min_s2).arg(min_disp);
+        auto* item_carga = new SmartTableWidgetItem(carga_str);
+        QString tip_carga = QString("<b>Distribuição de Carga Horária Semanal:</b><br>"
+                                    "• <b>1º Semestre:</b> %1 min (%2h%3m)<br>"
+                                    "• <b>2º Semestre:</b> %4 min (%5h%6m)<br>"
+                                    "• <b>Disponível na Jornada:</b> %7 min (%8h%9m)")
+                                    .arg(min_s1).arg(min_s1 / 60).arg(min_s1 % 60)
+                                    .arg(min_s2).arg(min_s2 / 60).arg(min_s2 % 60)
+                                    .arg(min_disp).arg(min_disp / 60).arg(min_disp % 60);
+
+        if (min_s1 > min_disp || min_s2 > min_disp) {
+            tip_carga += "<br><span style='color:#ef4444;'><b>⚠️ Atenção:</b> A carga de um dos semestres excede o tempo semanal disponível nesta turma!</span>";
+            item_carga->setForeground(QBrush(QColor(239, 68, 68)));
+        } else {
+            bool is_dark = ModernTheme::isDarkTheme();
+            item_carga->setForeground(QBrush(is_dark ? QColor(52, 211, 153) : QColor(22, 163, 74)));
+        }
+        item_carga->setToolTip(tip_carga);
+        table_turmas_->setItem(r, 6, item_carga);
     }
     table_turmas_->setSortingEnabled(true);
     if (search_bar_turmas_) {

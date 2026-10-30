@@ -541,8 +541,8 @@ public:
      */
     std::string regimeSemestreFormatado() const {
         if (isAnual()) return "Anual";
-        if (semestre_ == SemestreLetivo::SEMESTRE_1 || semestre_ativo_ == 1) return "Semestral (1º Sem)";
         if (semestre_ == SemestreLetivo::SEMESTRE_2 || semestre_ativo_ == 2) return "Semestral (2º Sem)";
+        if (semestre_ == SemestreLetivo::SEMESTRE_1 || semestre_ativo_ == 1) return "Semestral (1º Sem)";
         return "Semestral";
     }
 

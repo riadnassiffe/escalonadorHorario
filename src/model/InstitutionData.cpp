@@ -355,11 +355,13 @@ void InstitutionData::gerarOcorrenciasAulas(bool preservar_fixadas, EscopoSemest
                         disc.regime(), disc.semestre());
             aula.setTurnosPermitidos(disc.turnosPermitidos());
             aula.setSalasAlternativas(disc.salasAlternativas());
-            if (escopo == EscopoSemestreOtimizacao::SEMESTRE_2) {
-                aula.setSemestreAtivo(2);
+            int sem_ativo = 1;
+            if (disc.isSemestral()) {
+                sem_ativo = (disc.semestre() == SemestreLetivo::SEMESTRE_2) ? 2 : 1;
             } else {
-                aula.setSemestreAtivo(1);
+                sem_ativo = (escopo == EscopoSemestreOtimizacao::SEMESTRE_2) ? 2 : 1;
             }
+            aula.setSemestreAtivo(sem_ativo);
 
             auto it = fixadas.find(aula_id);
             if (it != fixadas.end()) {

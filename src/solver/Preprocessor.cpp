@@ -112,12 +112,24 @@ ValidationResult Preprocessor::validarDados(const model::InstitutionData& data) 
         }
     }
 
-    // Validar carga horária vs capacidade da turma
+    // Validar carga horária vs capacidade da turma por semestre letivo
     for (const auto& turma : data.turmas()) {
-        int minutos_necessarios = 0;
+        int minutos_s1 = 0;
+        int minutos_s2 = 0;
+        bool tem_s1 = false;
+        bool tem_s2 = false;
+
         for (const auto& disc : data.disciplinas()) {
             if (std::find(disc.turmas().begin(), disc.turmas().end(), turma.id()) != disc.turmas().end()) {
-                minutos_necessarios += disc.duracaoMinutos() * disc.aulasSemanais();
+                int disc_min = disc.duracaoMinutos() * disc.aulasSemanais();
+                if (disc.atendeSemestre(model::SemestreLetivo::SEMESTRE_1)) {
+                    minutos_s1 += disc_min;
+                    tem_s1 = true;
+                }
+                if (disc.atendeSemestre(model::SemestreLetivo::SEMESTRE_2)) {
+                    minutos_s2 += disc_min;
+                    tem_s2 = true;
+                }
             }
         }
 
@@ -130,14 +142,46 @@ ValidationResult Preprocessor::validarDados(const model::InstitutionData& data) 
             }
         }
 
-        if (minutos_necessarios > minutos_disponiveis) {
-            res.addError("Turma " + turma.id() + " necessita de " + std::to_string(minutos_necessarios) +
-                         " min de aula semanais, mas só possui " + std::to_string(minutos_disponiveis) +
-                         " min disponíveis em sua jornada letiva.");
-        } else if (data.config().preenchimento_integral_jornada && minutos_necessarios != minutos_disponiveis) {
-            res.addWarning("Preenchimento integral ativado, mas Turma " + turma.id() + " tem " +
-                           std::to_string(minutos_necessarios) + " min de aulas para " +
-                           std::to_string(minutos_disponiveis) + " min de blocos letivos.");
+        auto escopo = data.config().escopo_semestre;
+        bool validar_s1 = (escopo != model::EscopoSemestreOtimizacao::SEMESTRE_2);
+        bool validar_s2 = (escopo != model::EscopoSemestreOtimizacao::SEMESTRE_1);
+
+        // Se a turma só possui disciplinas anuais idênticas em ambos os semestres
+        if (tem_s1 && tem_s2 && minutos_s1 == minutos_s2) {
+            if (minutos_s1 > minutos_disponiveis) {
+                res.addError("Turma " + turma.id() + " necessita de " + std::to_string(minutos_s1) +
+                             " min de aula semanais, mas só possui " + std::to_string(minutos_disponiveis) +
+                             " min disponíveis em sua jornada letiva.");
+            } else if (data.config().preenchimento_integral_jornada && minutos_s1 != minutos_disponiveis) {
+                res.addWarning("Preenchimento integral ativado, mas Turma " + turma.id() + " tem " +
+                               std::to_string(minutos_s1) + " min de aulas para " +
+                               std::to_string(minutos_disponiveis) + " min de blocos letivos.");
+            }
+        } else {
+            // Turma com disciplinas semestrais diferenciadas
+            if (validar_s1 && tem_s1) {
+                if (minutos_s1 > minutos_disponiveis) {
+                    res.addError("Turma " + turma.id() + " necessita de " + std::to_string(minutos_s1) +
+                                 " min de aula semanais no 1º Semestre, mas só possui " + std::to_string(minutos_disponiveis) +
+                                 " min disponíveis em sua jornada letiva.");
+                } else if (data.config().preenchimento_integral_jornada && minutos_s1 != minutos_disponiveis) {
+                    res.addWarning("Preenchimento integral ativado, mas Turma " + turma.id() + " tem " +
+                                   std::to_string(minutos_s1) + " min de aulas no 1º Semestre para " +
+                                   std::to_string(minutos_disponiveis) + " min de blocos letivos.");
+                }
+            }
+
+            if (validar_s2 && tem_s2) {
+                if (minutos_s2 > minutos_disponiveis) {
+                    res.addError("Turma " + turma.id() + " necessita de " + std::to_string(minutos_s2) +
+                                 " min de aula semanais no 2º Semestre, mas só possui " + std::to_string(minutos_disponiveis) +
+                                 " min disponíveis em sua jornada letiva.");
+                } else if (data.config().preenchimento_integral_jornada && minutos_s2 != minutos_disponiveis) {
+                    res.addWarning("Preenchimento integral ativado, mas Turma " + turma.id() + " tem " +
+                                   std::to_string(minutos_s2) + " min de aulas no 2º Semestre para " +
+                                   std::to_string(minutos_disponiveis) + " min de blocos letivos.");
+                }
+            }
         }
     }
 
