@@ -46,6 +46,7 @@ std::string AddLessonToScheduleDialog::aulaId() const {
 
 void AddLessonToScheduleDialog::setupUi() {
     setWindowTitle("Alocar Disciplina na Grade Semanal");
+    setWindowIcon(ModernTheme::icon("add"));
     setMinimumWidth(600);
     resize(640, 560);
 
@@ -134,7 +135,8 @@ void AddLessonToScheduleDialog::setupUi() {
     form->addRow("Semestre:", combo_semestre_);
 
     // Checkbox de Fixação (Pin)
-    chk_fixar_ = new QCheckBox("📌 Fixar aula na grade (bloquear para o otimizador automático)", this);
+    chk_fixar_ = new QCheckBox("Fixar aula na grade (bloquear para o otimizador automático)", this);
+    chk_fixar_->setIcon(ModernTheme::icon("pin"));
     chk_fixar_->setChecked(true);
     chk_fixar_->setStyleSheet("font-weight: 600; color: palette(highlight); margin-top: 4px;");
     form->addRow("", chk_fixar_);
@@ -159,7 +161,7 @@ void AddLessonToScheduleDialog::setupUi() {
     btn_cancelar_->setObjectName("btnSecondary");
     btn_layout->addWidget(btn_cancelar_);
 
-    btn_alocar_ = new QPushButton("Alocar Aula na Grade", this);
+    btn_alocar_ = new QPushButton(ModernTheme::icon("add"), "Alocar Aula na Grade", this);
     btn_alocar_->setObjectName("btnPrimary");
     btn_alocar_->setCursor(Qt::PointingHandCursor);
     btn_alocar_->setDefault(true);

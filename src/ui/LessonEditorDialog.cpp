@@ -4,6 +4,7 @@
  */
 
 #include "ui/LessonEditorDialog.h"
+#include "ui/ModernTheme.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -51,6 +52,7 @@ LessonEditorDialog::LessonEditorDialog(const std::vector<model::Professor>& prof
  * @brief Constrói os campos do formulário, controles de regime, turnos e seleção de salas.
  */
 void LessonEditorDialog::setupUi() {
+    setWindowIcon(ModernTheme::icon("disciplina"));
     setMinimumWidth(550);
     auto* main_layout = new QVBoxLayout(this);
     main_layout->setSpacing(14);
@@ -62,8 +64,8 @@ void LessonEditorDialog::setupUi() {
     form_layout->addRow("Nome da Disciplina:", txt_nome_);
 
     combo_regime_ = new QComboBox(this);
-    combo_regime_->addItem("📅 Anual (Ano Letivo Completo)", "ANUAL");
-    combo_regime_->addItem("📆 Semestral", "SEMESTRAL");
+    combo_regime_->addItem(ModernTheme::icon("calendar"), "Anual (Ano Letivo Completo)", "ANUAL");
+    combo_regime_->addItem(ModernTheme::icon("calendar"), "Semestral", "SEMESTRAL");
     form_layout->addRow("Regime:", combo_regime_);
 
     combo_semestre_ = new QComboBox(this);
@@ -194,7 +196,7 @@ void LessonEditorDialog::setupUi() {
     btn_box->addStretch();
     auto* btn_cancel = new QPushButton("Cancelar", this);
     btn_cancel->setObjectName("btnSecondary");
-    auto* btn_save = new QPushButton("Salvar Disciplina", this);
+    auto* btn_save = new QPushButton(ModernTheme::icon("save_file"), "Salvar Disciplina", this);
     btn_box->addWidget(btn_cancel);
     btn_box->addWidget(btn_save);
     main_layout->addLayout(btn_box);

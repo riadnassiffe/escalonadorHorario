@@ -1,10 +1,10 @@
-# Documentação do Modelo Matemático e Sistema de Escalonamento (EscalonadorGemini)
+# Documentação do Modelo Matemático e Sistema de Escalonamento (EscalonadoEscalonador de horário)
 
 ---
 
 ## 1. Introdução e Visão Geral
 
-O **EscalonadorGemini** é um sistema computacional de alto desempenho desenvolvido para a resolução do **Problema de Programação de Horários Universitário e Escolar** (*High School and University Timetabling Problem*), classificado na literatura de complexidade como **NP-difícil** (*NP-hard*).
+O **Escalonador de horário** é um sistema computacional de alto desempenho desenvolvido para a resolução do **Problema de Programação de Horários Universitário e Escolar** (*High School and University Timetabling Problem*), classificado na literatura de complexidade como **NP-difícil** (*NP-hard*).
 
 O núcleo do sistema foi implementado em **C++20** integrado ao ecossistema **Qt 6**, incorporando múltiplos paradigmas de resolução:
 1. **Programação por Restrições (CP-SAT)** via Google OR-Tools, utilizando busca guiada por conflitos (*Conflict-Driven Clause Learning* - CDCL) e propagadores dedicados de intervalos (*Interval Constraints* e `NoOverlap`);
@@ -370,7 +370,7 @@ A fim de elevar o sistema a um padrão profissional de uso diário, o gerenciame
 
 ## 12. Visão Geral do Modelo Completo e Catálogo de Restrições
 
-Esta seção consolida a formalização matemática integral do **EscalonadorGemini**. O problema de programação de horários é formulado como uma otimização com restrições rígidas inegociáveis e critérios de preferência configuráveis.
+Esta seção consolida a formalização matemática integral do **Escalonador de horário**. O problema de programação de horários é formulado como uma otimização com restrições rígidas inegociáveis e critérios de preferência configuráveis.
 
 Para facilitar a distinção:
 * **Restrições Rígidas (*Hard Constraints*)**: Devem ser estritamente atendidas. Caso alguma seja violada, a grade é considerada matematicamente infactível (*Infeasible*).
@@ -571,7 +571,7 @@ Para garantir previsibilidade e estabilidade na execução em diferentes servido
 
 ## 13. Conclusão
 
-O modelo matemático implementado no **EscalonadorGemini** consolida formalismo matemático rigoroso, eficiência computacional moderna com CP-SAT e flexibilidade operacional total para lidar com cenários escolares complexos envolvendo disciplinas anuais e semestrais, salas teóricas fixas, restrições pedagógicas e preferências docentes.
+O modelo matemático implementado no **Escalonador de horário** consolida formalismo matemático rigoroso, eficiência computacional moderna com CP-SAT e flexibilidade operacional total para lidar com cenários escolares complexos envolvendo disciplinas anuais e semestrais, salas teóricas fixas, restrições pedagógicas e preferências docentes.
 
 Com a arquitetura moderna de gerenciamento de dados implementada, o sistema une sofisticação técnica de Pesquisa Operacional a uma experiência do usuário fluida, com identificadores dinâmicos transparentes, remoção em massa de dados e controle visual ergonômico de jornadas e disponibilidades.
 

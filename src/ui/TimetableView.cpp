@@ -47,9 +47,9 @@ void TimetableView::setupUi() {
     top_panel->addWidget(lbl_mode);
 
     combo_view_type_ = new QComboBox(this);
-    combo_view_type_->addItem("Por Turma", 0);
-    combo_view_type_->addItem("Por Professor", 1);
-    combo_view_type_->addItem("Por Sala", 2);
+    combo_view_type_->addItem(ModernTheme::icon("turma"), "Por Turma", 0);
+    combo_view_type_->addItem(ModernTheme::icon("professor"), "Por Professor", 1);
+    combo_view_type_->addItem(ModernTheme::icon("room"), "Por Sala", 2);
     combo_view_type_->setMinimumWidth(160);
     top_panel->addWidget(combo_view_type_);
 
@@ -81,7 +81,8 @@ void TimetableView::setupUi() {
     top_panel->addSpacing(15);
 
     search_lesson_ = new QLineEdit(this);
-    search_lesson_->setPlaceholderText("🔍 Destacar aula/prof/sala...");
+    search_lesson_->addAction(ModernTheme::icon("search"), QLineEdit::LeadingPosition);
+    search_lesson_->setPlaceholderText("Destacar aula/prof/sala...");
     search_lesson_->setClearButtonEnabled(true);
     search_lesson_->setFixedWidth(220);
     search_lesson_->setToolTip("Digite para localizar e destacar aulas na grade semanal");
@@ -96,13 +97,13 @@ void TimetableView::setupUi() {
 
     top_panel->addSpacing(10);
 
-    btn_add_lesson_ = new QPushButton("➕ Alocar Disciplina...", this);
+    btn_add_lesson_ = new QPushButton(ModernTheme::icon("add"), "Alocar Disciplina...", this);
     btn_add_lesson_->setObjectName("btnPrimary");
     btn_add_lesson_->setCursor(Qt::PointingHandCursor);
     btn_add_lesson_->setToolTip("Adiciona uma ocorrência de disciplina manualmente na grade semanal");
     top_panel->addWidget(btn_add_lesson_);
 
-    btn_clear_timetable_ = new QPushButton("🗑️ Limpar Grade...", this);
+    btn_clear_timetable_ = new QPushButton(ModernTheme::icon("delete"), "Limpar Grade...", this);
     btn_clear_timetable_->setObjectName("btnSecondary");
     btn_clear_timetable_->setCursor(Qt::PointingHandCursor);
     btn_clear_timetable_->setToolTip("Remove todas as alocações da grade semanal para iniciar uma nova configuração inicial");
@@ -369,7 +370,7 @@ void TimetableView::renderTimetable() {
 
             if (is_recess_for_day) {
                 int dur = (end_s - start_s) * model::SLOT_MINUTES;
-                auto* item = new QTableWidgetItem(QString("☕ INTERVALO (%1 min)").arg(dur));
+                auto* item = new QTableWidgetItem(ModernTheme::icon("coffee"), QString("☕ INTERVALO (%1 min)").arg(dur));
                 item->setTextAlignment(Qt::AlignCenter);
                 item->setBackground(QColor(245, 158, 11, 40));
                 item->setForeground(QColor("#f59e0b"));
@@ -613,13 +614,13 @@ void TimetableView::onCellContextMenu(const QPoint& pos) {
         if (text == "—") return;
 
         QMenu menu(this);
-        auto* add_act = menu.addAction("➕ Alocar Disciplina Neste Horário...");
+        auto* add_act = menu.addAction(ModernTheme::icon("add"), "Alocar Disciplina Neste Horário...");
         connect(add_act, &QAction::triggered, [this, row, col]() {
             alocarAulaManual(row, col);
         });
 
         menu.addSeparator();
-        auto* clear_act = menu.addAction("🗑️ Limpar Toda a Grade...");
+        auto* clear_act = menu.addAction(ModernTheme::icon("delete"), "Limpar Toda a Grade...");
         connect(clear_act, &QAction::triggered, this, &TimetableView::limparGradeCompleta);
 
         menu.exec(table_->viewport()->mapToGlobal(pos));
@@ -633,19 +634,19 @@ void TimetableView::onCellContextMenu(const QPoint& pos) {
 
     QMenu menu(this);
 
-    auto* move_act = menu.addAction("🔄 Mover Horário / Sala...");
+    auto* move_act = menu.addAction(ModernTheme::icon("swap"), "Mover Horário / Sala...");
     connect(move_act, &QAction::triggered, [this, aula_id]() {
         moverAulaManual(aula_id);
     });
 
-    auto* room_act = menu.addAction("🏢 Alterar Sala de Aula...");
+    auto* room_act = menu.addAction(ModernTheme::icon("room"), "Alterar Sala de Aula...");
     connect(room_act, &QAction::triggered, [this, aula_id]() {
         mudarSalaManual(aula_id);
     });
 
     menu.addSeparator();
 
-    auto* add_act = menu.addAction("➕ Alocar Outra Disciplina na Grade...");
+    auto* add_act = menu.addAction(ModernTheme::icon("add"), "Alocar Outra Disciplina na Grade...");
     connect(add_act, &QAction::triggered, [this]() {
         alocarAulaManual(-1, -1);
     });
@@ -653,7 +654,7 @@ void TimetableView::onCellContextMenu(const QPoint& pos) {
     menu.addSeparator();
 
     if (aula_model->isPinned()) {
-        auto* unpin_act = menu.addAction("🔓 Desafixar Horário Desta Aula");
+        auto* unpin_act = menu.addAction(ModernTheme::icon("unpin"), "Desafixar Horário Desta Aula");
         connect(unpin_act, &QAction::triggered, [this, aid]() {
             auto* a_model = data_.findAula(aid);
             auto* a_aloc = data_.grade().findAula(aid);
@@ -665,7 +666,7 @@ void TimetableView::onCellContextMenu(const QPoint& pos) {
             }
         });
     } else {
-        auto* pin_act = menu.addAction("📌 Fixar Horário Desta Aula (Bloquear para Reotimização)");
+        auto* pin_act = menu.addAction(ModernTheme::icon("pin"), "Fixar Horário Desta Aula (Bloquear para Reotimização)");
         connect(pin_act, &QAction::triggered, [this, aid]() {
             auto* a_model = data_.findAula(aid);
             auto* a_aloc = data_.grade().findAula(aid);
@@ -681,7 +682,7 @@ void TimetableView::onCellContextMenu(const QPoint& pos) {
         });
     }
 
-    auto* desalocar_act = menu.addAction("❌ Desalocar Aula da Grade");
+    auto* desalocar_act = menu.addAction(ModernTheme::icon("delete"), "Desalocar Aula da Grade");
     connect(desalocar_act, &QAction::triggered, [this, aid]() {
         auto resp = QMessageBox::question(this, "Confirmar Desalocação",
             "Deseja remover esta aula da grade de horários?\n(A aula ficará como não alocada até a próxima otimização)",
@@ -704,7 +705,7 @@ void TimetableView::onCellContextMenu(const QPoint& pos) {
     });
 
     menu.addSeparator();
-    auto* pin_all_act = menu.addAction("📌 Fixar Todas as Aulas da Grade Atual (Bloquear para Próximo Solver)");
+    auto* pin_all_act = menu.addAction(ModernTheme::icon("pin"), "Fixar Todas as Aulas da Grade Atual (Bloquear para Próximo Solver)");
     connect(pin_all_act, &QAction::triggered, [this]() {
         for (auto& aloc : data_.grade().alocacoes()) {
             auto* a_model = data_.findAula(aloc.aula_id);
@@ -719,7 +720,7 @@ void TimetableView::onCellContextMenu(const QPoint& pos) {
         renderTimetable();
     });
 
-    auto* unpin_all_act = menu.addAction("🔓 Desafixar Todas as Aulas da Grade Atual");
+    auto* unpin_all_act = menu.addAction(ModernTheme::icon("unpin"), "Desafixar Todas as Aulas da Grade Atual");
     connect(unpin_all_act, &QAction::triggered, [this]() {
         for (auto& aloc : data_.grade().alocacoes()) {
             auto* a_model = data_.findAula(aloc.aula_id);
@@ -732,7 +733,7 @@ void TimetableView::onCellContextMenu(const QPoint& pos) {
     });
 
     menu.addSeparator();
-    auto* clear_act = menu.addAction("🗑️ Limpar Toda a Grade...");
+    auto* clear_act = menu.addAction(ModernTheme::icon("delete"), "Limpar Toda a Grade...");
     connect(clear_act, &QAction::triggered, this, &TimetableView::limparGradeCompleta);
 
     menu.exec(table_->viewport()->mapToGlobal(pos));

@@ -7,6 +7,7 @@
 
 #include <QString>
 #include <QApplication>
+#include <QIcon>
 
 namespace scheduler::ui {
 
@@ -60,6 +61,20 @@ public:
      * @return true se o tema atual for escuro; false se for claro.
      */
     static bool isDarkTheme();
+
+    /**
+     * @brief Resolve o caminho do arquivo de imagem na pasta img/ do projeto.
+     * @param filename Nome do arquivo na pasta img/ (ex: "calendar.svg" ou "calendar").
+     * @return Caminho encontrado para o arquivo na pasta img/.
+     */
+    static QString iconPath(const QString& filename);
+
+    /**
+     * @brief Carrega um QIcon a partir da pasta img/ do projeto.
+     * @param name Nome do ícone na pasta img/ (ex: "calendar" ou "calendar.svg").
+     * @return QIcon carregado.
+     */
+    static QIcon icon(const QString& name);
 };
 
 } // namespace scheduler::ui

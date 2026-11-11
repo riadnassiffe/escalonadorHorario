@@ -47,6 +47,7 @@ MainWindow::MainWindow(QWidget* parent)
  */
 void MainWindow::setupUi() {
     setWindowTitle("Escalonador Inteligente de Horários Escolares");
+    setWindowIcon(ModernTheme::icon("app_icon"));
     resize(1300, 850);
 
     setupMenuBar();
@@ -70,13 +71,13 @@ void MainWindow::setupUi() {
     });
     config_widget_ = new ConfigWidget(this);
 
-    tab_widget_->addTab(timetable_view_, "📅 Grade Semanal");
-    tab_widget_->addTab(createProfessoresTab(), "👨‍🏫 Professores");
-    tab_widget_->addTab(createTurmasTab(), "🎓 Turmas & Jornadas");
-    tab_widget_->addTab(createSalasTab(), "🏫 Salas & Laboratórios");
-    tab_widget_->addTab(createDisciplinasTab(), "📚 Disciplinas");
-    tab_widget_->addTab(config_widget_, "⚙️ Parâmetros da Otimização");
-    tab_widget_->addTab(createLogsTab(), "📝 Diagnóstico & Logs");
+    tab_widget_->addTab(timetable_view_, ModernTheme::icon("calendar"), "Grade Semanal");
+    tab_widget_->addTab(createProfessoresTab(), ModernTheme::icon("professor"), "Professores");
+    tab_widget_->addTab(createTurmasTab(), ModernTheme::icon("turma"), "Turmas & Jornadas");
+    tab_widget_->addTab(createSalasTab(), ModernTheme::icon("room"), "Salas & Laboratórios");
+    tab_widget_->addTab(createDisciplinasTab(), ModernTheme::icon("disciplina"), "Disciplinas");
+    tab_widget_->addTab(config_widget_, ModernTheme::icon("settings"), "Parâmetros da Otimização");
+    tab_widget_->addTab(createLogsTab(), ModernTheme::icon("logs"), "Diagnóstico & Logs");
 
     main_layout->addWidget(tab_widget_);
     setCentralWidget(central_widget);
@@ -94,25 +95,25 @@ void MainWindow::setupUi() {
  */
 void MainWindow::setupMenuBar() {
     auto* menu_arquivo = menuBar()->addMenu("&Arquivo");
-    menu_arquivo->addAction("Novo Projeto", QKeySequence::New, this, &MainWindow::onNewProject);
-    menu_arquivo->addAction("Abrir JSON...", QKeySequence::Open, this, &MainWindow::onOpenFile);
-    menu_arquivo->addAction("Salvar JSON...", QKeySequence::Save, this, &MainWindow::onSaveFile);
-    menu_arquivo->addAction("Carregar Exemplo Padrão", this, &MainWindow::onLoadDefaultExample);
+    menu_arquivo->addAction(ModernTheme::icon("new_project"), "Novo Projeto", QKeySequence::New, this, &MainWindow::onNewProject);
+    menu_arquivo->addAction(ModernTheme::icon("open_file"), "Abrir JSON...", QKeySequence::Open, this, &MainWindow::onOpenFile);
+    menu_arquivo->addAction(ModernTheme::icon("save_file"), "Salvar JSON...", QKeySequence::Save, this, &MainWindow::onSaveFile);
+    menu_arquivo->addAction(ModernTheme::icon("example"), "Carregar Exemplo Padrão", this, &MainWindow::onLoadDefaultExample);
     menu_arquivo->addSeparator();
-    menu_arquivo->addAction("Exportar Grade HTML...", this, &MainWindow::onExportHtml);
-    menu_arquivo->addAction("Exportar Grade CSV...", this, &MainWindow::onExportCsv);
+    menu_arquivo->addAction(ModernTheme::icon("export_html"), "Exportar Grade HTML...", this, &MainWindow::onExportHtml);
+    menu_arquivo->addAction(ModernTheme::icon("export_csv"), "Exportar Grade CSV...", this, &MainWindow::onExportCsv);
     menu_arquivo->addSeparator();
     menu_arquivo->addAction("Sair", QKeySequence::Quit, this, &QWidget::close);
 
     auto* menu_grade = menuBar()->addMenu("&Grade");
-    auto* act_alocar = menu_grade->addAction("➕ Alocar Disciplina Manualmente...", this, [this]() {
+    auto* act_alocar = menu_grade->addAction(ModernTheme::icon("add"), "Alocar Disciplina Manualmente...", this, [this]() {
         tab_widget_->setCurrentWidget(timetable_view_);
         timetable_view_->alocarAulaManual(-1, -1);
     });
     act_alocar->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_M));
 
     menu_grade->addSeparator();
-    menu_grade->addAction("📌 Fixar Todas as Aulas da Grade", this, [this]() {
+    menu_grade->addAction(ModernTheme::icon("pin"), "Fixar Todas as Aulas da Grade", this, [this]() {
         for (auto& aloc : data_.grade().alocacoes()) {
             auto* a_model = data_.findAula(aloc.aula_id);
             if (a_model) {
@@ -126,7 +127,7 @@ void MainWindow::setupMenuBar() {
         timetable_view_->refreshView();
         updateKpiBanner();
     });
-    menu_grade->addAction("🔓 Desafixar Todas as Aulas da Grade", this, [this]() {
+    menu_grade->addAction(ModernTheme::icon("unpin"), "Desafixar Todas as Aulas da Grade", this, [this]() {
         for (auto& aloc : data_.grade().alocacoes()) {
             auto* a_model = data_.findAula(aloc.aula_id);
             if (a_model) {
@@ -138,13 +139,13 @@ void MainWindow::setupMenuBar() {
         updateKpiBanner();
     });
     menu_grade->addSeparator();
-    menu_grade->addAction("🗑️ Limpar Toda a Grade...", this, [this]() {
+    menu_grade->addAction(ModernTheme::icon("delete"), "Limpar Toda a Grade...", this, [this]() {
         timetable_view_->limparGradeCompleta();
         updateKpiBanner();
     });
 
     auto* menu_exibir = menuBar()->addMenu("&Exibir");
-    auto* menu_tema = menu_exibir->addMenu("🎨 &Tema Visual");
+    auto* menu_tema = menu_exibir->addMenu(ModernTheme::icon("theme"), "&Tema Visual");
 
     auto* grp_tema = new QActionGroup(this);
     grp_tema->setExclusive(true);
@@ -180,7 +181,9 @@ void MainWindow::setupToolBar() {
 
     auto* btn_optimize = new QToolButton(toolbar);
     btn_optimize->setObjectName("btnOptimize");
-    btn_optimize->setText("⚡ OTIMIZAR GRADE");
+    btn_optimize->setIcon(ModernTheme::icon("optimize"));
+    btn_optimize->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    btn_optimize->setText("OTIMIZAR GRADE");
     btn_optimize->setToolTip("Selecionar algoritmo e otimizar grade horária escolar (Seção 4 & 7)");
     connect(btn_optimize, &QToolButton::clicked, this, &MainWindow::onOptimize);
     toolbar->addWidget(btn_optimize);
@@ -188,21 +191,29 @@ void MainWindow::setupToolBar() {
     toolbar->addSeparator();
 
     auto* btn_new = new QToolButton(toolbar);
+    btn_new->setIcon(ModernTheme::icon("new_project"));
+    btn_new->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     btn_new->setText("Novo Projeto");
     connect(btn_new, &QToolButton::clicked, this, &MainWindow::onNewProject);
     toolbar->addWidget(btn_new);
 
     auto* btn_open = new QToolButton(toolbar);
+    btn_open->setIcon(ModernTheme::icon("open_file"));
+    btn_open->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     btn_open->setText("Abrir JSON");
     connect(btn_open, &QToolButton::clicked, this, &MainWindow::onOpenFile);
     toolbar->addWidget(btn_open);
 
     auto* btn_save = new QToolButton(toolbar);
+    btn_save->setIcon(ModernTheme::icon("save_file"));
+    btn_save->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     btn_save->setText("Salvar JSON");
     connect(btn_save, &QToolButton::clicked, this, &MainWindow::onSaveFile);
     toolbar->addWidget(btn_save);
 
     auto* btn_example = new QToolButton(toolbar);
+    btn_example->setIcon(ModernTheme::icon("example"));
+    btn_example->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     btn_example->setText("Carregar Exemplo Padrão");
     btn_example->setToolTip("Carrega o cenário acadêmico completo com 45/50 min, turmas, laboratórios e preferências");
     connect(btn_example, &QToolButton::clicked, this, &MainWindow::onLoadDefaultExample);
@@ -211,12 +222,16 @@ void MainWindow::setupToolBar() {
     toolbar->addSeparator();
 
     auto* btn_export_html = new QToolButton(toolbar);
+    btn_export_html->setIcon(ModernTheme::icon("export_html"));
+    btn_export_html->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     btn_export_html->setText("Exportar HTML");
     btn_export_html->setToolTip("Gera relatório visual em HTML pronto para impressão");
     connect(btn_export_html, &QToolButton::clicked, this, &MainWindow::onExportHtml);
     toolbar->addWidget(btn_export_html);
 
     auto* btn_export_csv = new QToolButton(toolbar);
+    btn_export_csv->setIcon(ModernTheme::icon("export_csv"));
+    btn_export_csv->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     btn_export_csv->setText("Exportar CSV");
     connect(btn_export_csv, &QToolButton::clicked, this, &MainWindow::onExportCsv);
     toolbar->addWidget(btn_export_csv);
@@ -294,10 +309,10 @@ QWidget* MainWindow::createProfessoresTab() {
     layout->setContentsMargins(10, 10, 10, 10);
 
     auto* btn_bar = new QHBoxLayout();
-    auto* btn_add = new QPushButton("+ Novo Professor", widget);
-    auto* btn_edit = new QPushButton("Editar", widget);
+    auto* btn_add = new QPushButton(ModernTheme::icon("add"), "Novo Professor", widget);
+    auto* btn_edit = new QPushButton(ModernTheme::icon("edit"), "Editar", widget);
     btn_edit->setObjectName("btnSecondary");
-    auto* btn_rem = new QPushButton("Remover", widget);
+    auto* btn_rem = new QPushButton(ModernTheme::icon("delete"), "Remover", widget);
     btn_rem->setObjectName("btnDanger");
     btn_rem->setToolTip("Remover professor(es) selecionado(s) em massa (Delete)");
     btn_bar->addWidget(btn_add);
@@ -338,10 +353,10 @@ QWidget* MainWindow::createTurmasTab() {
     layout->setContentsMargins(10, 10, 10, 10);
 
     auto* btn_bar = new QHBoxLayout();
-    auto* btn_add = new QPushButton("+ Nova Turma", widget);
-    auto* btn_edit = new QPushButton("Editar", widget);
+    auto* btn_add = new QPushButton(ModernTheme::icon("add"), "Nova Turma", widget);
+    auto* btn_edit = new QPushButton(ModernTheme::icon("edit"), "Editar", widget);
     btn_edit->setObjectName("btnSecondary");
-    auto* btn_rem = new QPushButton("Remover", widget);
+    auto* btn_rem = new QPushButton(ModernTheme::icon("delete"), "Remover", widget);
     btn_rem->setObjectName("btnDanger");
     btn_rem->setToolTip("Remover turma(s) selecionada(s) em massa (Delete)");
     btn_bar->addWidget(btn_add);
@@ -382,10 +397,10 @@ QWidget* MainWindow::createSalasTab() {
     layout->setContentsMargins(10, 10, 10, 10);
 
     auto* btn_bar = new QHBoxLayout();
-    auto* btn_add = new QPushButton("+ Nova Sala", widget);
-    auto* btn_edit = new QPushButton("Editar", widget);
+    auto* btn_add = new QPushButton(ModernTheme::icon("add"), "Nova Sala", widget);
+    auto* btn_edit = new QPushButton(ModernTheme::icon("edit"), "Editar", widget);
     btn_edit->setObjectName("btnSecondary");
-    auto* btn_rem = new QPushButton("Remover", widget);
+    auto* btn_rem = new QPushButton(ModernTheme::icon("delete"), "Remover", widget);
     btn_rem->setObjectName("btnDanger");
     btn_rem->setToolTip("Remover sala(s) selecionada(s) em massa (Delete)");
     btn_bar->addWidget(btn_add);
@@ -426,10 +441,10 @@ QWidget* MainWindow::createDisciplinasTab() {
     layout->setContentsMargins(10, 10, 10, 10);
 
     auto* btn_bar = new QHBoxLayout();
-    auto* btn_add = new QPushButton("+ Nova Disciplina", widget);
-    auto* btn_edit = new QPushButton("Editar", widget);
+    auto* btn_add = new QPushButton(ModernTheme::icon("add"), "Nova Disciplina", widget);
+    auto* btn_edit = new QPushButton(ModernTheme::icon("edit"), "Editar", widget);
     btn_edit->setObjectName("btnSecondary");
-    auto* btn_rem = new QPushButton("Remover", widget);
+    auto* btn_rem = new QPushButton(ModernTheme::icon("delete"), "Remover", widget);
     btn_rem->setObjectName("btnDanger");
     btn_rem->setToolTip("Remover disciplina(s) selecionada(s) em massa (Delete)");
     btn_bar->addWidget(btn_add);
@@ -469,9 +484,9 @@ QWidget* MainWindow::createLogsTab() {
     auto* layout = new QVBoxLayout(widget);
     layout->setContentsMargins(10, 10, 10, 10);
 
-    auto* btn_clear = new QPushButton("Limpar Logs", widget);
+    auto* btn_clear = new QPushButton(ModernTheme::icon("delete"), "Limpar Logs", widget);
     btn_clear->setObjectName("btnSecondary");
-    btn_clear->setFixedWidth(120);
+    btn_clear->setFixedWidth(135);
     layout->addWidget(btn_clear);
 
     txt_logs_ = new QPlainTextEdit(widget);

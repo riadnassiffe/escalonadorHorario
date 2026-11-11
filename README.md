@@ -134,7 +134,7 @@ cmake --build build -j$(nproc)
 ### 3. Executar o Software com Interface Gráfica
 
 ```bash
-./build/EscalonadorGemini
+./build/escalonadorHorarios
 ```
 
 ### 4. Executar em Modo de Teste Automatizado / CLI
@@ -143,13 +143,13 @@ O executável possui suporte direto a execução em linha de comando para valida
 
 ```bash
 # Executa com o cenário acadêmico padrão:
-./build/EscalonadorGemini --test
+./build/escalonadorHorarios --test
 
 # Executa definindo algoritmo, limite de tempo e teto de memória RAM (em MB):
-./build/EscalonadorGemini --test --cpsat --time-limit 30 --max-memory 4096
+./build/escalonadorHorarios --test --cpsat --time-limit 30 --max-memory 4096
 
 # Ou com um arquivo JSON específico:
-./build/EscalonadorGemini --test examples/exemplo_instituicao.json
+./build/escalonadorHorarios --test examples/exemplo_instituicao.json
 ```
 
 Ao finalizar, os relatórios `grade_horarios.html` e `grade_horarios.csv` são gerados automaticamente.

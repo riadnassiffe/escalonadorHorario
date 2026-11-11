@@ -4,6 +4,7 @@
  */
 
 #include "ui/ProfessorEditorDialog.h"
+#include "ui/ModernTheme.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -49,6 +50,7 @@ ProfessorEditorDialog::ProfessorEditorDialog(QWidget* parent, const model::Profe
  * @brief Constrói a interface com abas de dados básicos, preferências e grade semanal.
  */
 void ProfessorEditorDialog::setupUi() {
+    setWindowIcon(ModernTheme::icon("professor"));
     setMinimumWidth(750);
     setMinimumHeight(580);
     resize(780, 630);
@@ -109,23 +111,23 @@ void ProfessorEditorDialog::setupUi() {
     lbl_pre_tit->setStyleSheet("font-weight: bold; color: palette(highlight);");
     bar_presets->addWidget(lbl_pre_tit);
 
-    auto* btn_def_m = new QPushButton("🌅 Manhã", tab_disp);
+    auto* btn_def_m = new QPushButton(ModernTheme::icon("morning"), "Manhã", tab_disp);
     btn_def_m->setObjectName("btnSecondary");
     btn_def_m->setToolTip("Preencher toda a semana com horário matutino (07:30 às 12:00)");
 
-    auto* btn_def_t = new QPushButton("☀️ Tarde", tab_disp);
+    auto* btn_def_t = new QPushButton(ModernTheme::icon("afternoon"), "Tarde", tab_disp);
     btn_def_t->setObjectName("btnSecondary");
     btn_def_t->setToolTip("Preencher toda a semana com horário vespertino (13:15 às 18:00)");
 
-    auto* btn_def_int = new QPushButton("🌅+☀️ Integral", tab_disp);
+    auto* btn_def_int = new QPushButton(ModernTheme::icon("integral"), "Integral", tab_disp);
     btn_def_int->setObjectName("btnSecondary");
     btn_def_int->setToolTip("Preencher toda a semana com horário integral (07:30 às 18:00)");
 
-    auto* btn_def_n = new QPushButton("🌙 Noite", tab_disp);
+    auto* btn_def_n = new QPushButton(ModernTheme::icon("evening"), "Noite", tab_disp);
     btn_def_n->setObjectName("btnSecondary");
     btn_def_n->setToolTip("Preencher toda a semana com horário noturno (18:30 às 22:30)");
 
-    auto* btn_def_all = new QPushButton("🌟 Dia Todo", tab_disp);
+    auto* btn_def_all = new QPushButton(ModernTheme::icon("integral"), "Dia Todo", tab_disp);
     btn_def_all->setObjectName("btnSecondary");
     btn_def_all->setToolTip("Preencher toda a semana com dia completo (07:00 às 22:30)");
 
@@ -145,10 +147,10 @@ void ProfessorEditorDialog::setupUi() {
 
     // Barra de Ações para Intervalos
     auto* bar_actions = new QHBoxLayout();
-    auto* btn_add = new QPushButton("➕ Adicionar Intervalo", tab_disp);
-    auto* btn_rem = new QPushButton("➖ Remover Selecionado", tab_disp);
+    auto* btn_add = new QPushButton(ModernTheme::icon("add"), "Adicionar Intervalo", tab_disp);
+    auto* btn_rem = new QPushButton(ModernTheme::icon("delete"), "Remover Selecionado", tab_disp);
     btn_rem->setObjectName("btnSecondary");
-    auto* btn_clear = new QPushButton("🗑️ Limpar Todos", tab_disp);
+    auto* btn_clear = new QPushButton(ModernTheme::icon("delete"), "Limpar Todos", tab_disp);
     btn_clear->setObjectName("btnSecondary");
 
     bar_actions->addWidget(btn_add);
@@ -176,7 +178,7 @@ void ProfessorEditorDialog::setupUi() {
     table_disp_->setAlternatingRowColors(true);
     layout_tab_disp->addWidget(table_disp_);
 
-    main_tabs->addTab(tab_disp, "⏰ Horários de Disponibilidade (Início / Fim por Dia)");
+    main_tabs->addTab(tab_disp, ModernTheme::icon("calendar"), "Horários de Disponibilidade (Início / Fim por Dia)");
 
     // =========================================================================
     // ABA 2: TURNOS PRETENDIDOS & PREFERÊNCIAS
@@ -337,7 +339,7 @@ void ProfessorEditorDialog::setupUi() {
     scroll_prefs->setWidget(container_prefs);
     layout_tab_prefs->addWidget(scroll_prefs);
 
-    main_tabs->addTab(tab_prefs, "⭐ Turnos Pretendidos && Preferências");
+    main_tabs->addTab(tab_prefs, ModernTheme::icon("settings"), "Turnos Pretendidos && Preferências");
 
     root_layout->addWidget(main_tabs);
 
@@ -346,7 +348,7 @@ void ProfessorEditorDialog::setupUi() {
     btn_box->addStretch();
     auto* btn_cancel = new QPushButton("Cancelar", this);
     btn_cancel->setObjectName("btnSecondary");
-    auto* btn_save = new QPushButton("Salvar Professor", this);
+    auto* btn_save = new QPushButton(ModernTheme::icon("save_file"), "Salvar Professor", this);
     btn_box->addWidget(btn_cancel);
     btn_box->addWidget(btn_save);
     root_layout->addLayout(btn_box);

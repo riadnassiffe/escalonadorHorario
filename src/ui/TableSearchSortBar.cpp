@@ -5,6 +5,7 @@
 
 #include "ui/TableSearchSortBar.h"
 #include "ui/SmartTableWidgetItem.h"
+#include "ui/ModernTheme.h"
 #include <QHBoxLayout>
 #include <QHeaderView>
 
@@ -22,7 +23,8 @@ TableSearchSortBar::TableSearchSortBar(QWidget* parent)
 
     // Campo de busca
     search_edit_ = new QLineEdit(this);
-    search_edit_->setPlaceholderText("🔍 Buscar...");
+    search_edit_->addAction(ModernTheme::icon("search"), QLineEdit::LeadingPosition);
+    search_edit_->setPlaceholderText("Buscar...");
     search_edit_->setClearButtonEnabled(true);
     search_edit_->setMinimumWidth(180);
     search_edit_->setMaximumWidth(260);
@@ -81,7 +83,7 @@ void TableSearchSortBar::setupWithTable(QTableWidget* table,
     entityPlural_ = entityPlural;
     current_sort_order_ = defaultOrder;
 
-    search_edit_->setPlaceholderText(QString("🔍 Buscar %1...").arg(entityPlural_));
+    search_edit_->setPlaceholderText(QString("Buscar %1...").arg(entityPlural_));
 
     if (!table_) return;
 

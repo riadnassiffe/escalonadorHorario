@@ -30,6 +30,7 @@ OptimizeDialog::OptimizeDialog(const model::OptimizationConfig& current_config, 
  */
 void OptimizeDialog::setupUi() {
     setWindowTitle("Otimizar Grade - Seleção de Algoritmo");
+    setWindowIcon(ModernTheme::icon("optimize"));
     setMinimumWidth(560);
     setModal(true);
 
@@ -232,7 +233,7 @@ void OptimizeDialog::setupUi() {
     btn_cancel->setObjectName("btnSecondary");
     connect(btn_cancel, &QPushButton::clicked, this, &QDialog::reject);
 
-    auto* btn_start = new QPushButton("⚡ Iniciar Otimização", this);
+    auto* btn_start = new QPushButton(ModernTheme::icon("optimize"), "Iniciar Otimização", this);
     btn_start->setObjectName("btnOptimize");
     btn_start->setDefault(true);
     connect(btn_start, &QPushButton::clicked, this, &QDialog::accept);

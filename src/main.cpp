@@ -201,7 +201,7 @@ int main(int argc, char* argv[]) {
         main_win->show();
         main_win->resize(1280, 800);
         app.processEvents();
-        main_win->grab().save("/home/riadmn/.gemini/antigravity-ide/brain/623a91fa-fc3a-4352-bebe-6ffdd07616fb/kde_mainwindow.png");
+        main_win->grab().save("img/kde_mainwindow.png");
 
         // 2. Professor Dialog
         const scheduler::model::Professor* prof = inst.professores().empty() ? nullptr : &inst.professores().front();
@@ -209,7 +209,7 @@ int main(int argc, char* argv[]) {
         prof_dlg->show();
         prof_dlg->resize(760, 720);
         app.processEvents();
-        prof_dlg->grab().save("/home/riadmn/.gemini/antigravity-ide/brain/623a91fa-fc3a-4352-bebe-6ffdd07616fb/kde_prof_dialog.png");
+        prof_dlg->grab().save("img/kde_prof_dialog.png");
 
         // 3. Turma Dialog
         const scheduler::model::Turma* turma = inst.turmas().empty() ? nullptr : &inst.turmas().front();
@@ -217,7 +217,7 @@ int main(int argc, char* argv[]) {
         turma_dlg->show();
         turma_dlg->resize(820, 750);
         app.processEvents();
-        turma_dlg->grab().save("/home/riadmn/.gemini/antigravity-ide/brain/623a91fa-fc3a-4352-bebe-6ffdd07616fb/kde_turma_dialog.png");
+        turma_dlg->grab().save("img/kde_turma_dialog.png");
 
         // 4. Optimize Dialog
         scheduler::model::OptimizationConfig cfg;
@@ -225,7 +225,7 @@ int main(int argc, char* argv[]) {
         opt_dlg->show();
         opt_dlg->resize(600, 520);
         app.processEvents();
-        opt_dlg->grab().save("/home/riadmn/.gemini/antigravity-ide/brain/623a91fa-fc3a-4352-bebe-6ffdd07616fb/kde_optimize_dialog.png");
+        opt_dlg->grab().save("img/kde_optimize_dialog.png");
 
         std::cout << "[OK] Capturas salvas com sucesso no tema nativo do sistema / KDE." << std::endl;
         return 0;
@@ -233,9 +233,9 @@ int main(int argc, char* argv[]) {
 
     // Modo Interface Gráfica Qt
     QApplication app(argc, argv);
-    app.setApplicationName("EscalonadorGemini");
+    app.setApplicationName("EscalonadoEscalonador_de_horario");
     app.setApplicationDisplayName("Escalonador Inteligente de Horários - Google OR-Tools CP-SAT");
-    app.setOrganizationName("EscalonadorGemini");
+    app.setOrganizationName("EscalonadoEscalonador_de_horario");
     app.setApplicationVersion("1.0.0");
 
     // Aplica tema visual nativo do sistema / KDE Plasma

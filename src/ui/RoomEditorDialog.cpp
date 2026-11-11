@@ -4,6 +4,7 @@
  */
 
 #include "ui/RoomEditorDialog.h"
+#include "ui/ModernTheme.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -42,6 +43,7 @@ RoomEditorDialog::RoomEditorDialog(QWidget* parent, const model::Room* room, con
  * @brief Monta o layout de campos e botões de confirmação.
  */
 void RoomEditorDialog::setupUi() {
+    setWindowIcon(ModernTheme::icon("room"));
     setMinimumWidth(450);
     auto* main_layout = new QVBoxLayout(this);
     main_layout->setSpacing(14);
@@ -74,7 +76,7 @@ void RoomEditorDialog::setupUi() {
     btn_box->addStretch();
     auto* btn_cancel = new QPushButton("Cancelar", this);
     btn_cancel->setObjectName("btnSecondary");
-    auto* btn_save = new QPushButton("Salvar Sala", this);
+    auto* btn_save = new QPushButton(ModernTheme::icon("save_file"), "Salvar Sala", this);
     btn_box->addWidget(btn_cancel);
     btn_box->addWidget(btn_save);
     main_layout->addLayout(btn_box);

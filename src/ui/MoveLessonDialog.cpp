@@ -27,6 +27,7 @@ MoveLessonDialog::MoveLessonDialog(model::InstitutionData& data,
                                    QWidget* parent)
     : QDialog(parent), data_(data), aula_id_(aula_id), available_slots_(available_slots) {
     setWindowTitle("Mover Aula Manualmente");
+    setWindowIcon(ModernTheme::icon("swap"));
     setMinimumWidth(500);
     setupUi();
     updateValidationStatus();
@@ -147,7 +148,7 @@ void MoveLessonDialog::setupUi() {
     connect(btn_cancelar, &QPushButton::clicked, this, &QDialog::reject);
     btn_layout->addWidget(btn_cancelar);
 
-    btn_mover_ = new QPushButton("Salvar Alterações", this);
+    btn_mover_ = new QPushButton(ModernTheme::icon("save_file"), "Salvar Alterações", this);
     btn_mover_->setStyleSheet("font-weight: bold; padding: 6px 16px;");
     btn_mover_->setDefault(true);
     connect(btn_mover_, &QPushButton::clicked, this, &QDialog::accept);

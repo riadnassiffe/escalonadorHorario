@@ -4,6 +4,7 @@
  */
 
 #include "ui/TurmaEditorDialog.h"
+#include "ui/ModernTheme.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -53,6 +54,7 @@ TurmaEditorDialog::TurmaEditorDialog(const std::vector<model::Room>& salas_dispo
  * @brief Monta a interface de dados da turma, abas por dia da semana e política de salas teóricas.
  */
 void TurmaEditorDialog::setupUi() {
+    setWindowIcon(ModernTheme::icon("turma"));
     setMinimumWidth(750);
     setMinimumHeight(580);
     resize(790, 630);
@@ -107,19 +109,19 @@ void TurmaEditorDialog::setupUi() {
     lbl_rapido->setStyleSheet("font-weight: bold; color: palette(highlight);");
     bar_semana->addWidget(lbl_rapido);
 
-    auto* btn_all_manha = new QPushButton("🌅 Toda Manhã", tab_jornadas);
+    auto* btn_all_manha = new QPushButton(ModernTheme::icon("morning"), "Toda Manhã", tab_jornadas);
     btn_all_manha->setObjectName("btnSecondary");
     btn_all_manha->setToolTip("Aplica horário matutino (07:30 - 11:45) para todos os dias");
 
-    auto* btn_all_tarde = new QPushButton("☀️ Toda Tarde", tab_jornadas);
+    auto* btn_all_tarde = new QPushButton(ModernTheme::icon("afternoon"), "Toda Tarde", tab_jornadas);
     btn_all_tarde->setObjectName("btnSecondary");
     btn_all_tarde->setToolTip("Aplica horário vespertino (13:15 - 17:30) para todos os dias");
 
-    auto* btn_all_integral = new QPushButton("🌅+☀️ Toda Integral", tab_jornadas);
+    auto* btn_all_integral = new QPushButton(ModernTheme::icon("integral"), "Toda Integral", tab_jornadas);
     btn_all_integral->setObjectName("btnSecondary");
     btn_all_integral->setToolTip("Aplica horário de manhã e tarde com almoço (07:30 - 17:30) para todos os dias");
 
-    auto* btn_all_noite = new QPushButton("🌙 Toda Noite", tab_jornadas);
+    auto* btn_all_noite = new QPushButton(ModernTheme::icon("evening"), "Toda Noite", tab_jornadas);
     btn_all_noite->setObjectName("btnSecondary");
     btn_all_noite->setToolTip("Aplica horário noturno (18:30 - 22:30) para todos os dias");
 
@@ -163,7 +165,7 @@ void TurmaEditorDialog::setupUi() {
     lbl_resumo_semanal_->setWordWrap(true);
     layout_tab_j->addWidget(lbl_resumo_semanal_);
 
-    main_tabs->addTab(tab_jornadas, "📅 Horários && Jornadas por Dia");
+    main_tabs->addTab(tab_jornadas, ModernTheme::icon("calendar"), "Horários && Jornadas por Dia");
 
     // =========================================================================
     // ABA 2: SALA TEÓRICA PERMANENTE (SEÇÃO 3.6)
@@ -228,7 +230,7 @@ void TurmaEditorDialog::setupUi() {
 
     layout_tab_sala->addStretch();
 
-    main_tabs->addTab(tab_sala, "🏛️ Sala Teórica Permanente");
+    main_tabs->addTab(tab_sala, ModernTheme::icon("room"), "Sala Teórica Permanente");
 
     main_layout->addWidget(main_tabs);
 
@@ -237,7 +239,7 @@ void TurmaEditorDialog::setupUi() {
     btn_box->addStretch();
     auto* btn_cancel = new QPushButton("Cancelar", this);
     btn_cancel->setObjectName("btnSecondary");
-    auto* btn_save = new QPushButton("Salvar Turma", this);
+    auto* btn_save = new QPushButton(ModernTheme::icon("save_file"), "Salvar Turma", this);
     btn_box->addWidget(btn_cancel);
     btn_box->addWidget(btn_save);
     main_layout->addLayout(btn_box);
@@ -304,7 +306,7 @@ QWidget* TurmaEditorDialog::createDayTab(int day_idx) {
     top_row->addWidget(w.chk_dia_ativo);
     top_row->addStretch();
 
-    auto* btn_copy = new QPushButton(QString("📋 Copiar para outros dias..."), tab_page);
+    auto* btn_copy = new QPushButton(ModernTheme::icon("copy"), QString("Copiar para outros dias..."), tab_page);
     btn_copy->setObjectName("btnSecondary");
     btn_copy->setToolTip(QString("Copia o horário e intervalos configurados para %1 para outros dias da semana")
                          .arg(QString::fromStdString(model::dayToLongString(d))));
@@ -327,19 +329,19 @@ QWidget* TurmaEditorDialog::createDayTab(int day_idx) {
     lbl_pre_dia->setStyleSheet("font-size: 11px;");
     presets_row->addWidget(lbl_pre_dia);
 
-    auto* btn_p_manha = new QPushButton("🌅 Manhã", w.content_panel);
+    auto* btn_p_manha = new QPushButton(ModernTheme::icon("morning"), "Manhã", w.content_panel);
     btn_p_manha->setObjectName("btnSecondary");
     btn_p_manha->setMinimumHeight(28);
 
-    auto* btn_p_tarde = new QPushButton("☀️ Tarde", w.content_panel);
+    auto* btn_p_tarde = new QPushButton(ModernTheme::icon("afternoon"), "Tarde", w.content_panel);
     btn_p_tarde->setObjectName("btnSecondary");
     btn_p_tarde->setMinimumHeight(28);
 
-    auto* btn_p_integral = new QPushButton("🌅+☀️ Manhã e Tarde (Integral)", w.content_panel);
+    auto* btn_p_integral = new QPushButton(ModernTheme::icon("integral"), "Manhã e Tarde (Integral)", w.content_panel);
     btn_p_integral->setStyleSheet("font-weight: bold; color: palette(highlight);");
     btn_p_integral->setMinimumHeight(28);
 
-    auto* btn_p_noite = new QPushButton("🌙 Noite", w.content_panel);
+    auto* btn_p_noite = new QPushButton(ModernTheme::icon("evening"), "Noite", w.content_panel);
     btn_p_noite->setObjectName("btnSecondary");
     btn_p_noite->setMinimumHeight(28);
 

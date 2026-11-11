@@ -30,7 +30,8 @@ ChangeRoomDialog::ChangeRoomDialog(model::InstitutionData& data,
  * @brief Inicializa e posiciona os componentes visuais da janela.
  */
 void ChangeRoomDialog::setupUi() {
-    setWindowTitle("🏢 Alterar Sala de Aula");
+    setWindowTitle("Alterar Sala de Aula");
+    setWindowIcon(ModernTheme::icon("room"));
     setMinimumWidth(520);
     setModal(true);
 
@@ -184,7 +185,8 @@ void ChangeRoomDialog::setupUi() {
     main_lay->addWidget(gb_select);
 
     // 3. Opções
-    chk_pin_ = new QCheckBox("📌 Fixar esta sala para a aula (preservar em futuras reotimizações)", this);
+    chk_pin_ = new QCheckBox("Fixar esta sala para a aula (preservar em futuras reotimizações)", this);
+    chk_pin_->setIcon(ModernTheme::icon("pin"));
     chk_pin_->setChecked(true);
     main_lay->addWidget(chk_pin_);
 
@@ -192,7 +194,7 @@ void ChangeRoomDialog::setupUi() {
     auto* btn_lay = new QHBoxLayout();
     btn_lay->addStretch();
 
-    btn_swap_ = new QPushButton("🔄 Trocar Salas (Swap)", this);
+    btn_swap_ = new QPushButton(ModernTheme::icon("swap"), "Trocar Salas (Swap)", this);
     btn_swap_->setObjectName("btnSecondary");
     btn_swap_->setVisible(false);
     btn_lay->addWidget(btn_swap_);

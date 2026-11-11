@@ -7,16 +7,41 @@
 #include <QFont>
 #include <QStyleFactory>
 #include <QStyle>
+#include <QFileInfo>
+#include <QDir>
+#include <QCoreApplication>
 
 namespace scheduler::ui {
 
 static ModernTheme::ThemeMode s_current_theme_mode = ModernTheme::ThemeMode::SystemKDE;
+
+QString ModernTheme::iconPath(const QString& filename) {
+    QString file = filename.contains('.') ? filename : (filename + ".svg");
+    QStringList search_dirs = {
+        "img",
+        "../img",
+        QCoreApplication::applicationDirPath() + "/img",
+        QCoreApplication::applicationDirPath() + "/../img"
+    };
+    for (const auto& dir : search_dirs) {
+        QString candidate = QDir(dir).filePath(file);
+        if (QFileInfo::exists(candidate)) {
+            return QFileInfo(candidate).absoluteFilePath();
+        }
+    }
+    return "img/" + file;
+}
+
+QIcon ModernTheme::icon(const QString& name) {
+    return QIcon(iconPath(name));
+}
 
 /**
  * @brief Aplica o tema padrão inicial à aplicação.
  * @param app Referência para QApplication.
  */
 void ModernTheme::applyTheme(QApplication& app) {
+    app.setWindowIcon(icon("app_icon"));
     setThemeMode(app, ThemeMode::SystemKDE);
 }
 
