@@ -1,6 +1,6 @@
 {
   "config": {
-    "algoritmo": "GENETIC_ALGORITHM",
+    "algoritmo": "CP_SAT",
     "distribuir_disciplinas_na_semana": true,
     "escopo_semestre": "AMBOS_INTEGRADO",
     "lambda_dias": 5,

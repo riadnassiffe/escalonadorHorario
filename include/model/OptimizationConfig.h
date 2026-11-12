@@ -50,8 +50,7 @@ enum class SolverAlgorithm {
     GREEDY_HEURISTIC,   ///< Heurística Construtiva Gulosa (Greedy Search) - Resolução rápida por prioridades.
     SCIP,               ///< SCIP (Solving Constraint Integer Programs) - Programação Inteira Mista e por Restrições.
     HIGHS,              ///< HiGHS (High Performance Optimization Software) - Programação Linear Inteira Mista (MILP).
-    MILP,               ///< Programação Linear Inteira Mista (Alias de compatibilidade -> HiGHS/SCIP).
-    GENETIC_ALGORITHM   ///< Algoritmo Genético / Meta-heurística populacional.
+    MILP                ///< Programação Linear Inteira Mista (Alias de compatibilidade -> HiGHS/SCIP).
 };
 
 /**
@@ -66,7 +65,6 @@ inline std::string solverAlgorithmToString(SolverAlgorithm algo) {
         case SolverAlgorithm::SCIP: return "SCIP";
         case SolverAlgorithm::HIGHS: return "HIGHS";
         case SolverAlgorithm::MILP: return "MILP";
-        case SolverAlgorithm::GENETIC_ALGORITHM: return "GENETIC_ALGORITHM";
     }
     return "CP_SAT";
 }
@@ -81,7 +79,6 @@ inline SolverAlgorithm stringToSolverAlgorithm(const std::string& str) {
     if (str == "SCIP") return SolverAlgorithm::SCIP;
     if (str == "HIGHS") return SolverAlgorithm::HIGHS;
     if (str == "MILP") return SolverAlgorithm::MILP;
-    if (str == "GENETIC_ALGORITHM") return SolverAlgorithm::GENETIC_ALGORITHM;
     return SolverAlgorithm::CP_SAT;
 }
 
@@ -97,7 +94,6 @@ inline std::string solverAlgorithmDisplayName(SolverAlgorithm algo) {
         case SolverAlgorithm::SCIP: return "SCIP - Programação Inteira Mista e por Restrições (Branch-and-Cut)";
         case SolverAlgorithm::HIGHS: return "HiGHS - Programação Linear Inteira Mista de Alta Performance (MILP)";
         case SolverAlgorithm::MILP: return "Programação Linear Inteira Mista (MILP - HiGHS/SCIP)";
-        case SolverAlgorithm::GENETIC_ALGORITHM: return "Algoritmo Genético (Meta-heurística)";
     }
     return "Google OR-Tools CP-SAT";
 }

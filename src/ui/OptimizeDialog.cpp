@@ -74,8 +74,6 @@ void OptimizeDialog::setupUi() {
                               static_cast<int>(model::SolverAlgorithm::HIGHS));
     combo_algorithm_->addItem("Heurística Construtiva Gulosa (Greedy Search) [Rápido]",
                               static_cast<int>(model::SolverAlgorithm::GREEDY_HEURISTIC));
-    combo_algorithm_->addItem("Algoritmo Genético (Meta-heurística) [Estocástico]",
-                              static_cast<int>(model::SolverAlgorithm::GENETIC_ALGORITHM));
     
     int target_algo = static_cast<int>(initial_config_.algoritmo);
     if (initial_config_.algoritmo == model::SolverAlgorithm::MILP) {
@@ -336,23 +334,6 @@ void OptimizeDialog::updateAlgorithmDetails(model::SolverAlgorithm algo) {
             spin_mem_limit_->setEnabled(!chk_sem_limite_memoria_->isChecked());
             spin_threads_->setEnabled(true);
             chk_log_->setEnabled(true);
-            break;
-
-        case model::SolverAlgorithm::GENETIC_ALGORITHM:
-            lbl_algo_desc_->setText(
-                "<b>Algoritmo Genético / Meta-heurística Populacional</b><br>"
-                "Evolução iterativa com múltiplas soluções candidatas, operadores de crossover, "
-                "mutação de alocações e refinamento local por vizinhança. "
-                "Excelente para explorar múltiplos cenários viáveis em problemas complexos.");
-            lbl_algo_type_->setText("Meta-heurística Estocástica");
-            lbl_algo_guarantee_->setText("Aproximado / Heurístico");
-            lbl_algo_speed_->setText("Iterativo");
-            chk_sem_limite_tempo_->setEnabled(true);
-            spin_time_limit_->setEnabled(!chk_sem_limite_tempo_->isChecked());
-            chk_sem_limite_memoria_->setEnabled(true);
-            spin_mem_limit_->setEnabled(!chk_sem_limite_memoria_->isChecked());
-            spin_threads_->setEnabled(true);
-            chk_log_->setEnabled(false);
             break;
     }
 }

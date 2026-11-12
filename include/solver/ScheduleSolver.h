@@ -92,14 +92,6 @@ private:
      */
     model::Timetable solveMilp(const model::InstitutionData& data, ProgressCallback callback);
 
-    /**
-     * @brief Resolve o escalonamento utilizando meta-heurística de Algoritmo Genético.
-     * @param data Dados institucionais e parâmetros.
-     * @param callback Callback de atualização de progresso.
-     * @return Grade calculada pelo Algoritmo Genético.
-     */
-    model::Timetable solveGeneticAlgorithm(const model::InstitutionData& data, ProgressCallback callback);
-
     std::atomic<bool> stop_requested_{false};
 };
 

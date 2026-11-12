@@ -48,11 +48,10 @@ int main(int argc, char* argv[]) {
                   << "  --scip                       Utiliza SCIP (Solving Constraint Integer Programs)\n"
                   << "  --highs                      Utiliza HiGHS (High Performance Optimization Software)\n"
                   << "  --milp                       Utiliza MILP (HiGHS/SCIP)\n"
-                  << "  --genetic                    Utiliza Algoritmo Genético\n"
                   << "  --max-memory <MB>            Define teto de consumo de memória RAM em MB (ex: 2048)\n"
                   << "  --unlimited-memory           Executa sem limite imposto de memória\n"
                   << "  --time-limit <SEG>           Define tempo limite de resolução em segundos\n"
-                  << "  --warmstart-chain            Testa encadeamento guloso -> CP-SAT / Genético\n"
+                  << "  --warmstart-chain            Testa encadeamento guloso -> CP-SAT\n"
                   << "  --render-screenshots         Gera capturas de tela dos diálogos da interface\n"
                   << "  --help, -h                   Exibe esta mensagem de ajuda\n";
         return 0;
@@ -106,7 +105,6 @@ int main(int argc, char* argv[]) {
             std::string arg = argv[i];
             if (arg == "--warmstart-chain") warmstart_chain = true;
             else if (arg == "--greedy") data.config().algoritmo = scheduler::model::SolverAlgorithm::GREEDY_HEURISTIC;
-            else if (arg == "--genetic") data.config().algoritmo = scheduler::model::SolverAlgorithm::GENETIC_ALGORITHM;
             else if (arg == "--scip") data.config().algoritmo = scheduler::model::SolverAlgorithm::SCIP;
             else if (arg == "--highs") data.config().algoritmo = scheduler::model::SolverAlgorithm::HIGHS;
             else if (arg == "--milp") data.config().algoritmo = scheduler::model::SolverAlgorithm::MILP;
@@ -150,18 +148,6 @@ int main(int argc, char* argv[]) {
             std::cout << "Tempo: " << tt2.estatisticas().tempo_execucao_ms << " ms" << std::endl;
             std::cout << "Aulas alocadas: " << tt2.estatisticas().total_aulas_alocadas << std::endl;
             for (const auto& msg : tt2.mensagensDiagnostico()) {
-                std::cout << "  " << msg << std::endl;
-            }
-
-            std::cout << "\n[TESTE ENCADINHAMENTO] 3. Executando próximo algoritmo (Genético) com a distribuição em tela como entrada..." << std::endl;
-            data.config().algoritmo = scheduler::model::SolverAlgorithm::GENETIC_ALGORITHM;
-            data.config().usar_distribuicao_como_entrada = true;
-            data.setGrade(tt1); // Usa a grade da tela
-            scheduler::solver::ScheduleSolver solver3;
-            auto tt3 = solver3.solve(data, nullptr);
-            data.setGrade(tt3);
-            std::cout << "  -> Status: " << tt3.estatisticas().status << " | Aulas: " << tt3.estatisticas().total_aulas_alocadas << std::endl;
-            for (const auto& msg : tt3.mensagensDiagnostico()) {
                 std::cout << "  " << msg << std::endl;
             }
 

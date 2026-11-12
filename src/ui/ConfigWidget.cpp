@@ -125,8 +125,6 @@ void ConfigWidget::setupUi() {
                               static_cast<int>(model::SolverAlgorithm::HIGHS));
     combo_algoritmo_->addItem("Heurística Construtiva Gulosa (Rápido / Prioridade)",
                               static_cast<int>(model::SolverAlgorithm::GREEDY_HEURISTIC));
-    combo_algoritmo_->addItem("Algoritmo Genético (Meta-heurística)",
-                              static_cast<int>(model::SolverAlgorithm::GENETIC_ALGORITHM));
     form_solver->addRow("Algoritmo de Otimização Padrão:", combo_algoritmo_);
 
     combo_escopo_semestre_ = new QComboBox(grp_solver);

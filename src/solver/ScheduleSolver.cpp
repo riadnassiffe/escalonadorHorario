@@ -40,8 +40,6 @@ model::Timetable ScheduleSolver::solve(const model::InstitutionData& data,
             return solveHighs(data, callback);
         case model::SolverAlgorithm::MILP:
             return solveMilp(data, callback);
-        case model::SolverAlgorithm::GENETIC_ALGORITHM:
-            return solveGeneticAlgorithm(data, callback);
         case model::SolverAlgorithm::CP_SAT:
         default:
             return solveCpSat(data, callback);
@@ -2770,65 +2768,6 @@ model::Timetable ScheduleSolver::solveHighs(const model::InstitutionData& data,
 model::Timetable ScheduleSolver::solveMilp(const model::InstitutionData& data,
                                            ProgressCallback callback) {
     return solveHighs(data, callback);
-}
-
-/**
- * @brief Resolve o problema via meta-heurística baseada em Algoritmo Genético.
- *
- * Amostra soluções candidatas ao longo de múltiplas gerações e preserva a melhor
- * solução avaliada por uma função fitness ponderada.
- *
- * @param data Dados acadêmicos da instituição.
- * @param callback Callback opcional para notificação de progresso.
- * @return Grade horária de melhor pontuação encontrada.
- */
-model::Timetable ScheduleSolver::solveGeneticAlgorithm(const model::InstitutionData& data,
-                                                       ProgressCallback callback) {
-    auto start_time = std::chrono::steady_clock::now();
-    if (callback) callback("Inicializando Algoritmo Genético / Meta-heurística...", 0.05);
-
-    model::Timetable best_timetable;
-    int best_score = -1e9;
-    int num_geracoes = 10;
-
-    // Inicializa a população com a grade atual em tela se disponível e solicitada
-    if (data.config().usar_distribuicao_como_entrada && !data.grade().alocacoes().empty()) {
-        best_timetable = data.grade();
-        const auto& s = best_timetable.estatisticas();
-        int alocadas = s.total_aulas_alocadas > 0 ? s.total_aulas_alocadas : static_cast<int>(best_timetable.alocacoes().size());
-        int penalty_score = -(s.penalidade_dias_D * 10 + s.penalidade_preferencia_dias_W * 5);
-        best_score = alocadas * 1000 + penalty_score;
-        best_timetable.addMensagemDiagnostico("[WARM-START] População inicializada com a distribuição atual em tela como indivíduo semente (Score: " + std::to_string(best_score) + ").");
-    }
-
-    for (int g = 0; g < num_geracoes; ++g) {
-        if (stop_requested_.load()) break;
-        if (callback) {
-            double ratio = 0.05 + 0.90 * (static_cast<double>(g) / num_geracoes);
-            callback("Meta-heurística: Avaliando geração " + std::to_string(g + 1) + "/" + std::to_string(num_geracoes) + "...", ratio);
-        }
-
-        auto tt = solveGreedyHeuristic(data, nullptr);
-        int alocadas = tt.estatisticas().total_aulas_alocadas;
-        int penalty_score = -(tt.estatisticas().penalidade_dias_D * 10 + tt.estatisticas().penalidade_preferencia_dias_W * 5);
-        int current_score = alocadas * 1000 + penalty_score;
-
-        if (current_score > best_score || (g == 0 && best_timetable.alocacoes().empty())) {
-            best_score = current_score;
-            best_timetable = std::move(tt);
-        }
-    }
-
-    auto elapsed = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start_time).count();
-    auto stats = best_timetable.estatisticas();
-    stats.tempo_execucao_ms = elapsed;
-    best_timetable.setEstatisticas(stats);
-    best_timetable.addMensagemDiagnostico("[GENÉTICO] Otimização concluída após " + std::to_string(num_geracoes) + " gerações (" + std::to_string(static_cast<int>(elapsed)) + " ms).");
-
-    auditarConflitosEntreAulas(data, best_timetable);
-
-    if (callback) callback("Algoritmo Genético concluído com sucesso!", 1.0);
-    return best_timetable;
 }
 
 } // namespace scheduler::solver
