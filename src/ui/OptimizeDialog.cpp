@@ -158,6 +158,7 @@ void OptimizeDialog::setupUi() {
     spin_time_limit_->setRange(1.0, 3600.0);
     spin_time_limit_->setValue(initial_config_.tempo_limite_segundos);
     spin_time_limit_->setSuffix(" segundos");
+    spin_time_limit_->setFixedWidth(140);
 
     chk_sem_limite_tempo_ = new QCheckBox("Sem restrição de tempo", grp_params);
     chk_sem_limite_tempo_->setChecked(initial_config_.sem_limite_tempo);
@@ -183,6 +184,7 @@ void OptimizeDialog::setupUi() {
     spin_mem_limit_->setSingleStep(256);
     spin_mem_limit_->setValue(initial_config_.max_memoria_mb > 0 ? initial_config_.max_memoria_mb : 2048);
     spin_mem_limit_->setSuffix(" MB");
+    spin_mem_limit_->setFixedWidth(140);
 
     chk_sem_limite_memoria_ = new QCheckBox("Sem restrição de memória", grp_params);
     chk_sem_limite_memoria_->setChecked(initial_config_.sem_limite_memoria);
@@ -204,6 +206,7 @@ void OptimizeDialog::setupUi() {
     spin_threads_->setRange(1, 64);
     spin_threads_->setValue(initial_config_.num_threads);
     spin_threads_->setSuffix(" threads");
+    spin_threads_->setFixedWidth(140);
     form_params->addRow("Processamento:", spin_threads_);
 
     chk_log_ = new QCheckBox("Exibir log detalhado de busca durante o processo", grp_params);

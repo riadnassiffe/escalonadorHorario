@@ -143,6 +143,11 @@ private:
     void setupUi();
 
     /**
+     * @brief Atualiza o estilo visual e background do banner informativo conforme o tema ativo.
+     */
+    void updateBannerTheme();
+
+    /**
      * @brief Preenche o combobox de entidades alvo de acordo com o modo de visualização atual.
      */
     void populateTargetCombo();

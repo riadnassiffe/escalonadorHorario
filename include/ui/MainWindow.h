@@ -161,6 +161,11 @@ private:
     void setupKpiBanner();
 
     /**
+     * @brief Atualiza o estilo visual e background do banner de KPIs conforme o tema ativo.
+     */
+    void updateKpiBannerTheme();
+
+    /**
      * @brief Atualiza os valores e cores dos KPIs com base nas estatísticas da grade atual.
      */
     void updateKpiBanner();
@@ -228,6 +233,7 @@ private:
     ConfigWidget* config_widget_{nullptr};
 
     // KPI Banner Widgets
+    QFrame* kpi_banner_card_{nullptr};
     QLabel* lbl_kpi_status_{nullptr};
     QLabel* lbl_kpi_tempo_{nullptr};
     QLabel* lbl_kpi_aulas_{nullptr};

@@ -8,6 +8,7 @@
 #include <QHBoxLayout>
 #include <QFormLayout>
 #include <QGroupBox>
+#include <QScrollArea>
 
 namespace scheduler::ui {
 
@@ -23,12 +24,22 @@ ConfigWidget::ConfigWidget(QWidget* parent) : QWidget(parent) {
  * @brief Constrói os grupos de pesos, parâmetros acadêmicos e do solver.
  */
 void ConfigWidget::setupUi() {
-    auto* main_layout = new QVBoxLayout(this);
+    auto* root_layout = new QVBoxLayout(this);
+    root_layout->setContentsMargins(0, 0, 0, 0);
+
+    auto* scroll_area = new QScrollArea(this);
+    scroll_area->setWidgetResizable(true);
+    scroll_area->setFrameShape(QFrame::NoFrame);
+    scroll_area->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    scroll_area->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+
+    auto* content_widget = new QWidget(scroll_area);
+    auto* main_layout = new QVBoxLayout(content_widget);
     main_layout->setContentsMargins(16, 16, 16, 16);
     main_layout->setSpacing(16);
 
     // 1. Pesos Institucionais da Otimização (Seção 4 & 8)
-    auto* grp_pesos = new QGroupBox("Pesos Institucionais da Otimização (Lambda_i) - Seção 4 & 8", this);
+    auto* grp_pesos = new QGroupBox("Pesos Institucionais da Otimização (Lambda_i) - Seção 4 & 8", content_widget);
     auto* lay_pesos = new QVBoxLayout(grp_pesos);
     lay_pesos->setSpacing(12);
 
@@ -84,7 +95,7 @@ void ConfigWidget::setupUi() {
     main_layout->addWidget(grp_pesos);
 
     // 2. Semântica da Preferência e Regras Acadêmicas
-    auto* grp_regras = new QGroupBox("Semântica da Preferência e Regras Acadêmicas (Seção 4.4 & 5)", this);
+    auto* grp_regras = new QGroupBox("Semântica da Preferência e Regras Acadêmicas (Seção 4.4 & 5)", content_widget);
     auto* form_regras = new QFormLayout(grp_regras);
     form_regras->setSpacing(10);
 
@@ -106,15 +117,17 @@ void ConfigWidget::setupUi() {
     spin_max_aulas_dia_ = new QSpinBox(grp_regras);
     spin_max_aulas_dia_->setRange(1, 6);
     spin_max_aulas_dia_->setValue(2);
-    spin_max_aulas_dia_->setSuffix(" aulas diárias por matéria para a turma");
+    spin_max_aulas_dia_->setSuffix(" aulas diárias");
+    spin_max_aulas_dia_->setToolTip("Limite de aulas diárias por matéria para a turma");
+    spin_max_aulas_dia_->setFixedWidth(140);
     form_regras->addRow("Limite Diário por Disciplina:", spin_max_aulas_dia_);
 
     main_layout->addWidget(grp_regras);
 
     // 3. Parâmetros do Solver e Algoritmo
-    auto* grp_solver = new QGroupBox("Configurações do Algoritmo e Parâmetros de Execução", this);
+    auto* grp_solver = new QGroupBox("Configurações do Algoritmo e Parâmetros de Execução", content_widget);
     auto* form_solver = new QFormLayout(grp_solver);
-    form_solver->setSpacing(10);
+    form_solver->setSpacing(12);
 
     combo_algoritmo_ = new QComboBox(grp_solver);
     combo_algoritmo_->addItem("Google OR-Tools CP-SAT (Restrições / Exato - Recomendado)",
@@ -125,6 +138,7 @@ void ConfigWidget::setupUi() {
                               static_cast<int>(model::SolverAlgorithm::HIGHS));
     combo_algoritmo_->addItem("Heurística Construtiva Gulosa (Rápido / Prioridade)",
                               static_cast<int>(model::SolverAlgorithm::GREEDY_HEURISTIC));
+    combo_algoritmo_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     form_solver->addRow("Algoritmo de Otimização Padrão:", combo_algoritmo_);
 
     combo_escopo_semestre_ = new QComboBox(grp_solver);
@@ -132,6 +146,7 @@ void ConfigWidget::setupUi() {
     combo_escopo_semestre_->addItem("1º Semestre (Anuais + 1º Sem)", static_cast<int>(model::EscopoSemestreOtimizacao::SEMESTRE_1));
     combo_escopo_semestre_->addItem("2º Semestre (Anuais + 2º Sem)", static_cast<int>(model::EscopoSemestreOtimizacao::SEMESTRE_2));
     combo_escopo_semestre_->addItem("Ambos os Semestres (Multi-Semestre Integrado)", static_cast<int>(model::EscopoSemestreOtimizacao::AMBOS_INTEGRADO));
+    combo_escopo_semestre_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     form_solver->addRow("Escopo de Semestre Padrão:", combo_escopo_semestre_);
 
     chk_sincronizar_anuais_ = new QCheckBox("Sincronizar horários de disciplinas anuais entre semestres", grp_solver);
@@ -145,6 +160,7 @@ void ConfigWidget::setupUi() {
     spin_tempo_limite_->setRange(1.0, 3600.0);
     spin_tempo_limite_->setValue(30.0);
     spin_tempo_limite_->setSuffix(" segundos");
+    spin_tempo_limite_->setFixedWidth(140);
 
     chk_sem_limite_tempo_ = new QCheckBox("Sem restrição de tempo", grp_solver);
     chk_sem_limite_tempo_->setToolTip("Executa o solver sem tempo limite máximo.");
@@ -166,6 +182,7 @@ void ConfigWidget::setupUi() {
     spin_max_memoria_->setSingleStep(256);
     spin_max_memoria_->setValue(2048);
     spin_max_memoria_->setSuffix(" MB");
+    spin_max_memoria_->setFixedWidth(140);
 
     chk_sem_limite_memoria_ = new QCheckBox("Sem restrição de memória", grp_solver);
     chk_sem_limite_memoria_->setToolTip("Executa o solver sem impor limite máximo explícito de memória RAM.");
@@ -182,7 +199,9 @@ void ConfigWidget::setupUi() {
     spin_threads_ = new QSpinBox(grp_solver);
     spin_threads_->setRange(1, 64);
     spin_threads_->setValue(4);
-    spin_threads_->setSuffix(" threads (processamento paralelo)");
+    spin_threads_->setSuffix(" threads");
+    spin_threads_->setToolTip("Número de threads para processamento paralelo");
+    spin_threads_->setFixedWidth(140);
     form_solver->addRow("Número de Threads:", spin_threads_);
 
     chk_log_solver_ = new QCheckBox("Habilitar log de busca em tempo real do CP-SAT", grp_solver);
@@ -195,6 +214,9 @@ void ConfigWidget::setupUi() {
 
     main_layout->addWidget(grp_solver);
     main_layout->addStretch();
+
+    scroll_area->setWidget(content_widget);
+    root_layout->addWidget(scroll_area);
 }
 
 /**

@@ -59,7 +59,7 @@ void MainWindow::setupUi() {
     main_layout->setSpacing(10);
 
     setupKpiBanner();
-    main_layout->addWidget(lbl_kpi_status_->parentWidget());
+    main_layout->addWidget(kpi_banner_card_);
 
     tab_widget_ = new QTabWidget(this);
 
@@ -241,13 +241,12 @@ void MainWindow::setupToolBar() {
  * @brief Constrói o painel horizontal de cartões com os indicadores-chave de desempenho (KPIs).
  */
 void MainWindow::setupKpiBanner() {
-    auto* banner_card = new QFrame(this);
-    banner_card->setFrameShape(QFrame::StyledPanel);
-    banner_card->setObjectName("kpiBannerCard");
-    banner_card->setStyleSheet(
-        "QFrame#kpiBannerCard { background-color: palette(base); border: 1px solid palette(mid); border-radius: 8px; padding: 4px; }");
+    kpi_banner_card_ = new QFrame(this);
+    kpi_banner_card_->setFrameShape(QFrame::StyledPanel);
+    kpi_banner_card_->setObjectName("kpiBannerCard");
+    updateKpiBannerTheme();
 
-    auto* layout = new QHBoxLayout(banner_card);
+    auto* layout = new QHBoxLayout(kpi_banner_card_);
     layout->setContentsMargins(12, 6, 12, 6);
     layout->setSpacing(20);
 
@@ -277,9 +276,29 @@ void MainWindow::setupKpiBanner() {
 }
 
 /**
+ * @brief Atualiza o estilo visual e o fundo do banner de KPIs de acordo com o tema ativo.
+ */
+void MainWindow::updateKpiBannerTheme() {
+    if (!kpi_banner_card_) {
+        return;
+    }
+    if (ModernTheme::isDarkTheme()) {
+        kpi_banner_card_->setStyleSheet(
+            "QFrame#kpiBannerCard { background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 4px; }"
+            "QFrame#kpiBannerCard QLabel { background-color: transparent; }");
+    } else {
+        kpi_banner_card_->setStyleSheet(
+            "QFrame#kpiBannerCard { background-color: palette(base); border: 1px solid palette(mid); border-radius: 8px; padding: 4px; }"
+            "QFrame#kpiBannerCard QLabel { background-color: transparent; }");
+    }
+}
+
+/**
  * @brief Atualiza os valores e indicadores visuais dos KPIs a partir das estatísticas da grade atual.
  */
 void MainWindow::updateKpiBanner() {
+    updateKpiBannerTheme();
+
     const auto& s = data_.grade().estatisticas();
     lbl_kpi_status_->setText(QString::fromStdString(s.status));
     if (s.status == "OPTIMAL") {

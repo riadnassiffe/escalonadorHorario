@@ -164,6 +164,27 @@ static QString getDarkStyleSheet() {
             background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1d4ed8, stop:1 #0284c7);
         }
 
+        QFrame#kpiBannerCard {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 4px;
+        }
+
+        QFrame#kpiBannerCard QLabel {
+            background-color: transparent;
+        }
+
+        QLabel#lblInfoBanner {
+            background-color: #1e293b;
+            color: #f8fafc;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
         QTabWidget::pane {
             border: 1px solid #334155;
             background-color: #1e293b;
@@ -262,6 +283,10 @@ static QString getDarkStyleSheet() {
             min-height: 20px;
         }
 
+        QComboBox {
+            padding-right: 28px;
+        }
+
         QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus, QTimeEdit:focus {
             border-color: #38bdf8;
             background-color: #131c2e;
@@ -343,7 +368,7 @@ static QString getDarkStyleSheet() {
             border: 1px solid #334155;
             border-radius: 8px;
             margin-top: 18px;
-            padding-top: 14px;
+            padding: 16px 12px 12px 12px;
             font-weight: 600;
             color: #38bdf8;
         }
@@ -462,6 +487,27 @@ QString ModernTheme::getStyleSheet(ThemeMode mode) {
 
         QPushButton#btnDanger:hover {
             background-color: #b91c1c;
+        }
+
+        QFrame#kpiBannerCard {
+            background-color: palette(base);
+            border: 1px solid palette(mid);
+            border-radius: 8px;
+            padding: 4px;
+        }
+
+        QFrame#kpiBannerCard QLabel {
+            background-color: transparent;
+        }
+
+        QLabel#lblInfoBanner {
+            background-color: palette(base);
+            color: palette(window-text);
+            border: 1px solid palette(mid);
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 500;
         }
     )");
 }

@@ -38,11 +38,11 @@ void TimetableView::setupUi() {
     main_layout->setContentsMargins(12, 12, 12, 12);
     main_layout->setSpacing(12);
 
-    // Barra superior de seleção
+    // Barra superior de seleção e filtros
     auto* top_panel = new QHBoxLayout();
-    top_panel->setSpacing(10);
+    top_panel->setSpacing(8);
 
-    auto* lbl_mode = new QLabel("Modo de Exibição:", this);
+    auto* lbl_mode = new QLabel("Modo:", this);
     lbl_mode->setStyleSheet("font-weight: bold; color: palette(highlight);");
     top_panel->addWidget(lbl_mode);
 
@@ -50,52 +50,37 @@ void TimetableView::setupUi() {
     combo_view_type_->addItem(ModernTheme::icon("turma"), "Por Turma", 0);
     combo_view_type_->addItem(ModernTheme::icon("professor"), "Por Professor", 1);
     combo_view_type_->addItem(ModernTheme::icon("room"), "Por Sala", 2);
-    combo_view_type_->setMinimumWidth(160);
+    combo_view_type_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    combo_view_type_->setMinimumWidth(140);
     top_panel->addWidget(combo_view_type_);
 
+    top_panel->addSpacing(8);
+
     auto* lbl_entity = new QLabel("Selecionar Alvo:", this);
-    lbl_entity->setStyleSheet("font-weight: bold; color: palette(highlight); margin-left: 10px;");
+    lbl_entity->setStyleSheet("font-weight: bold; color: palette(highlight);");
     top_panel->addWidget(lbl_entity);
 
     combo_target_ = new QComboBox(this);
-    combo_target_->setMinimumWidth(260);
+    combo_target_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    combo_target_->setMinimumWidth(180);
+    combo_target_->setMaximumWidth(320);
     top_panel->addWidget(combo_target_);
 
+    top_panel->addSpacing(8);
+
     auto* lbl_semestre = new QLabel("Semestre:", this);
-    lbl_semestre->setStyleSheet("font-weight: bold; color: palette(highlight); margin-left: 10px;");
+    lbl_semestre->setStyleSheet("font-weight: bold; color: palette(highlight);");
     top_panel->addWidget(lbl_semestre);
 
     combo_semestre_filtro_ = new QComboBox(this);
     combo_semestre_filtro_->addItem("Todos os Semestres (Geral)", 0);
     combo_semestre_filtro_->addItem("1º Semestre", 1);
     combo_semestre_filtro_->addItem("2º Semestre", 2);
-    combo_semestre_filtro_->setMinimumWidth(190);
+    combo_semestre_filtro_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    combo_semestre_filtro_->setMinimumWidth(160);
     top_panel->addWidget(combo_semestre_filtro_);
 
     top_panel->addStretch();
-
-    lbl_info_banner_ = new QLabel(this);
-    lbl_info_banner_->setStyleSheet("font-size: 12px;");
-    top_panel->addWidget(lbl_info_banner_);
-
-    top_panel->addSpacing(15);
-
-    search_lesson_ = new QLineEdit(this);
-    search_lesson_->addAction(ModernTheme::icon("search"), QLineEdit::LeadingPosition);
-    search_lesson_->setPlaceholderText("Destacar aula/prof/sala...");
-    search_lesson_->setClearButtonEnabled(true);
-    search_lesson_->setFixedWidth(220);
-    search_lesson_->setToolTip("Digite para localizar e destacar aulas na grade semanal");
-    top_panel->addWidget(search_lesson_);
-
-    lbl_search_count_ = new QLabel(this);
-    lbl_search_count_->setStyleSheet(
-        "background-color: palette(base); color: palette(window-text); border: 1px solid palette(mid); "
-        "border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: 500;");
-    lbl_search_count_->setVisible(false);
-    top_panel->addWidget(lbl_search_count_);
-
-    top_panel->addSpacing(10);
 
     btn_add_lesson_ = new QPushButton(ModernTheme::icon("add"), "Alocar Disciplina...", this);
     btn_add_lesson_->setObjectName("btnPrimary");
@@ -110,6 +95,34 @@ void TimetableView::setupUi() {
     top_panel->addWidget(btn_clear_timetable_);
 
     main_layout->addLayout(top_panel);
+
+    // Barra secundária de informações do alvo e busca rápida
+    auto* sub_panel = new QHBoxLayout();
+    sub_panel->setSpacing(8);
+
+    lbl_info_banner_ = new QLabel(this);
+    lbl_info_banner_->setObjectName("lblInfoBanner");
+    lbl_info_banner_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    sub_panel->addWidget(lbl_info_banner_, 1);
+
+    sub_panel->addSpacing(8);
+
+    search_lesson_ = new QLineEdit(this);
+    search_lesson_->addAction(ModernTheme::icon("search"), QLineEdit::LeadingPosition);
+    search_lesson_->setPlaceholderText("Destacar aula/prof/sala...");
+    search_lesson_->setClearButtonEnabled(true);
+    search_lesson_->setFixedWidth(220);
+    search_lesson_->setToolTip("Digite para localizar e destacar aulas na grade semanal");
+    sub_panel->addWidget(search_lesson_);
+
+    lbl_search_count_ = new QLabel(this);
+    lbl_search_count_->setObjectName("lblSearchCount");
+    lbl_search_count_->setVisible(false);
+    sub_panel->addWidget(lbl_search_count_);
+
+    updateBannerTheme();
+
+    main_layout->addLayout(sub_panel);
 
     // Tabela da Grade Semanal com Drag & Drop
     table_ = new TimetableGridWidget(this);
@@ -179,9 +192,38 @@ void TimetableView::populateTargetCombo() {
 }
 
 /**
+ * @brief Atualiza o estilo visual e o fundo do banner informativo de acordo com o tema ativo.
+ */
+void TimetableView::updateBannerTheme() {
+    if (!lbl_info_banner_) {
+        return;
+    }
+    if (ModernTheme::isDarkTheme()) {
+        lbl_info_banner_->setStyleSheet(
+            "QLabel#lblInfoBanner { background-color: #1e293b; color: #f8fafc; border: 1px solid #334155; "
+            "border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 500; }");
+        if (lbl_search_count_ && !lbl_search_count_->isVisible()) {
+            lbl_search_count_->setStyleSheet(
+                "QLabel#lblSearchCount { background-color: #1e293b; color: #f8fafc; border: 1px solid #334155; "
+                "border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: 500; }");
+        }
+    } else {
+        lbl_info_banner_->setStyleSheet(
+            "QLabel#lblInfoBanner { background-color: palette(base); color: palette(window-text); border: 1px solid palette(mid); "
+            "border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 500; }");
+        if (lbl_search_count_ && !lbl_search_count_->isVisible()) {
+            lbl_search_count_->setStyleSheet(
+                "QLabel#lblSearchCount { background-color: palette(base); color: palette(window-text); border: 1px solid palette(mid); "
+                "border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: 500; }");
+        }
+    }
+}
+
+/**
  * @brief Atualiza os alvos e redesenha a grade na tela.
  */
 void TimetableView::refreshView() {
+    updateBannerTheme();
     populateTargetCombo();
 }
 
