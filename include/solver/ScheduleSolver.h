@@ -69,6 +69,22 @@ private:
     model::Timetable solveGreedyHeuristic(const model::InstitutionData& data, ProgressCallback callback);
 
     /**
+     * @brief Resolve o escalonamento utilizando o solver SCIP (Solving Constraint Integer Programs).
+     * @param data Dados institucionais e parâmetros.
+     * @param callback Callback de atualização de progresso.
+     * @return Grade calculada pelo modelo SCIP.
+     */
+    model::Timetable solveScip(const model::InstitutionData& data, ProgressCallback callback);
+
+    /**
+     * @brief Resolve o escalonamento utilizando o solver HiGHS (High Performance Optimization Software).
+     * @param data Dados institucionais e parâmetros.
+     * @param callback Callback de atualização de progresso.
+     * @return Grade calculada pelo modelo HiGHS.
+     */
+    model::Timetable solveHighs(const model::InstitutionData& data, ProgressCallback callback);
+
+    /**
      * @brief Resolve o escalonamento utilizando formulação de Programação Linear Inteira Mista (MILP).
      * @param data Dados institucionais e parâmetros.
      * @param callback Callback de atualização de progresso.

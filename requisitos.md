@@ -163,19 +163,23 @@ $$\min Z = \lambda_1 J + \lambda_2 D + \lambda_3 P + \lambda_4 W + \lambda_5 T +
 
 ## 5. Requisitos dos Motores de Resolução (Solvers)
 
-O sistema implementa 4 algoritmos de resolução intercambiáveis:
+O sistema implementa 6 algoritmos de resolução intercambiáveis:
 
 1. **Google OR-Tools CP-SAT (Padrão / Recomendado):**
    * Programação por restrições com aprendizado de cláusulas guiado por conflitos (CDCL).
    * Variáveis intervalares opcionais (`NewOptionalIntervalVar`) e propagador nativo `AddNoOverlap`.
    * Parâmetros configuráveis: tempo limite em segundos (`tempo_limite_segundos`), limite de memória RAM em MB (`max_memoria_mb`), número de threads de CPU paralelas (`num_threads`) e log de progresso (`log_search_progress`).
-2. **Warm Start / Hints no CP-SAT:**
-   * Utilização opcional da grade horária pré-existente como solução inicial de partida (`AddHint`), acelerando a convergência em reotimizações.
-3. **Heurística Construtiva Gulosa (Greedy Heuristic):**
+2. **SCIP — Solving Constraint Integer Programs (`solveScip`):**
+   * Solver nativo de Programação Inteira Mista e por Restrições (Branch-Cut-and-Price) integrado via API C do SCIP (`<scip/scip.h>`).
+   * Formulação linear inteira completa com cortes de clique por slot para não sobreposição ($\sum_{c \text{ cobre } k} x_{a,c} \le 1$), variáveis de sala teórica fixa ($z_{g,r}$), início obrigatório da jornada ($T_{\text{ini}}$), blocos consecutivos e penalidades suaves ($D, W, P, T, J, J_G$).
+   * Suporte a injeção de solução primal inicial (Warm Start / semente heurística) via `SCIPaddSolFree`.
+3. **HiGHS — High Performance Optimization Software (`solveHighs`):**
+   * Solver nativo de Programação Linear Inteira Mista de alta performance integrado via API C++ do HiGHS (`<Highs.h>`).
+   * Construção direta da matriz esparsa comprimida (`HighsSparseMatrix`), pré-processamento algébrico, Dual Simplex paralelo e Branch-and-Cut.
+   * Suporte a Warm Start via `Highs::setSolution`.
+4. **Heurística Construtiva Gulosa (Greedy Heuristic):**
    * Resolução rápida baseada em ordenação por grau de restrição (número de candidatos viáveis e duração da aula).
    * Alocação gulosa priorizando aulas fixadas e minimizando penalidades imediatas.
-4. **Programação Linear Inteira Mista (MILP):**
-   * Suporte à formulação linear inteira via branch-and-cut.
 5. **Algoritmo Genético (Meta-heurística):**
    * Otimização populacional multi-geração.
    * Suporte à semeadura da população inicial com a grade atual em tela.
@@ -215,7 +219,8 @@ O sistema implementa 4 algoritmos de resolução intercambiáveis:
 
 * Suporte a execução sem interface gráfica via flags:
   * `--cli`, `--test`, `--benchmark`: Execução de testes automatizados e benchmark.
-  * `--greedy`, `--cpsat`, `--milp`, `--genetic`: Seleção do algoritmo.
+  * `--greedy`, `--cpsat`, `--scip`, `--highs`, `--milp`, `--genetic`: Seleção do algoritmo.
+  * `--log`: Ativação do log interno de progresso dos motores de busca.
   * `--max-memory <MB>`: Definição de teto de memória RAM.
   * `--unlimited-memory`: Execução sem limite de memória.
   * `--time-limit <SEG>`: Tempo limite de resolução.

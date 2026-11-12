@@ -288,9 +288,10 @@ Sliders interativos com exibição numérica do valor configurado (0 a 20):
 Acionado pelo botão principal `⚡ OTIMIZAR GRADE`:
 * **Seletor de Algoritmo:** Dropdown para escolher entre:
   1. `Google OR-Tools CP-SAT (Restrições / Exato)`
-  2. `Heurística Construtiva Gulosa (Rápido / Prioridade)`
-  3. `Programação Linear Inteira Mista (MILP)`
-  4. `Algoritmo Genético (Meta-heurística)`
+  2. `SCIP - Programação Inteira Mista e por Restrições (Branch-and-Cut)`
+  3. `HiGHS - Programação Linear Inteira Mista de Alta Performance (MILP)`
+  4. `Heurística Construtiva Gulosa (Rápido / Prioridade)`
+  5. `Algoritmo Genético (Meta-heurística)`
 * **Painel Explicativo Dinâmico:** Atualiza um texto descritivo explicando a metodologia, garantias matemáticas e casos recomendados para o algoritmo selecionado.
 * **Escopo Semestral de Otimização:** Dropdown para definir se a execução otimizará Todas as Disciplinas, 1º Semestre, 2º Semestre ou Ambos Integrado.
 * **Sincronização Intersemestral:** Checkbox para garantir horários idênticos para disciplinas anuais.

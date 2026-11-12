@@ -9,6 +9,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 find_package(ortools REQUIRED)
+find_package(highs QUIET)
+find_package(scip QUIET)
 find_package(nlohmann_json REQUIRED)
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
 
@@ -87,8 +89,23 @@ add_executable(escalonadorHorarios ${SOURCES} ${HEADERS})
 
 target_include_directories(escalonadorHorarios PRIVATE include)
 
+if(DEFINED highs_PACKAGE_FOLDER_RELEASE)
+    target_include_directories(escalonadorHorarios PRIVATE
+        "${highs_PACKAGE_FOLDER_RELEASE}/include"
+        "${highs_PACKAGE_FOLDER_RELEASE}/include/highs"
+    )
+endif()
+
+if(DEFINED scip_PACKAGE_FOLDER_RELEASE)
+    target_include_directories(escalonadorHorarios PRIVATE
+        "${scip_PACKAGE_FOLDER_RELEASE}/include"
+    )
+endif()
+
 target_link_libraries(escalonadorHorarios PRIVATE
     or-tools::or-tools
+    highs::highs
+    scip::scip
     nlohmann_json::nlohmann_json
     Qt6::Core
     Qt6::Gui

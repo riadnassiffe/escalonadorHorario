@@ -119,10 +119,12 @@ void ConfigWidget::setupUi() {
     combo_algoritmo_ = new QComboBox(grp_solver);
     combo_algoritmo_->addItem("Google OR-Tools CP-SAT (Restrições / Exato - Recomendado)",
                               static_cast<int>(model::SolverAlgorithm::CP_SAT));
+    combo_algoritmo_->addItem("SCIP - Solving Constraint Integer Programs (Branch-and-Cut)",
+                              static_cast<int>(model::SolverAlgorithm::SCIP));
+    combo_algoritmo_->addItem("HiGHS - High Performance Optimization Software (MILP)",
+                              static_cast<int>(model::SolverAlgorithm::HIGHS));
     combo_algoritmo_->addItem("Heurística Construtiva Gulosa (Rápido / Prioridade)",
                               static_cast<int>(model::SolverAlgorithm::GREEDY_HEURISTIC));
-    combo_algoritmo_->addItem("Programação Linear Inteira Mista (MILP)",
-                              static_cast<int>(model::SolverAlgorithm::MILP));
     combo_algoritmo_->addItem("Algoritmo Genético (Meta-heurística)",
                               static_cast<int>(model::SolverAlgorithm::GENETIC_ALGORITHM));
     form_solver->addRow("Algoritmo de Otimização Padrão:", combo_algoritmo_);
@@ -228,7 +230,11 @@ void ConfigWidget::loadConfig(const model::OptimizationConfig& cfg) {
     chk_distribuir_semana_->setChecked(cfg.distribuir_disciplinas_na_semana);
     spin_max_aulas_dia_->setValue(cfg.max_aulas_disciplina_dia_turma);
 
-    int idx_algo = combo_algoritmo_->findData(static_cast<int>(cfg.algoritmo));
+    int target_algo = static_cast<int>(cfg.algoritmo);
+    if (cfg.algoritmo == model::SolverAlgorithm::MILP) {
+        target_algo = static_cast<int>(model::SolverAlgorithm::HIGHS);
+    }
+    int idx_algo = combo_algoritmo_->findData(target_algo);
     if (idx_algo >= 0) combo_algoritmo_->setCurrentIndex(idx_algo);
 
     int idx_esc = combo_escopo_semestre_->findData(static_cast<int>(cfg.escopo_semestre));

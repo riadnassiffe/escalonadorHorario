@@ -21,6 +21,15 @@
 #include <string>
 
 #include "ortools/linear_solver/linear_solver.h"
+#ifdef slots
+#undef slots
+#include <Highs.h>
+#include <scip/scip.h>
+#define slots Q_SLOTS
+#else
+#include <Highs.h>
+#include <scip/scip.h>
+#endif
 
 /**
  * @brief Função principal do programa.
@@ -36,7 +45,9 @@ int main(int argc, char* argv[]) {
                   << "  --cli, --test, --benchmark   Executa em modo linha de comando (sem GUI)\n"
                   << "  --greedy                     Utiliza Heurística Gulosa\n"
                   << "  --cpsat                      Utiliza CP-SAT (Google OR-Tools)\n"
-                  << "  --milp                       Utiliza MILP (SCIP/HiGHS)\n"
+                  << "  --scip                       Utiliza SCIP (Solving Constraint Integer Programs)\n"
+                  << "  --highs                      Utiliza HiGHS (High Performance Optimization Software)\n"
+                  << "  --milp                       Utiliza MILP (HiGHS/SCIP)\n"
                   << "  --genetic                    Utiliza Algoritmo Genético\n"
                   << "  --max-memory <MB>            Define teto de consumo de memória RAM em MB (ex: 2048)\n"
                   << "  --unlimited-memory           Executa sem limite imposto de memória\n"
@@ -54,10 +65,9 @@ int main(int argc, char* argv[]) {
         std::cout << "  Modo Linha de Comando / Verificação Automática" << std::endl;
         std::cout << "===========================================================" << std::endl;
 
-        std::unique_ptr<operations_research::MPSolver> highs(operations_research::MPSolver::CreateSolver("HIGHS"));
-        std::cout << "  [SOLVER CHECK] HiGHS disponível: " << (highs ? "SIM" : "NAO") << std::endl;
-        std::unique_ptr<operations_research::MPSolver> scip(operations_research::MPSolver::CreateSolver("SCIP"));
-        std::cout << "  [SOLVER CHECK] SCIP disponível: " << (scip ? "SIM" : "NAO") << std::endl;
+        std::cout << "  [SOLVER CHECK] HiGHS disponível: SIM (Nativo v" << highsVersion() << ")" << std::endl;
+        std::cout << "  [SOLVER CHECK] SCIP disponível: SIM (Nativo v"
+                  << SCIPmajorVersion() << "." << SCIPminorVersion() << "." << SCIPtechVersion() << ")" << std::endl;
 
         scheduler::model::InstitutionData data;
         std::string filename;
@@ -97,8 +107,11 @@ int main(int argc, char* argv[]) {
             if (arg == "--warmstart-chain") warmstart_chain = true;
             else if (arg == "--greedy") data.config().algoritmo = scheduler::model::SolverAlgorithm::GREEDY_HEURISTIC;
             else if (arg == "--genetic") data.config().algoritmo = scheduler::model::SolverAlgorithm::GENETIC_ALGORITHM;
+            else if (arg == "--scip") data.config().algoritmo = scheduler::model::SolverAlgorithm::SCIP;
+            else if (arg == "--highs") data.config().algoritmo = scheduler::model::SolverAlgorithm::HIGHS;
             else if (arg == "--milp") data.config().algoritmo = scheduler::model::SolverAlgorithm::MILP;
             else if (arg == "--cpsat") data.config().algoritmo = scheduler::model::SolverAlgorithm::CP_SAT;
+            else if (arg == "--log") data.config().log_search_progress = true;
             else if (arg == "--max-memory" && i + 1 < argc) {
                 data.config().max_memoria_mb = std::stoi(argv[++i]);
             } else if (arg.rfind("--max-memory=", 0) == 0) {

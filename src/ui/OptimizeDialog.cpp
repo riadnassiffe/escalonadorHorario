@@ -68,14 +68,20 @@ void OptimizeDialog::setupUi() {
     combo_algorithm_ = new QComboBox(grp_algo);
     combo_algorithm_->addItem("Google OR-Tools CP-SAT (Restrições / Exato) [Recomendado]",
                               static_cast<int>(model::SolverAlgorithm::CP_SAT));
+    combo_algorithm_->addItem("SCIP - Solving Constraint Integer Programs (Branch-and-Cut) [Exato]",
+                              static_cast<int>(model::SolverAlgorithm::SCIP));
+    combo_algorithm_->addItem("HiGHS - High Performance Optimization Software (MILP) [Exato]",
+                              static_cast<int>(model::SolverAlgorithm::HIGHS));
     combo_algorithm_->addItem("Heurística Construtiva Gulosa (Greedy Search) [Rápido]",
                               static_cast<int>(model::SolverAlgorithm::GREEDY_HEURISTIC));
-    combo_algorithm_->addItem("Programação Linear Inteira Mista (MILP) [Comparativo]",
-                              static_cast<int>(model::SolverAlgorithm::MILP));
     combo_algorithm_->addItem("Algoritmo Genético (Meta-heurística) [Estocástico]",
                               static_cast<int>(model::SolverAlgorithm::GENETIC_ALGORITHM));
     
-    int initial_idx = combo_algorithm_->findData(static_cast<int>(initial_config_.algoritmo));
+    int target_algo = static_cast<int>(initial_config_.algoritmo);
+    if (initial_config_.algoritmo == model::SolverAlgorithm::MILP) {
+        target_algo = static_cast<int>(model::SolverAlgorithm::HIGHS);
+    }
+    int initial_idx = combo_algorithm_->findData(target_algo);
     if (initial_idx >= 0) {
         combo_algorithm_->setCurrentIndex(initial_idx);
     }
@@ -297,15 +303,33 @@ void OptimizeDialog::updateAlgorithmDetails(model::SolverAlgorithm algo) {
             chk_log_->setEnabled(false);
             break;
 
+        case model::SolverAlgorithm::SCIP:
+            lbl_algo_desc_->setText(
+                "<b>SCIP (Solving Constraint Integer Programs)</b><br>"
+                "Resolvedor acadêmico/industrial de Programação Inteira Mista e por Restrições (CIP/MINLP/MILP) "
+                "baseado em Branch-Cut-and-Price com SoPlex. Formulação linear inteira completa com cortes "
+                "de clique por slot, variáveis de sala fixa, janelas e suporte a solução inicial (Warm Start).");
+            lbl_algo_type_->setText("Exato (CIP / MILP)");
+            lbl_algo_guarantee_->setText("Ótimo Global");
+            lbl_algo_speed_->setText("Moderado / Forte");
+            chk_sem_limite_tempo_->setEnabled(true);
+            spin_time_limit_->setEnabled(!chk_sem_limite_tempo_->isChecked());
+            chk_sem_limite_memoria_->setEnabled(true);
+            spin_mem_limit_->setEnabled(!chk_sem_limite_memoria_->isChecked());
+            spin_threads_->setEnabled(true);
+            chk_log_->setEnabled(true);
+            break;
+
+        case model::SolverAlgorithm::HIGHS:
         case model::SolverAlgorithm::MILP:
             lbl_algo_desc_->setText(
-                "<b>Programação Linear Inteira Mista (MILP)</b><br>"
-                "Formulações lineares discretas via Branch-and-Cut (conforme Seção 7 das instruções). "
-                "Utiliza relaxação contínua e planos de corte para convergir ao ótimo global. "
-                "Se os solvers externos (SCIP/HiGHS) não estiverem instalados, integra via formulação CP-SAT.");
-            lbl_algo_type_->setText("Programação Linear (MILP)");
+                "<b>HiGHS (High Performance Optimization Software)</b><br>"
+                "Resolvedor de Programação Linear Inteira Mista (MILP) de altíssima performance baseado em "
+                "Branch-and-Cut paralelizado, pré-processamento algébrico, planos de corte Gomory/Clique e "
+                "relaxação Dual Simplex de última geração, com suporte a Warm Start.");
+            lbl_algo_type_->setText("Exato (MILP)");
             lbl_algo_guarantee_->setText("Ótimo Global");
-            lbl_algo_speed_->setText("Moderado");
+            lbl_algo_speed_->setText("Rápido / Paralelo");
             chk_sem_limite_tempo_->setEnabled(true);
             spin_time_limit_->setEnabled(!chk_sem_limite_tempo_->isChecked());
             chk_sem_limite_memoria_->setEnabled(true);
