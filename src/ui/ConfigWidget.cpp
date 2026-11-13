@@ -132,6 +132,8 @@ void ConfigWidget::setupUi() {
     combo_algoritmo_ = new QComboBox(grp_solver);
     combo_algoritmo_->addItem("Google OR-Tools CP-SAT (Restrições / Exato - Recomendado)",
                               static_cast<int>(model::SolverAlgorithm::CP_SAT));
+    combo_algoritmo_->addItem("NVIDIA cuOpt - Otimização Matemática Acelerada por GPU (MILP/LP)",
+                              static_cast<int>(model::SolverAlgorithm::CUOPT));
     combo_algoritmo_->addItem("SCIP - Solving Constraint Integer Programs (Branch-and-Cut)",
                               static_cast<int>(model::SolverAlgorithm::SCIP));
     combo_algoritmo_->addItem("HiGHS - High Performance Optimization Software (MILP)",

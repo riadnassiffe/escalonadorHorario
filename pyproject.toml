@@ -1,0 +1,21 @@
+[project]
+name = "escalonadorhorario"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Ríad M. Nassiffe", email = "riad.nassiffe@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "cuopt-server-cu13>=26.10.0",
+    "cuopt-sh-client>=26.10.0",
+    "libcuopt-cu13>=26.10.0",
+]
+
+[project.scripts]
+escalonadorhorario = "escalonadorhorario:main"
+
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14.0"]
+build-backend = "uv_build"

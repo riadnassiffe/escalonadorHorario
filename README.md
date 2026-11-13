@@ -118,18 +118,56 @@ O software implementa rigorosamente todas as especificações e formulações ma
 
 ## ⚙️ Compilação e Execução
 
-### 1. Instalar Dependências com Conan
+### 1. Instalar Dependências com Conan (Linux)
 
 ```bash
 conan install . --build=missing -s compiler.cppstd=20
 ```
 
-### 2. Configurar e Compilar com CMake
+### 2. Configurar e Compilar com CMake (Linux)
 
 ```bash
 cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j$(nproc)
 ```
+
+---
+
+## 🪟 Compilação no Windows (MSVC 2022 + Conan 2 + Qt 6)
+
+### Pré-requisitos no Windows
+- **Visual Studio 2022** (com a carga de trabalho *"Desenvolvimento para Desktop com C++"*)
+- **CMake 3.20+** e **Ninja** (ou compilador MSVC via Visual Studio Command Prompt)
+- **Conan 2.x** (`pip install conan`)
+- **Qt 6** (instalado via Qt Online Installer ou `aqtinstall`, ex: `C:\Qt\6.8.0\msvc2022_64`)
+
+### Opção A: Script Automatizado (PowerShell)
+
+Execute no **Developer PowerShell for VS 2022**:
+
+```powershell
+.\scripts\build_windows.ps1 -BuildType Release -QtDir "C:\Qt\6.8.0\msvc2022_64"
+```
+
+O script instala as dependências via Conan, compila o projeto e executa o `windeployqt` para copiar todas as DLLs necessárias para a pasta do `.exe`.
+
+### Opção B: Passo a Passo Manual
+
+1. **Instalar dependências via Conan usando o perfil do Windows:**
+   ```powershell
+   conan install . --profile:host profiles/windows-msvc --profile:build default --build=missing
+   ```
+
+2. **Configurar e Compilar com CMake:**
+   ```powershell
+   cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=build/generators/conan_toolchain.cmake -DCMAKE_PREFIX_PATH="C:\Qt\6.8.0\msvc2022_64"
+   cmake --build build --config Release --parallel
+   ```
+
+3. **Empacotar as DLLs do Qt (windeployqt):**
+   ```powershell
+   C:\Qt\6.8.0\msvc2022_64\bin\windeployqt.exe build\Release\escalonadorHorarios.exe
+   ```
 
 ### 3. Executar o Software com Interface Gráfica
 

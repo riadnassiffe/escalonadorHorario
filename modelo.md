@@ -2,23 +2,23 @@
 
 ## 1. Descrição do Problema
 
-O problema de escalonamento de horários em escolas é um problema muito conhecido com várias soluções como: [ascTimeTables](https://www.asctimetables.com/timetables_pt.html), [PowerCubus](https://powercubus.com.br/features), [CronosTimeTable](https://www.cronostimetable.com/) e outros  . Apesar de um ser um problema muito comum em instituições de ensino, pode ter muitas características diferentes entre diferentes instituições. O **Problema de Programação de Horários Universitário e Escolar** (*High School and University Timetabling Problem*), classificado na literatura de complexidade como **NP-difícil** (*NP-hard*).
+O problema de escalonamento de horários em escolas é um problema conhecido com várias variações e soluções como: [ascTimeTables](https://www.asctimetables.com/timetables_pt.html), [PowerCubus](https://powercubus.com.br/features), [CronosTimeTable](https://www.cronostimetable.com/) e outros. Apesar de um ser um problema muito comum em instituições de ensino, pode ter muitas características diferentes entre diferentes instituições. O **Problema de Programação de Horários Universitário e Escolar** (*High School and University Timetabling Problem*), classificado na literatura de complexidade como **NP-difícil** (*NP-hard*).
 
 Visando criar uma solução para instituição que trabalho, listei a baixo os requisitos que o sistema deve levar em consideração para escalonar as aulas:
-	+ Aulas podem ter tempo de 45 minutos ou 50 minutos.
-	+ Professores tem disponibilidade de acordo com turno
-	+ Professores podem expressar preferências de dias e horários.
-	+ Turmas podem ter aulas pela manhã e tarde ou tarde e noite, podendo variar de acordo com o dia da semana.
-	+ Salas pode ser cadastradas e classificadas como: laboratórios (mecânica, elétrica, informática, química e física), sala teórica e ambiente especial (ginásio, sala de música e etc), com número de alunos suportados.
-	+ Disciplinas podem ser semestral ou anual, podem usar a sala ou grupo de salas em especifico, quantidade de aulas por dia e se devem ser ministradas em bloco ou não.
++ Aulas podem ter tempo de 45 minutos ou 50 minutos.
++ Professores tem disponibilidade de acordo com turno
++ Professores podem expressar preferências de dias e horários.
++ Turmas podem ter aulas pela manhã e tarde ou tarde e noite, podendo variar de acordo com o dia da semana.
++ Salas pode ser cadastradas e classificadas como: laboratórios (mecânica, elétrica, informática, química e física), sala teórica e ambiente especial (ginásio, sala de música e etc), com número de alunos suportados.
++ Disciplinas podem ser semestral ou anual, podem usar a sala ou grupo de salas em especifico, quantidade de aulas por dia e se devem ser ministradas em bloco ou não.
 
-Uma das principais características do sistema é a diferenciação formal e simultânea entre **Disciplinas Anuais** e **Disciplinas Semestrais** e aulas com tempos diferentes algumas de 45 e outras de 50, permitindo otimizações integradas com acoplamento intersemestral de horários e salas. Com intuito de resolver isso a seguir será montando um conjunto de restrições matemática para implementação de um sistema de escalonamento.
+
 
 # 2. Definição do Modelo
 
 ## 2.1. Representação do Tempo
 
-As aulas podem ser de 45 ou 50 minutos. Devido a isso o dia será dividido em pequenos blocos (*slots*) de $\Delta = 5$ minutos, numerados a partir da meia-noite (`00:00` = slot 0):
+As aulas podem ser de 45 ou 50 minutos. Devido a isso o dia será dividido em blocos (*slots*) de $\Delta = 5$ minutos, numerados a partir da meia-noite (`00:00` = slot 0):
 - Uma aula de **45 minutos** ocupa $L_a = 9$ slots consecutivos.
 - Uma aula de **50 minutos** ocupa $L_a = 10$ slots consecutivos.
 - Uma aula que começa no slot $t$ e dura $L_a$ slots ocupa o intervalo semiaberto $[t, t + L_a)$, ou seja, os slots $t, t+1, \ldots, t+L_a-1$. Assim, uma aula que termina às `08:45` (slot 105) não conflita com outra que começa exatamente às `08:45` (slot 105).
@@ -27,7 +27,7 @@ Com essa representação podemos representar qualquer tempo de aula que seja mú
 
 ## 2.2. Disciplinas Anuais e Semestrais
 
-É considerado que todas as disciplinas são dividadas em semestres, mas algumas ocupam dois semestres, as anuais, ($\mathcal{S} = \{1, 2\}$ e outras podem ocorrer em um único semestre ($\mathcal{S} = \{1\}$ ou $\mathcal{S} = \{2\}$) , sendo assim:
+É considerado que todas as disciplinas são divididas em semestres, mas algumas ocupam dois semestres, as anuais, ($\mathcal{S} = \{1, 2\}$ e outras podem ocorrer em um único semestre ($\mathcal{S} = \{1\}$ ou $\mathcal{S} = \{2\}$) , sendo assim:
 - **Disciplinas anuais:** Ocorrem nos dois semestres no mesmo dia, horário e sala. Por isso, usam uma única variável de decisão compartilhada entre o 1º e o 2º semestre.
 - **Disciplinas semestrais:** Ocupam professor, turma e sala apenas no semestre em que estão ativas. Isso permite que uma aula do 1º semestre e outra do 2º semestre usem o mesmo horário e a mesma sala sem conflito.
 
@@ -56,7 +56,7 @@ Na tabela a baixo esta sintetizado os conjuntos e índices dos "recursos" a sere
 | $\mathcal{C}_a$ | Conjunto de candidatos viáveis gerados para a aula $a$ | 
   
 
-**O que é uma ocorrência de aula ($a \in \mathcal{A}$)?**
+**Ocorrência de aula ($a \in \mathcal{A}$)?**
 
 Se a disciplina de Matemática tem 4 aulas por semana, o sistema gera 4 ocorrências independentes ($a_1, a_2, a_3, a_4 \in \mathcal{A}_q$). Cada ocorrência precisa receber um dia, um horário inicial e uma sala. Se as aulas ocorrerem sempre de duas em duas, a disciplina pode ser cadastrada com aulas de 90 minutos, que irá gerar metade das ocorrências.
 

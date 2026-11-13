@@ -1,0 +1,16 @@
+[settings]
+os=Windows
+arch=x86_64
+compiler=msvc
+compiler.version=194
+compiler.cppstd=20
+compiler.runtime=dynamic
+compiler.runtime_type=Release
+build_type=Release
+
+[options]
+or-tools/*:shared=False
+
+[conf]
+# Caso prefira utilizar Ninja no Windows, descomente a linha abaixo:
+# tools.cmake.cmaketoolchain:generator=Ninja

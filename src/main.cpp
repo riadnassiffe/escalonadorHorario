@@ -43,6 +43,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Uso: " << argv[0] << " [OPÇÕES] [ARQUIVO.json]\n\n"
                   << "Opções de Execução:\n"
                   << "  --cli, --test, --benchmark   Executa em modo linha de comando (sem GUI)\n"
+                  << "  --cuopt                      Utiliza NVIDIA cuOpt (GPU-Accelerated Mathematical Optimization)\n"
                   << "  --greedy                     Utiliza Heurística Gulosa\n"
                   << "  --cpsat                      Utiliza CP-SAT (Google OR-Tools)\n"
                   << "  --scip                       Utiliza SCIP (Solving Constraint Integer Programs)\n"
@@ -67,6 +68,7 @@ int main(int argc, char* argv[]) {
         std::cout << "  [SOLVER CHECK] HiGHS disponível: SIM (Nativo v" << highsVersion() << ")" << std::endl;
         std::cout << "  [SOLVER CHECK] SCIP disponível: SIM (Nativo v"
                   << SCIPmajorVersion() << "." << SCIPminorVersion() << "." << SCIPtechVersion() << ")" << std::endl;
+        std::cout << "  [SOLVER CHECK] NVIDIA cuOpt: SIM (GPU Acelerado / Suporte a C API e Modelo MPS)" << std::endl;
 
         scheduler::model::InstitutionData data;
         std::string filename;
@@ -104,6 +106,7 @@ int main(int argc, char* argv[]) {
         for (int i = 1; i < argc; ++i) {
             std::string arg = argv[i];
             if (arg == "--warmstart-chain") warmstart_chain = true;
+            else if (arg == "--cuopt") data.config().algoritmo = scheduler::model::SolverAlgorithm::CUOPT;
             else if (arg == "--greedy") data.config().algoritmo = scheduler::model::SolverAlgorithm::GREEDY_HEURISTIC;
             else if (arg == "--scip") data.config().algoritmo = scheduler::model::SolverAlgorithm::SCIP;
             else if (arg == "--highs") data.config().algoritmo = scheduler::model::SolverAlgorithm::HIGHS;

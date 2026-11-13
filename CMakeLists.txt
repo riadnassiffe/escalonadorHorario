@@ -5,6 +5,11 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+if(MSVC)
+    add_compile_options(/utf-8)
+    add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN)
+endif()
+
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
@@ -90,14 +95,23 @@ add_executable(escalonadorHorarios ${SOURCES} ${HEADERS})
 
 target_include_directories(escalonadorHorarios PRIVATE include)
 
-if(DEFINED highs_PACKAGE_FOLDER_RELEASE)
+if(DEFINED highs_PACKAGE_FOLDER)
+    target_include_directories(escalonadorHorarios PRIVATE
+        "${highs_PACKAGE_FOLDER}/include"
+        "${highs_PACKAGE_FOLDER}/include/highs"
+    )
+elseif(DEFINED highs_PACKAGE_FOLDER_RELEASE)
     target_include_directories(escalonadorHorarios PRIVATE
         "${highs_PACKAGE_FOLDER_RELEASE}/include"
         "${highs_PACKAGE_FOLDER_RELEASE}/include/highs"
     )
 endif()
 
-if(DEFINED scip_PACKAGE_FOLDER_RELEASE)
+if(DEFINED scip_PACKAGE_FOLDER)
+    target_include_directories(escalonadorHorarios PRIVATE
+        "${scip_PACKAGE_FOLDER}/include"
+    )
+elseif(DEFINED scip_PACKAGE_FOLDER_RELEASE)
     target_include_directories(escalonadorHorarios PRIVATE
         "${scip_PACKAGE_FOLDER_RELEASE}/include"
     )
@@ -111,5 +125,6 @@ target_link_libraries(escalonadorHorarios PRIVATE
     Qt6::Core
     Qt6::Gui
     Qt6::Widgets
+    ${CMAKE_DL_LIBS}
 )
 

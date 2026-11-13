@@ -163,27 +163,28 @@ $$\min Z = \lambda_1 J + \lambda_2 D + \lambda_3 P + \lambda_4 W + \lambda_5 T +
 
 ## 5. Requisitos dos Motores de Resolução (Solvers)
 
-O sistema implementa 6 algoritmos de resolução intercambiáveis:
+O sistema implementa algoritmos de resolução intercambiáveis:
 
 1. **Google OR-Tools CP-SAT (Padrão / Recomendado):**
    * Programação por restrições com aprendizado de cláusulas guiado por conflitos (CDCL).
    * Variáveis intervalares opcionais (`NewOptionalIntervalVar`) e propagador nativo `AddNoOverlap`.
    * Parâmetros configuráveis: tempo limite em segundos (`tempo_limite_segundos`), limite de memória RAM em MB (`max_memoria_mb`), número de threads de CPU paralelas (`num_threads`) e log de progresso (`log_search_progress`).
-2. **SCIP — Solving Constraint Integer Programs (`solveScip`):**
+2. **NVIDIA cuOpt — GPU-Accelerated Mathematical Optimization (`solveCuOpt`):**
+   * Solver de otimização combinatória e Programação Linear Inteira Mista (MILP) acelerado por hardware NVIDIA GPU / CUDA.
+   * Montagem de matriz esparsa comprimida (CSR) com vinculação direta à C API do cuOpt (`cuOptCreateRangedProblem`, `cuOptSolve`) via carregamento dinâmico (`libcuopt.so`).
+   * Exportação automática da formulação matemática completa em formato padrão MPS (`grade_cuopt_model.mps`) para ingestão em microserviços cuOpt, scripts Python e containers NVIDIA NGC.
+   * Telemetria e detecção automática de GPUs NVIDIA instaladas no sistema, com fallback para motor Dual Simplex B&C de alta performance com Warm Start.
+3. **SCIP — Solving Constraint Integer Programs (`solveScip`):**
    * Solver nativo de Programação Inteira Mista e por Restrições (Branch-Cut-and-Price) integrado via API C do SCIP (`<scip/scip.h>`).
    * Formulação linear inteira completa com cortes de clique por slot para não sobreposição ($\sum_{c \text{ cobre } k} x_{a,c} \le 1$), variáveis de sala teórica fixa ($z_{g,r}$), início obrigatório da jornada ($T_{\text{ini}}$), blocos consecutivos e penalidades suaves ($D, W, P, T, J, J_G$).
    * Suporte a injeção de solução primal inicial (Warm Start / semente heurística) via `SCIPaddSolFree`.
-3. **HiGHS — High Performance Optimization Software (`solveHighs`):**
+4. **HiGHS — High Performance Optimization Software (`solveHighs`):**
    * Solver nativo de Programação Linear Inteira Mista de alta performance integrado via API C++ do HiGHS (`<Highs.h>`).
    * Construção direta da matriz esparsa comprimida (`HighsSparseMatrix`), pré-processamento algébrico, Dual Simplex paralelo e Branch-and-Cut.
    * Suporte a Warm Start via `Highs::setSolution`.
-4. **Heurística Construtiva Gulosa (Greedy Heuristic):**
+5. **Heurística Construtiva Gulosa (Greedy Heuristic):**
    * Resolução rápida baseada em ordenação por grau de restrição (número de candidatos viáveis e duração da aula).
    * Alocação gulosa priorizando aulas fixadas e minimizando penalidades imediatas.
-5. **Algoritmo Genético (Meta-heurística):**
-   * Otimização populacional multi-geração.
-   * Suporte à semeadura da população inicial com a grade atual em tela.
-   * Avaliação de fitness baseada na função objetivo ponderada e número de aulas alocadas.
 6. **Auditoria Pós-Resolução:**
    * Verificação estrita de integridade executada após o solver para detectar eventuais sobreposições de professores, turmas ou salas, emitindo mensagens de diagnóstico imediatas.
 
@@ -219,7 +220,7 @@ O sistema implementa 6 algoritmos de resolução intercambiáveis:
 
 * Suporte a execução sem interface gráfica via flags:
   * `--cli`, `--test`, `--benchmark`: Execução de testes automatizados e benchmark.
-  * `--greedy`, `--cpsat`, `--scip`, `--highs`, `--milp`, `--genetic`: Seleção do algoritmo.
+  * `--cuopt`, `--greedy`, `--cpsat`, `--scip`, `--highs`, `--milp`: Seleção do algoritmo.
   * `--log`: Ativação do log interno de progresso dos motores de busca.
   * `--max-memory <MB>`: Definição de teto de memória RAM.
   * `--unlimited-memory`: Execução sem limite de memória.

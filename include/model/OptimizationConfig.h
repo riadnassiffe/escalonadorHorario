@@ -50,11 +50,12 @@ enum class SolverAlgorithm {
     GREEDY_HEURISTIC,   ///< Heurística Construtiva Gulosa (Greedy Search) - Resolução rápida por prioridades.
     SCIP,               ///< SCIP (Solving Constraint Integer Programs) - Programação Inteira Mista e por Restrições.
     HIGHS,              ///< HiGHS (High Performance Optimization Software) - Programação Linear Inteira Mista (MILP).
-    MILP                ///< Programação Linear Inteira Mista (Alias de compatibilidade -> HiGHS/SCIP).
+    MILP,               ///< Programação Linear Inteira Mista (Alias de compatibilidade -> HiGHS/SCIP).
+    CUOPT               ///< NVIDIA cuOpt (GPU-Accelerated Mathematical Optimization / MILP).
 };
 
 /**
- * @brief Converte o enum SolverAlgorithm em identificador textual ("CP_SAT", "GREEDY_HEURISTIC", "SCIP", "HIGHS", etc.).
+ * @brief Converte o enum SolverAlgorithm em identificador textual ("CP_SAT", "GREEDY_HEURISTIC", "SCIP", "HIGHS", "CUOPT", etc.).
  * @param algo Algoritmo de resolução.
  * @return String com a chave do algoritmo.
  */
@@ -65,6 +66,7 @@ inline std::string solverAlgorithmToString(SolverAlgorithm algo) {
         case SolverAlgorithm::SCIP: return "SCIP";
         case SolverAlgorithm::HIGHS: return "HIGHS";
         case SolverAlgorithm::MILP: return "MILP";
+        case SolverAlgorithm::CUOPT: return "CUOPT";
     }
     return "CP_SAT";
 }
@@ -79,6 +81,7 @@ inline SolverAlgorithm stringToSolverAlgorithm(const std::string& str) {
     if (str == "SCIP") return SolverAlgorithm::SCIP;
     if (str == "HIGHS") return SolverAlgorithm::HIGHS;
     if (str == "MILP") return SolverAlgorithm::MILP;
+    if (str == "CUOPT") return SolverAlgorithm::CUOPT;
     return SolverAlgorithm::CP_SAT;
 }
 
@@ -94,6 +97,7 @@ inline std::string solverAlgorithmDisplayName(SolverAlgorithm algo) {
         case SolverAlgorithm::SCIP: return "SCIP - Programação Inteira Mista e por Restrições (Branch-and-Cut)";
         case SolverAlgorithm::HIGHS: return "HiGHS - Programação Linear Inteira Mista de Alta Performance (MILP)";
         case SolverAlgorithm::MILP: return "Programação Linear Inteira Mista (MILP - HiGHS/SCIP)";
+        case SolverAlgorithm::CUOPT: return "NVIDIA cuOpt - Otimização Matemática Acelerada por GPU (MILP/LP)";
     }
     return "Google OR-Tools CP-SAT";
 }

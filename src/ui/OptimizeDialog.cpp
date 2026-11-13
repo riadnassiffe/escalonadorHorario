@@ -68,6 +68,8 @@ void OptimizeDialog::setupUi() {
     combo_algorithm_ = new QComboBox(grp_algo);
     combo_algorithm_->addItem("Google OR-Tools CP-SAT (Restrições / Exato) [Recomendado]",
                               static_cast<int>(model::SolverAlgorithm::CP_SAT));
+    combo_algorithm_->addItem("NVIDIA cuOpt - Otimização Matemática Acelerada por GPU (MILP/LP) [GPU]",
+                              static_cast<int>(model::SolverAlgorithm::CUOPT));
     combo_algorithm_->addItem("SCIP - Solving Constraint Integer Programs (Branch-and-Cut) [Exato]",
                               static_cast<int>(model::SolverAlgorithm::SCIP));
     combo_algorithm_->addItem("HiGHS - High Performance Optimization Software (MILP) [Exato]",
@@ -331,6 +333,23 @@ void OptimizeDialog::updateAlgorithmDetails(model::SolverAlgorithm algo) {
             lbl_algo_type_->setText("Exato (MILP)");
             lbl_algo_guarantee_->setText("Ótimo Global");
             lbl_algo_speed_->setText("Rápido / Paralelo");
+            chk_sem_limite_tempo_->setEnabled(true);
+            spin_time_limit_->setEnabled(!chk_sem_limite_tempo_->isChecked());
+            chk_sem_limite_memoria_->setEnabled(true);
+            spin_mem_limit_->setEnabled(!chk_sem_limite_memoria_->isChecked());
+            spin_threads_->setEnabled(true);
+            chk_log_->setEnabled(true);
+            break;
+
+        case model::SolverAlgorithm::CUOPT:
+            lbl_algo_desc_->setText(
+                "<b>NVIDIA cuOpt (GPU-Accelerated Mathematical Optimization)</b><br>"
+                "Motor de otimização combinatória e matemática de alto desempenho acelerado por hardware NVIDIA GPU / CUDA. "
+                "Utiliza paralelismo massivo em GPU (PDLP / Simplex / Primal Heuristics / Branch-and-Bound) para resolução "
+                "de modelos lineares inteiros mistos (MILP), com matriz esparsa CSR nativa, exportação MPS e Warm Start.");
+            lbl_algo_type_->setText("GPU Acelerado (MILP/LP)");
+            lbl_algo_guarantee_->setText("Ótimo / Heurística GPU");
+            lbl_algo_speed_->setText("Massivo / GPU CUDA");
             chk_sem_limite_tempo_->setEnabled(true);
             spin_time_limit_->setEnabled(!chk_sem_limite_tempo_->isChecked());
             chk_sem_limite_memoria_->setEnabled(true);

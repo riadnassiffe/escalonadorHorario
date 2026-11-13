@@ -92,6 +92,14 @@ private:
      */
     model::Timetable solveMilp(const model::InstitutionData& data, ProgressCallback callback);
 
+    /**
+     * @brief Resolve o escalonamento utilizando o motor acelerado por GPU NVIDIA cuOpt.
+     * @param data Dados institucionais e parâmetros.
+     * @param callback Callback de atualização de progresso.
+     * @return Grade calculada pelo modelo cuOpt na GPU.
+     */
+    model::Timetable solveCuOpt(const model::InstitutionData& data, ProgressCallback callback);
+
     std::atomic<bool> stop_requested_{false};
 };
 
