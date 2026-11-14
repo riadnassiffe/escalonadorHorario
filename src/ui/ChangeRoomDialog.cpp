@@ -330,9 +330,10 @@ bool ChangeRoomDialog::isPinned() const {
  */
 void ChangeRoomDialog::onConfirmClicked() {
     if (!conflicting_aula_id_.empty()) {
-        auto resp = QMessageBox::warning(this, "Conflito de Sala",
+        auto resp = QMessageBox::question(this, "Permissão: Conflito de Sala",
             "A sala selecionada já está ocupada por outra aula neste horário.\n\n"
-            "Deseja realmente alocar ambas as aulas na mesma sala (compartilhamento)?",
+            "⚠️ Ambas as aulas que geraram conflito serão destacadas em cor VERMELHA na grade horária.\n\n"
+            "Deseja permissão para alocar ambas as aulas na mesma sala (compartilhamento)?",
             QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
         if (resp != QMessageBox::Yes) return;
     }

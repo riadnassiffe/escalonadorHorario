@@ -297,6 +297,16 @@ public:
     void setGrade(Timetable grade) { grade_ = std::move(grade); }
 
     /**
+     * @brief Realiza a auditoria completa de conflitos de restrições na grade horária atual.
+     *
+     * Valida choques de turma, choques de professor, choques de sala, indisponibilidades docentes,
+     * intervalos/recreios das turmas, jornada diária e limites diários de aulas por disciplina.
+     *
+     * @return Mapa associando o identificador da aula (aula_id) a um vetor com os conflitos detectados.
+     */
+    std::map<std::string, std::vector<std::string>> verificarConflitosGrade() const;
+
+    /**
      * @brief Remove todos os dados cadastrados (professores, salas, turmas, disciplinas, aulas e grade).
      */
     void clear();

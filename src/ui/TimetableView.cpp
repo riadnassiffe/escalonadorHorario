@@ -377,6 +377,7 @@ void TimetableView::renderTimetable() {
     QStringList vertical_headers;
 
     int row = 0;
+    auto conflitos_map = data_.verificarConflitosGrade();
     for (const auto& [start_s, end_s] : horarios_set) {
         model::TimeInterval row_inter(start_s, end_s);
         vertical_headers << QString::fromStdString(row_inter.toString());
@@ -466,6 +467,8 @@ void TimetableView::renderTimetable() {
                 QString main_aula_id;
                 bool has_lab = false;
                 bool has_special = false;
+                bool cell_has_conflict = false;
+                QStringList cell_conflict_tooltips;
 
                 for (const auto* aula : found_aulas) {
                     if (main_aula_id.isEmpty()) {
@@ -473,6 +476,17 @@ void TimetableView::renderTimetable() {
                     }
                     if (aula->tipo == "LABORATORIO") has_lab = true;
                     if (aula->tipo == "ESPECIAL") has_special = true;
+
+                    bool aula_has_conflict = false;
+                    auto it_conf = conflitos_map.find(aula->aula_id);
+                    if (it_conf != conflitos_map.end() && !it_conf->second.empty()) {
+                        cell_has_conflict = true;
+                        aula_has_conflict = true;
+                        for (const auto& c_msg : it_conf->second) {
+                            cell_conflict_tooltips << QString("• [%1] %2")
+                                .arg(QString::fromStdString(aula->disciplina_nome), QString::fromStdString(c_msg));
+                        }
+                    }
 
                     QString reg_tag;
                     if (aula->regime == model::RegimeDisciplina::ANUAL) {
@@ -484,6 +498,9 @@ void TimetableView::renderTimetable() {
                     }
 
                     QString title = QString("%1 %2").arg(reg_tag, QString::fromStdString(aula->disciplina_nome));
+                    if (aula_has_conflict) {
+                        title = "⚠️ " + title;
+                    }
                     if (aula->is_pinned) {
                         title = "📌 " + title;
                     }
@@ -544,7 +561,19 @@ void TimetableView::renderTimetable() {
                 item->setData(Qt::UserRole, main_aula_id);
 
                 bool is_dark = ModernTheme::isDarkTheme();
-                if (has_lab) {
+                if (cell_has_conflict) {
+                    // Destaque em cor vermelha para aulas que geraram conflito
+                    item->setBackground(is_dark ? QColor(153, 27, 27, 180) : QColor(254, 202, 202, 230));
+                    item->setForeground(is_dark ? QColor("#fca5a5") : QColor("#991b1b"));
+                    QFont font = item->font();
+                    font.setBold(true);
+                    item->setFont(font);
+
+                    cell_conflict_tooltips.removeDuplicates();
+                    QString tooltip = QString("⚠️ <b>AULA COM CONFLITO DE RESTRIÇÕES:</b><br>%1")
+                        .arg(cell_conflict_tooltips.join("<br>"));
+                    item->setToolTip(tooltip);
+                } else if (has_lab) {
                     item->setBackground(is_dark ? QColor(236, 72, 153, 40) : QColor(251, 207, 232, 160));
                     item->setForeground(is_dark ? QColor("#f472b6") : QColor("#9d174d"));
                 } else if (has_special) {
@@ -838,6 +867,37 @@ void TimetableView::moverAulaManual(const QString& aula_id) {
             if (a_aloc->dia != target_day || a_aloc->intervalo.start_slot != target_interval.start_slot) {
                 onLessonDropRequested(aula_id, target_row, target_col);
             } else if (room_changed) {
+                // Verificar se a alteração de sala causará choque ou incompatibilidade
+                std::vector<std::string> room_conflitos;
+                const auto* s_novo = data_.findSala(target_room);
+                if (a_aloc->tipo == "LABORATORIO" && s_novo && s_novo->isTeorica()) {
+                    room_conflitos.push_back("Incompatibilidade de sala: A aula requer Laboratório, mas a Sala '" + s_nome + "' é Teórica.");
+                }
+                for (const auto& other_a : data_.grade().alocacoes()) {
+                    if (other_a.aula_id != aid && other_a.dia == a_aloc->dia &&
+                        std::max(other_a.intervalo.start_slot, a_aloc->intervalo.start_slot) < std::min(other_a.intervalo.end_slot, a_aloc->intervalo.end_slot)) {
+                        if (std::find(other_a.salas.begin(), other_a.salas.end(), target_room) != other_a.salas.end()) {
+                            room_conflitos.push_back("Choque de sala: A Sala '" + s_nome + "' já está ocupada pela aula '" +
+                                                    other_a.disciplina_nome + "' (" + other_a.aula_id + ") neste horário.");
+                        }
+                    }
+                }
+                if (!room_conflitos.empty()) {
+                    QString msg = QString("Foram detectados %1 conflito(s) ao alterar para a sala '%2':\n\n")
+                        .arg(room_conflitos.size()).arg(QString::fromStdString(s_nome));
+                    for (const auto& c : room_conflitos) {
+                        msg += "• " + QString::fromStdString(c) + "\n";
+                    }
+                    msg += "\n⚠️ As aulas que geraram conflito serão destacadas em cor VERMELHA na grade horária.\n\nDeseja permissão para confirmar a alteração mesmo com os conflitos informados?";
+                    auto resp = QMessageBox::question(this, "Permissão: Conflito de Sala", msg, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+                    if (resp != QMessageBox::Yes) {
+                        // Reverter sala
+                        if (a_model->isPinned() && !a_model->pinnedRooms().empty()) {
+                            a_aloc->salas = a_model->pinnedRooms();
+                        }
+                        return;
+                    }
+                }
                 a_aloc->is_pinned = true;
                 a_model->setPinned(true);
                 data_.grade().addMensagemDiagnostico("[MANUAL] Sala da aula " + aid + " (" + a_aloc->disciplina_nome + ") alterada para " + s_nome + ".");
@@ -1141,6 +1201,9 @@ std::vector<std::string> TimetableView::verificarConflitosMovimentacao(
     // 3. Verificar salas
     for (const auto& sala_id : a_aloc->salas) {
         const auto* s = data_.findSala(sala_id);
+        if (a_aloc->tipo == "LABORATORIO" && s && s->isTeorica()) {
+            conflitos.push_back("Incompatibilidade de sala: A aula requer Laboratório, mas a Sala '" + s->nome() + "' é Teórica.");
+        }
         for (const auto& a : data_.grade().alocacoes()) {
             if (a.aula_id != aid && a.dia == dia && semestres_conflitam(*a_aloc, a) && time_overlaps(a.intervalo, intervalo)) {
                 if (std::find(a.salas.begin(), a.salas.end(), sala_id) != a.salas.end()) {
@@ -1251,12 +1314,15 @@ void TimetableView::onLessonDropRequested(const QString& aula_id, int target_row
     model::TimeInterval new_interval(target_interval.start_slot, target_interval.start_slot + a_aloc->intervalo.durationSlots());
     auto conflitos = verificarConflitosMovimentacao(aid, target_day, new_interval);
     if (!conflitos.empty()) {
-        QString msg = "Atenção: A movimentação manual causará as seguintes incompatibilidades:\n\n";
-        for (const auto& c : conflitos) {
-            msg += "• " + QString::fromStdString(c) + "\n";
+        QString msg = QString("Foram detectados %1 conflito(s) com as restrições cadastradas ao movimentar esta aula:\n\n").arg(conflitos.size());
+        for (size_t i = 0; i < std::min<size_t>(conflitos.size(), 8); ++i) {
+            msg += "• " + QString::fromStdString(conflitos[i]) + "\n";
         }
-        msg += "\nDeseja confirmar a alocação manual mesmo assim?";
-        auto resp = QMessageBox::warning(this, "Aviso de Conflitos", msg, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        if (conflitos.size() > 8) {
+            msg += QString("... e mais %1 outro(s).\n").arg(conflitos.size() - 8);
+        }
+        msg += "\n⚠️ As aulas que geraram conflito serão destacadas em cor VERMELHA na grade horária.\n\nDeseja permissão para confirmar a alocação mesmo com os conflitos informados?";
+        auto resp = QMessageBox::question(this, "Permissão: Conflito de Restrições", msg, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
         if (resp != QMessageBox::Yes) return;
     }
 

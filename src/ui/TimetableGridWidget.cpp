@@ -72,6 +72,7 @@ void TimetableGridWidget::mouseMoveEvent(QMouseEvent* event) {
 
     // Miniatura elegante sob o cursor do mouse
     bool is_dark = ModernTheme::isDarkTheme();
+    bool has_conflict = item->text().contains("⚠️");
     QPixmap pixmap(230, 52);
     pixmap.fill(Qt::transparent);
     QPainter painter(&pixmap);
@@ -79,6 +80,10 @@ void TimetableGridWidget::mouseMoveEvent(QMouseEvent* event) {
 
     QColor bg_color = is_dark ? QColor(30, 58, 138, 235) : QColor(37, 99, 235, 235);
     QColor border_color = is_dark ? QColor("#60a5fa") : QColor("#93c5fd");
+    if (has_conflict) {
+        bg_color = is_dark ? QColor(153, 27, 27, 235) : QColor(220, 38, 38, 235);
+        border_color = is_dark ? QColor("#fca5a5") : QColor("#ef4444");
+    }
     painter.setBrush(bg_color);
     painter.setPen(QPen(border_color, 1.5));
     painter.drawRoundedRect(QRect(1, 1, 228, 50), 6, 6);

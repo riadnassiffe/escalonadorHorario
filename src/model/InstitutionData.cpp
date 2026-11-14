@@ -705,4 +705,141 @@ InstitutionData InstitutionData::criarExemploPadrao() {
     return data;
 }
 
+std::map<std::string, std::vector<std::string>> InstitutionData::verificarConflitosGrade() const {
+    std::map<std::string, std::vector<std::string>> conflitos;
+    const auto& alocs = grade_.alocacoes();
+    if (alocs.empty()) return conflitos;
+
+    auto time_overlaps = [](const TimeInterval& t1, const TimeInterval& t2) {
+        return std::max(t1.start_slot, t2.start_slot) < std::min(t1.end_slot, t2.end_slot);
+    };
+
+    auto semestres_conflitam = [](const AllocatedLesson& a1, const AllocatedLesson& a2) {
+        if (a1.regime == RegimeDisciplina::ANUAL || a2.regime == RegimeDisciplina::ANUAL) return true;
+        int s1 = (a1.semestre == SemestreLetivo::SEMESTRE_2 || a1.semestre_alocado == 2) ? 2 : 1;
+        int s2 = (a2.semestre == SemestreLetivo::SEMESTRE_2 || a2.semestre_alocado == 2) ? 2 : 1;
+        return s1 == s2;
+    };
+
+    // 1. Verificações individuais de cada aula alocada
+    for (const auto& a : alocs) {
+        // 1.1 Restrições de Turma
+        for (const auto& t_id : a.turmas) {
+            const auto* t = findTurma(t_id);
+            if (t) {
+                if (!t->funcionaNoDia(a.dia)) {
+                    conflitos[a.aula_id].push_back(
+                        "Turma inativa: A Turma '" + t->nome() + "' não funciona na " + dayToLongString(a.dia) + ".");
+                }
+                auto j = t->jornadaParaDia(a.dia);
+                for (const auto& inter : j.intervalosAtivos()) {
+                    if (time_overlaps(inter, a.intervalo)) {
+                        conflitos[a.aula_id].push_back(
+                            "Intervalo de recreio: Sobrepõe o recreio (" + inter.toString() + ") da Turma '" + t->nome() + "'.");
+                    }
+                }
+                if (a.intervalo.start_slot < j.jornada_total.start_slot || a.intervalo.end_slot > j.jornada_total.end_slot) {
+                    conflitos[a.aula_id].push_back(
+                        "Fora da jornada: O horário ultrapassa a jornada letiva da Turma '" + t->nome() + "' (" + j.jornada_total.toString() + ").");
+                }
+            }
+        }
+
+        // 1.2 Restrições de Professores
+        for (const auto& p_id : a.professores) {
+            const auto* p = findProfessor(p_id);
+            if (p) {
+                if (!p->isDisponivelNoIntervalo(a.dia, a.intervalo.start_slot, a.intervalo.end_slot)) {
+                    conflitos[a.aula_id].push_back(
+                        "Indisponibilidade docente: O Prof. '" + p->nome() + "' possui indisponibilidade cadastrada neste horário.");
+                }
+            }
+        }
+
+        // 1.3 Incompatibilidade de Sala (Laboratório em sala teórica)
+        if (a.tipo == "LABORATORIO") {
+            for (const auto& s_id : a.salas) {
+                const auto* s = findSala(s_id);
+                if (s && s->isTeorica()) {
+                    conflitos[a.aula_id].push_back(
+                        "Incompatibilidade de sala: A aula requer Laboratório, mas a Sala '" + s->nome() + "' é Teórica.");
+                }
+            }
+        }
+
+        // 1.4 Limite diário de aulas da mesma disciplina na turma
+        if (config_.distribuir_disciplinas_na_semana) {
+            const auto* disc = findDisciplina(a.disciplina_id);
+            int max_lim = (disc && disc->maxAulasPorDiaTurma() > 0) ? disc->maxAulasPorDiaTurma() : config_.max_aulas_disciplina_dia_turma;
+            if (max_lim > 0) {
+                for (const auto& t_id : a.turmas) {
+                    int count = 0;
+                    for (const auto& other : alocs) {
+                        if (other.dia == a.dia && other.disciplina_id == a.disciplina_id && semestres_conflitam(a, other)) {
+                            if (std::find(other.turmas.begin(), other.turmas.end(), t_id) != other.turmas.end()) {
+                                count++;
+                            }
+                        }
+                    }
+                    if (count > max_lim) {
+                        const auto* t = findTurma(t_id);
+                        conflitos[a.aula_id].push_back(
+                            "Limite diário excedido: " + std::to_string(count) + " aulas da disciplina alocadas hoje para a Turma '" +
+                            (t ? t->nome() : t_id) + "' (máximo permitido: " + std::to_string(max_lim) + ").");
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Choques entre pares de aulas alocadas
+    for (size_t i = 0; i < alocs.size(); ++i) {
+        for (size_t j = i + 1; j < alocs.size(); ++j) {
+            const auto& a1 = alocs[i];
+            const auto& a2 = alocs[j];
+
+            if (a1.dia == a2.dia && semestres_conflitam(a1, a2) && time_overlaps(a1.intervalo, a2.intervalo)) {
+                // Choque de Turma
+                for (const auto& t1 : a1.turmas) {
+                    if (std::find(a2.turmas.begin(), a2.turmas.end(), t1) != a2.turmas.end()) {
+                        const auto* t = findTurma(t1);
+                        std::string t_nome = t ? t->nome() : t1;
+                        conflitos[a1.aula_id].push_back(
+                            "Choque de Turma: Conflita com a aula '" + a2.disciplina_nome + "' (" + a2.aula_id + ") da Turma '" + t_nome + "' neste mesmo horário.");
+                        conflitos[a2.aula_id].push_back(
+                            "Choque de Turma: Conflita com a aula '" + a1.disciplina_nome + "' (" + a1.aula_id + ") da Turma '" + t_nome + "' neste mesmo horário.");
+                    }
+                }
+
+                // Choque de Professor
+                for (const auto& p1 : a1.professores) {
+                    if (std::find(a2.professores.begin(), a2.professores.end(), p1) != a2.professores.end()) {
+                        const auto* p = findProfessor(p1);
+                        std::string p_nome = p ? p->nome() : p1;
+                        conflitos[a1.aula_id].push_back(
+                            "Choque de Professor: O Prof. '" + p_nome + "' também ministra a aula '" + a2.disciplina_nome + "' (" + a2.aula_id + ") neste mesmo horário.");
+                        conflitos[a2.aula_id].push_back(
+                            "Choque de Professor: O Prof. '" + p_nome + "' também ministra a aula '" + a1.disciplina_nome + "' (" + a1.aula_id + ") neste mesmo horário.");
+                    }
+                }
+
+                // Choque de Sala
+                for (const auto& s1 : a1.salas) {
+                    if (!s1.empty() && std::find(a2.salas.begin(), a2.salas.end(), s1) != a2.salas.end()) {
+                        const auto* s = findSala(s1);
+                        std::string s_nome = s ? s->nome() : s1;
+                        conflitos[a1.aula_id].push_back(
+                            "Choque de Sala: A Sala '" + s_nome + "' também está ocupada pela aula '" + a2.disciplina_nome + "' (" + a2.aula_id + ") neste mesmo horário.");
+                        conflitos[a2.aula_id].push_back(
+                            "Choque de Sala: A Sala '" + s_nome + "' também está ocupada pela aula '" + a1.disciplina_nome + "' (" + a1.aula_id + ") neste mesmo horário.");
+                    }
+                }
+            }
+        }
+    }
+
+    return conflitos;
+}
+
 } // namespace scheduler::model

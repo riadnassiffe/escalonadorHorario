@@ -629,6 +629,9 @@ std::vector<std::string> AddLessonToScheduleDialog::verificarConflitos() const {
     // 3. Validar sala
     if (!sel_sala.empty()) {
         const auto* s = data_.findSala(sel_sala);
+        if (disc->tipo() == "LABORATORIO" && s && s->isTeorica()) {
+            conflitos.push_back("Incompatibilidade de sala: A disciplina requer Laboratório, mas a Sala '" + s->nome() + "' é Teórica.");
+        }
         for (const auto& a : data_.grade().alocacoes()) {
             if (a.aula_id != cur_aid && a.dia == dia && semestres_conflitam(a) && time_overlaps(a.intervalo, intervalo)) {
                 if (std::find(a.salas.begin(), a.salas.end(), sel_sala) != a.salas.end()) {
@@ -655,7 +658,7 @@ void AddLessonToScheduleDialog::updateValidationStatus() {
         for (const auto& c : conflitos) {
             itens.append("• " + QString::fromStdString(c));
         }
-        lbl_conflito_status_->setText(QString("⚠️ <b>Atenção (%1 conflito%2 detectado%2):</b><br>%3")
+        lbl_conflito_status_->setText(QString("⚠️ <b>Atenção (%1 conflito%2 de restrições detectado%2):</b><br>%3<br><i>Ao clicar em Alocar, será solicitada confirmação. As aulas em conflito serão exibidas em vermelho na grade.</i>")
             .arg(conflitos.size())
             .arg(conflitos.size() > 1 ? "s" : "")
             .arg(itens.join("<br>")));
@@ -683,16 +686,16 @@ void AddLessonToScheduleDialog::onAcceptClicked() {
 
     auto conflitos = verificarConflitos();
     if (!conflitos.empty()) {
-        QString msg = QString("Foram detectados %1 conflito(s) de horário com esta alocação:\n\n").arg(conflitos.size());
-        for (size_t i = 0; i < std::min<size_t>(conflitos.size(), 6); ++i) {
+        QString msg = QString("Foram detectados %1 conflito(s) com as restrições cadastradas nesta alocação:\n\n").arg(conflitos.size());
+        for (size_t i = 0; i < std::min<size_t>(conflitos.size(), 8); ++i) {
             msg += QString("• %1\n").arg(QString::fromStdString(conflitos[i]));
         }
-        if (conflitos.size() > 6) {
-            msg += QString("... e mais %1 outro(s).\n").arg(conflitos.size() - 6);
+        if (conflitos.size() > 8) {
+            msg += QString("... e mais %1 outro(s).\n").arg(conflitos.size() - 8);
         }
-        msg += "\nDeseja alocar mesmo assim com os conflitos informados?";
+        msg += "\n⚠️ As aulas que geraram conflito serão destacadas em cor VERMELHA na grade horária.\n\nDeseja permissão para alocar mesmo assim com os conflitos informados?";
 
-        auto resp = QMessageBox::question(this, "Confirmar Alocação com Conflitos", msg,
+        auto resp = QMessageBox::question(this, "Permissão para Alocação com Conflito", msg,
                                           QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
         if (resp != QMessageBox::Yes) {
             return;
