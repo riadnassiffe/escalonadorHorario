@@ -34,6 +34,24 @@ TimetableGridWidget::TimetableGridWidget(QWidget* parent)
 void TimetableGridWidget::mousePressEvent(QMouseEvent* event) {
     if (event->button() == Qt::LeftButton) {
         drag_start_pos_ = event->pos();
+
+        auto* item = itemAt(event->pos());
+        if (item) {
+            QStringList all_ids = item->data(Qt::UserRole + 3).toStringList();
+            QString clicked_id;
+            if (all_ids.size() > 1) {
+                QRect cell_rect = visualItemRect(item);
+                int rel_y = event->pos().y() - cell_rect.top();
+                int idx = std::clamp((rel_y * static_cast<int>(all_ids.size())) / std::max(1, cell_rect.height()), 0, static_cast<int>(all_ids.size()) - 1);
+                clicked_id = all_ids[idx];
+            } else {
+                clicked_id = item->data(Qt::UserRole).toString();
+            }
+
+            if (!clicked_id.isEmpty()) {
+                emit lessonSelected(clicked_id);
+            }
+        }
     }
     QTableWidget::mousePressEvent(event);
 }
@@ -58,7 +76,18 @@ void TimetableGridWidget::mouseMoveEvent(QMouseEvent* event) {
         return;
     }
 
-    QString aula_id = item->data(Qt::UserRole).toString();
+    QStringList all_ids = item->data(Qt::UserRole + 3).toStringList();
+    QString aula_id;
+    int aula_idx = 0;
+    if (all_ids.size() > 1) {
+        QRect cell_rect = visualItemRect(item);
+        int rel_y = drag_start_pos_.y() - cell_rect.top();
+        aula_idx = std::clamp((rel_y * static_cast<int>(all_ids.size())) / std::max(1, cell_rect.height()), 0, static_cast<int>(all_ids.size()) - 1);
+        aula_id = all_ids[aula_idx];
+    } else {
+        aula_id = item->data(Qt::UserRole).toString();
+    }
+
     if (aula_id.isEmpty()) {
         QTableWidget::mouseMoveEvent(event);
         return;
@@ -73,7 +102,7 @@ void TimetableGridWidget::mouseMoveEvent(QMouseEvent* event) {
     // Miniatura elegante sob o cursor do mouse
     bool is_dark = ModernTheme::isDarkTheme();
     bool has_conflict = item->text().contains("⚠️");
-    QPixmap pixmap(230, 52);
+    QPixmap pixmap(240, 56);
     pixmap.fill(Qt::transparent);
     QPainter painter(&pixmap);
     painter.setRenderHint(QPainter::Antialiasing);
@@ -86,7 +115,7 @@ void TimetableGridWidget::mouseMoveEvent(QMouseEvent* event) {
     }
     painter.setBrush(bg_color);
     painter.setPen(QPen(border_color, 1.5));
-    painter.drawRoundedRect(QRect(1, 1, 228, 50), 6, 6);
+    painter.drawRoundedRect(QRect(1, 1, 238, 54), 6, 6);
 
     painter.setPen(Qt::white);
     QFont f = painter.font();
@@ -94,16 +123,20 @@ void TimetableGridWidget::mouseMoveEvent(QMouseEvent* event) {
     f.setPointSize(9);
     painter.setFont(f);
 
-    QString title = item->text().section('\n', 0, 0);
-    painter.drawText(QRect(10, 6, 210, 18), Qt::AlignLeft | Qt::AlignVCenter, title);
+    QString full_text = item->text();
+    QStringList blocks = full_text.split("───────────────");
+    QString block_text = (aula_idx >= 0 && aula_idx < blocks.size()) ? blocks[aula_idx].trimmed() : full_text;
+
+    QString title = block_text.section('\n', 0, 0).trimmed();
+    painter.drawText(QRect(10, 6, 220, 20), Qt::AlignLeft | Qt::AlignVCenter, title);
 
     f.setBold(false);
     f.setPointSize(8);
     painter.setFont(f);
     painter.setPen(QColor("#dbeafe"));
 
-    QString sub = item->text().section('\n', 1, 1);
-    painter.drawText(QRect(10, 26, 210, 18), Qt::AlignLeft | Qt::AlignVCenter, sub);
+    QString sub = block_text.section('\n', 1, 1).trimmed();
+    painter.drawText(QRect(10, 28, 220, 20), Qt::AlignLeft | Qt::AlignVCenter, sub);
     painter.end();
 
     drag->setPixmap(pixmap);

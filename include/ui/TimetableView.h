@@ -20,8 +20,8 @@ namespace scheduler::ui {
  * @class TimetableView
  * @brief Widget principal para visualização, filtragem e edição direta da grade horária semanal.
  *
- * Suporta três modos de perspectiva (por Turma, por Professor e por Sala), filtragem por semestre letivo,
- * busca em tempo real de disciplinas/professores, menu de contexto com fixação (Pin),
+ * Suporta quatro modos de perspectiva (por Turma, por Professor, por Sala e Todas as Disciplinas/Turmas),
+ * filtragem por semestre letivo, busca em tempo real de disciplinas/professores, menu de contexto com fixação (Pin),
  * alteração de sala com verificação de conflitos, movimentação manual e suporte a Drag & Drop.
  */
 class TimetableView : public QWidget {
@@ -81,6 +81,12 @@ public slots:
     void moverAulaManual(const QString& aula_id);
 
     /**
+     * @brief Abre o diálogo de permuta direta de horários (Swap) entre a aula e outra aula da grade.
+     * @param aula_id ID da aula de origem (se vazio, usa a aula atualmente selecionada ou permite escolher).
+     */
+    void trocarAulaManual(const QString& aula_id = QString());
+
+    /**
      * @brief Abre o diálogo específico para alteração ou permuta de salas para a aula.
      * @param aula_id ID da aula.
      */
@@ -97,6 +103,12 @@ public slots:
      * @brief Limpa todas as alocações da grade horária permitindo reiniciar a montagem da grade.
      */
     void limparGradeCompleta();
+
+    /**
+     * @brief Trata a seleção individual de uma aula pelo usuário na grade horária.
+     * @param aula_id ID da aula selecionada.
+     */
+    void onLessonSelected(const QString& aula_id);
 
 private slots:
     /**
@@ -136,6 +148,11 @@ private slots:
      */
     void onSearchLessonChanged(const QString& query);
 
+    /**
+     * @brief Alterna a orientação da grade semanal entre Horário por Dia e Dia por Horário.
+     */
+    void onToggleGridOrientation();
+
 private:
     /**
      * @brief Inicializa e monta a barra de ferramentas superior, banner informativo e a grade.
@@ -170,15 +187,20 @@ private:
 
     model::InstitutionData& data_;
     QComboBox* combo_view_type_{nullptr};
+    QLabel* lbl_entity_{nullptr};
     QComboBox* combo_target_{nullptr};
     QComboBox* combo_semestre_filtro_{nullptr};
     QLabel* lbl_info_banner_{nullptr};
     QLineEdit* search_lesson_{nullptr};
     QLabel* lbl_search_count_{nullptr};
     TimetableGridWidget* table_{nullptr};
+    QPushButton* btn_toggle_orientation_{nullptr};
+    QPushButton* btn_swap_lesson_{nullptr};
     QPushButton* btn_add_lesson_{nullptr};
     QPushButton* btn_clear_timetable_{nullptr};
 
+    bool transpose_grid_{false};
+    QString selected_aula_id_;
     std::vector<model::TimeInterval> row_intervals_;
 };
 

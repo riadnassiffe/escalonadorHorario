@@ -90,9 +90,10 @@ Um menu suspenso permite alternar a perspectiva da grade semanal instantaneament
 1. **Visão por Turma:** Mostra a grade curricular da turma selecionada com suas disciplinas, professores, salas e intervalos de recreio.
 2. **Visão por Professor:** Mostra a agenda semanal de aulas do docente selecionado, indicando as turmas atendidas e os laboratórios/salas atribuídos.
 3. **Visão por Sala / Laboratório:** Mostra a taxa de ocupação física da sala selecionada ao longo da semana.
+4. **Visão Geral (Todas as Disciplinas e Turmas):** Mostra todas as disciplinas e turmas alocadas simultaneamente na semana, com identificação clara de turma, docente e sala, oferecendo uma visão panorâmica global com suporte a filtro opcional por turma.
 
 ### 5.2. Filtros e Controles Rápidos da Grade
-* **Seletor de Entidade:** Dropdown dinâmico que lista turmas, professores ou salas conforme a perspectiva ativa.
+* **Seletor de Entidade / Filtro de Turma:** Dropdown dinâmico que lista turmas, professores, salas ou "Todas as Turmas (Visão Geral)" com opção de filtro pontual.
 * **Filtro de Semestre Letivo:** Alterna a exibição entre:
   * `1º Semestre (Anuais + 1º Sem)`
   * `2º Semestre (Anuais + 2º Sem)`
@@ -102,10 +103,12 @@ Um menu suspenso permite alternar a perspectiva da grade semanal instantaneament
   * Destaca visualmente na grade as células cujas disciplinas, professores ou salas correspondam ao texto digitado.
   * Badge ao lado indicando o número de aulas encontradas (ex: `3 encontradas`).
 * **Ações Diretas:**
-  * Botão `➕ Alocar Disciplina Manualmente`
-  * Botão `🗑️ Limpar Toda a Grade`
+  * Botão `🔄 Trocar Aulas (Swap)...`: Abre o diálogo de permuta rápida entre a aula selecionada e qualquer outra da grade.
+  * Botão `➕ Alocar Disciplina...`: Adiciona uma ocorrência manual.
+  * Botão `🗑️ Limpar Grade...`: Limpa a grade semanal.
 
-### 5.3. Renderização Visual das Células
+### 5.3. Renderização Visual das Células e Seleção Individual
+* **Seleção Precisa de Aula:** Em células com múltiplas aulas (como no modo de visualização global ou turmas concorrentes), o clique direto seleciona especificamente a disciplina e docente desejados. A aula ativa ganha a marcação visual `👉 [SELECIONADA]`, destaque em azul/dourado na célula e informações no banner superior.
 * **Faixas Horárias Dinâmicas:** Linhas da tabela calculadas a partir dos horários reais de início/fim e intervalos dos blocos letivos.
 * **Células de Recreio / Almoço:** Renderizadas com cor destacada (âmbar) e texto centralizado (ex: `☕ INTERVALO (09:40 - 09:55)`), bloqueadas para alocação.
 * **Cartões de Aula:**
@@ -117,13 +120,14 @@ Um menu suspenso permite alternar a perspectiva da grade semanal instantaneament
   * **Ícone de Fixação (Pin 📌):** Indica se a aula está travada contra alterações do solver.
 
 ### 5.4. Arrastar e Soltar Nativo (Drag & Drop com `TimetableGridWidget`)
-* Permite clicar com o botão esquerdo em qualquer aula alocada e arrastá-la diretamente para outro horário ou dia da semana.
-* **Feedback Visual:** Gera miniatura gráfica flutuante com sombra durante o movimento do cursor (`QDrag`).
+* Permite clicar com o botão esquerdo em qualquer aula alocada e arrastá-la diretamente para outro horário ou dia da semana. Em células com mais de uma aula, arrasta especificamente a aula clicada.
+* **Feedback Visual:** Gera miniatura gráfica flutuante com sombra durante o movimento do cursor (`QDrag`) contendo o nome e turma da aula arrastada.
 * **Validação de Destino:** O cursor bloqueia solturas inválidas sobre células de recreio ou dias inativos da turma.
-* **Confirmação e Auditoria:** Ao soltar a aula (`dropEvent`), o sistema verifica choques de turma, professor e sala. Se o horário já estiver ocupado por outra aula, abre o diálogo de permuta (Swap).
+* **Confirmação e Auditoria:** Ao soltar a aula (`dropEvent`), se o horário já estiver ocupado, o sistema pergunta com qual aula daquele horário deseja trocar (Swap) ou se deseja alocar juntas.
 
 ### 5.5. Menu de Contexto Completo (Botão Direito do Mouse)
 Ao clicar com o botão direito em uma **célula ocupada por aula**:
+* `🔄 Trocar Horário Com Outra Aula (Swap)...`: Abre o diálogo de permuta direta de horários entre esta aula e qualquer outra aula da grade.
 * `🔄 Mover Horário / Sala...`: Abre o diálogo de movimentação detalhada.
 * `🏢 Alterar Sala de Aula...`: Abre o diálogo específico para troca ou permuta de espaço físico.
 * `➕ Alocar Outra Disciplina na Grade...`: Abre o assistente de nova alocação.
@@ -138,7 +142,7 @@ Ao clicar com o botão direito em uma **célula vazia**:
 * `🗑️ Limpar Toda a Grade...`: Esvazia a grade semanal.
 
 ### 5.6. Atalho por Clique Duplo
-* Um duplo clique com o botão esquerdo sobre qualquer aula abre imediatamente a janela de movimentação rápida daquela aula.
+* Um duplo clique com o botão esquerdo sobre uma aula abre imediatamente o diálogo de permuta rápida (Swap) ou o menu de ações específicas daquela aula.
 
 ---
 
@@ -165,6 +169,12 @@ Ao clicar com o botão direito em uma **célula vazia**:
 * Seleção de semestre letivo (1º Semestre, 2º Semestre ou Anual).
 * Validação dinâmica de choques e respeito aos intervalos de recreio.
 * Opção de fixar imediatamente a aula alocada.
+
+### 6.4. Diálogo de Permuta de Horários entre Aulas (`SwapLessonDialog`)
+* Permite selecionar uma aula de origem e permutar diretamente o dia e horário com qualquer outra aula alocada na grade.
+* **Busca e Filtragem em Tempo Real:** Permite encontrar a aula de destino por disciplina, professor, turma ou dia da semana.
+* **Validação Mútua em Tempo Real:** Audita simultaneamente choques de turma, disponibilidade de docentes e ocupação de salas para ambas as aulas.
+* **Fixação Automática:** Permite travar ambas as aulas com Pin (📌) para proteger a nova configuração contra alterações futuras do solver.
 
 ---
 

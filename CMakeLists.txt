@@ -47,6 +47,7 @@ set(SOURCES
     src/ui/TimetableGridWidget.cpp
     src/ui/TimetableView.cpp
     src/ui/MoveLessonDialog.cpp
+    src/ui/SwapLessonDialog.cpp
     src/ui/ChangeRoomDialog.cpp
     src/ui/AddLessonToScheduleDialog.cpp
     src/ui/ProfessorEditorDialog.cpp
@@ -79,6 +80,7 @@ set(HEADERS
     include/ui/TimetableGridWidget.h
     include/ui/TimetableView.h
     include/ui/MoveLessonDialog.h
+    include/ui/SwapLessonDialog.h
     include/ui/ChangeRoomDialog.h
     include/ui/AddLessonToScheduleDialog.h
     include/ui/ProfessorEditorDialog.h

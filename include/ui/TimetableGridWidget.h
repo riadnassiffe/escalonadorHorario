@@ -29,6 +29,12 @@ public:
 
 signals:
     /**
+     * @brief Emitido quando uma aula específica é selecionada pelo usuário na grade.
+     * @param aula_id ID da aula selecionada.
+     */
+    void lessonSelected(const QString& aula_id);
+
+    /**
      * @brief Sinal emitido quando uma aula é arrastada e solta em uma célula da grade.
      * @param aula_id ID da aula que foi movida.
      * @param target_row Linha da célula de destino.

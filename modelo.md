@@ -2,7 +2,7 @@
 
 ## 1. Descrição do Problema
 
-O problema de escalonamento de horários em escolas é um problema conhecido com várias variações e soluções como: [ascTimeTables](https://www.asctimetables.com/timetables_pt.html), [PowerCubus](https://powercubus.com.br/features), [CronosTimeTable](https://www.cronostimetable.com/) e outros. Apesar de um ser um problema muito comum em instituições de ensino, pode ter muitas características diferentes entre diferentes instituições. O **Problema de Programação de Horários Universitário e Escolar** (*High School and University Timetabling Problem*), classificado na literatura de complexidade como **NP-difícil** (*NP-hard*).
+O problema de escalonamento de horários em escolas é um problema conhecido com várias variações e soluções como: [ascTimeTables](https://www.asctimetables.com/timetables_pt.html), [PowerCubus](https://powercubus.com.br/features), [CronosTimeTable](https://www.cronostimetable.com/) e outros. Apesar de um ser um problema muito comum em instituições de ensino, pode ter muitas características diferentes entre diferentes instituições. O **Problema de Programação de Horários Universitário e Escolar** (*High School and University Timetabling Problem*), classificado na literatura de complexidade como **NP-difícil** (*NP-hard*) [[Even, Itai & Shamir, 1976](#16-referências-bibliográficas); [Schaerf, 1999](#16-referências-bibliográficas)].
 
 Visando criar uma solução para instituição que trabalho, listei a baixo os requisitos que o sistema deve levar em consideração para escalonar as aulas:
 + Aulas podem ter tempo de 45 minutos ou 50 minutos.
@@ -23,7 +23,7 @@ As aulas podem ser de 45 ou 50 minutos. Devido a isso o dia será dividido em bl
 - Uma aula de **50 minutos** ocupa $L_a = 10$ slots consecutivos.
 - Uma aula que começa no slot $t$ e dura $L_a$ slots ocupa o intervalo semiaberto $[t, t + L_a)$, ou seja, os slots $t, t+1, \ldots, t+L_a-1$. Assim, uma aula que termina às `08:45` (slot 105) não conflita com outra que começa exatamente às `08:45` (slot 105).
 
-Com essa representação podemos representar qualquer tempo de aula que seja múltiplo de 5 minutos, o problema dela é a grande quantidade *slots* gerado, e um dia temos 288 para gerenciar.
+Com essa representação podemos representar qualquer tempo de aula que seja múltiplo de 5 minutos, o problema dela é a grande quantidade *slots* gerado, e um dia temos 288 para gerenciar. Essa abordagem segue a **Formulação Indexada no Tempo** (*Time-Indexed Formulation*) clássica de escalonamento [[Sousa & Wolsey, 1992](#16-referências-bibliográficas); [Daskalaki et al., 2004](#16-referências-bibliográficas)] e está implementada em [`TimeInterval.h`](include/model/TimeInterval.h#L16-L35) (`SLOT_MINUTES = 5`, `SLOTS_PER_DAY = 288`).
 
 ## 2.2. Disciplinas Anuais e Semestrais
 
@@ -105,15 +105,21 @@ $$
 
 $$
 
-Para uma aula $a$, um candidato $c = (d_c, t_c, b_c)$ ocupando os slots $\mathcal{I}_{a,c} = \{t_c, \ldots, t_c + L_a - 1\}$ só é criado se satisfizer **todas** as regras abaixo:
+Para uma aula $a$, um candidato $c = (d_c, t_c, b_c)$ ocupando os slots $\mathcal{I}_{a,c} = \{t_c, \ldots, t_c + L_a - 1\}$ só é criado se satisfizer **todas** as regras abaixo (pré-filtragem de domínio segundo [[Schaerf, 1999](#16-referências-bibliográficas)], implementada em [`Preprocessor::gerarCandidatosParaAula`](src/solver/Preprocessor.cpp#L249-L481)):
 
 1. **Cabe na jornada e não corta intervalos:** Todas as turmas $g \in \mathcal{G}_a$ têm aula no dia $d_c$ ($d_c \in \mathcal{D}_g$) e o intervalo $\mathcal{I}_{a,c}$ cabe inteiramente dentro de um único bloco letivo contínuo de $\mathcal{F}_{g,d_c}$.
+   - *Código:* [`Preprocessor::turmaAcomodaAula`](src/solver/Preprocessor.cpp#L199-L214) e [`Preprocessor.cpp` (L361–L396)](src/solver/Preprocessor.cpp#L361-L396).
 
 2. **Disponibilidade docente:** Todos os professores $p \in \mathcal{P}_a$ estão disponíveis durante todo o intervalo da aula ($\mathcal{I}_{a,c} \subseteq \mathcal{V}_{p,d_c}$).
+   - *Referência:* `PreferTimesConstraint` (Hard) no padrão XHSTT [[Post et al., 2012](#16-referências-bibliográficas)].
+   - *Código:* [`Preprocessor.cpp` (L410–L419)](src/solver/Preprocessor.cpp#L410-L419) (`Professor::isDisponivelNoIntervalo`).
 
 3. **Turno permitido:** O intervalo $\mathcal{I}_{a,c}$ cabe em pelo menos um dos turnos autorizados para a disciplina (ou a lista de turnos permitidos está vazia).
+   - *Código:* [`Preprocessor::shiftAcomodaAula`](src/solver/Preprocessor.cpp#L223-L240) e [`Preprocessor.cpp` (L397–L408)](src/solver/Preprocessor.cpp#L397-L408).
 
 4. **Salas compatíveis:** A combinação de salas $b_c \in \mathcal{B}_a$ é válida para o tipo da aula (se for aula teórica, $b_c = \{r\}$ deve pertencer às salas teóricas elegíveis da turma).
+   - *Referência:* Filtragem de subconjuntos de salas por tipo de aula [[Daskalaki et al., 2004](#16-referências-bibliográficas)].
+   - *Código:* [`Preprocessor.cpp` (L302–L336)](src/solver/Preprocessor.cpp#L302-L336) e [`Preprocessor.cpp` (L431–L442)](src/solver/Preprocessor.cpp#L431-L442).
   
 
 ## 6. Variáveis de Decisão
@@ -215,6 +221,11 @@ $$
 
 $$
 
+- **Referência na literatura:** `AssignTimeConstraint` e `AssignResourceConstraint` no padrão XHSTT [[Post et al., 2012](#16-referências-bibliográficas); [Schaerf, 1999](#16-referências-bibliográficas)].
+- **Implementação no código:**
+  - CP-SAT: [`ScheduleSolver.cpp` (L282–L290)](src/solver/ScheduleSolver.cpp#L282-L290)
+  - MILP (SCIP / HiGHS / cuOpt): [`ScheduleSolver.cpp` (L1736–L1745)](src/solver/ScheduleSolver.cpp#L1736-L1745)
+
   
 
 ### R2. Sem choque de horário para professores
@@ -228,6 +239,12 @@ $$
 o^P_{p,d,k,s} \le 1 \qquad \forall p, d, k, s.
 
 $$
+
+- **Referência na literatura:** `AvoidClashesConstraint` (Resource: Teacher) no XHSTT [[Post et al., 2012](#16-referências-bibliográficas)]; inequações de clique indexadas no tempo [[Sousa & Wolsey, 1992](#16-referências-bibliográficas)] e restrições `NoOverlap` sobre variáveis de intervalo opcionais [[Laborie & Rogerie, 2008](#16-referências-bibliográficas); [Perron & Furnon, OR-Tools](#16-referências-bibliográficas)].
+- **Implementação no código:**
+  - CP-SAT (`NewOptionalIntervalVar` + `AddNoOverlap`): [`ScheduleSolver.cpp` (L292–L321)](src/solver/ScheduleSolver.cpp#L292-L321)
+  - MILP (cliques por slot `add_no_overlap_cliques`): [`ScheduleSolver.cpp` (L1747–L1791)](src/solver/ScheduleSolver.cpp#L1747-L1791)
+  - Heurística Gulosa: [`ScheduleSolver.cpp` (L1094–L1100)](src/solver/ScheduleSolver.cpp#L1094-L1100)
 
   
 
@@ -243,6 +260,12 @@ o^G_{g,d,k,s} \le 1 \qquad \forall g, d, k, s.
 
 $$
 
+- **Referência na literatura:** `AvoidClashesConstraint` (Resource: Class/Student Group) no XHSTT [[Post et al., 2012](#16-referências-bibliográficas); [Santos et al., 2012](#16-referências-bibliográficas)].
+- **Implementação no código:**
+  - CP-SAT: [`ScheduleSolver.cpp` (L352–L379)](src/solver/ScheduleSolver.cpp#L352-L379)
+  - MILP: [`ScheduleSolver.cpp` (L1747–L1791)](src/solver/ScheduleSolver.cpp#L1747-L1791)
+  - Heurística Gulosa: [`ScheduleSolver.cpp` (L1102–L1106)](src/solver/ScheduleSolver.cpp#L1102-L1106)
+
   
 
 ### R4. Sem choque de horário para salas
@@ -256,6 +279,12 @@ $$
 \sum_{a \in \mathcal{A}:\, s \in \mathcal{S}_a} \sum_{c \in \mathcal{C}_a:\, r \in b_c} H_{a,c,d,k}\, x_{a,c} \le 1 \qquad \forall r, d, k, s.
 
 $$
+
+- **Referência na literatura:** `AvoidClashesConstraint` (Resource: Room) no XHSTT [[Post et al., 2012](#16-referências-bibliográficas); [Daskalaki et al., 2004](#16-referências-bibliográficas)].
+- **Implementação no código:**
+  - CP-SAT: [`ScheduleSolver.cpp` (L323–L350)](src/solver/ScheduleSolver.cpp#L323-L350)
+  - MILP: [`ScheduleSolver.cpp` (L1747–L1791)](src/solver/ScheduleSolver.cpp#L1747-L1791)
+  - Heurística Gulosa: [`ScheduleSolver.cpp` (L1153–L1159)](src/solver/ScheduleSolver.cpp#L1153-L1159)
   
 
 ### R5. Sala teórica fixa por turma
@@ -284,6 +313,12 @@ $$
 
 Se a turma já tiver uma sala fixa predefinida $\bar{r}_g$ no cadastro, fixa-se $z_{g,\bar{r}_g} = 1$. Aulas práticas ou de laboratório não usam essa regra.
 
+- **Referência na literatura:** Restrições de estabilidade de sala (*Room Stability* / *Home Room Assignment*) e separação entre salas teóricas e laboratórios [[Daskalaki et al., 2004](#16-referências-bibliográficas); [Post et al., 2012](#16-referências-bibliográficas)].
+- **Implementação no código:**
+  - Pré-processamento: [`Preprocessor.cpp` (L304–L315)](src/solver/Preprocessor.cpp#L304-L315)
+  - CP-SAT: [`ScheduleSolver.cpp` (L245–L278)](src/solver/ScheduleSolver.cpp#L245-L278)
+  - MILP (com agregação fortalecida $\sum_{c:\,b_c=\{r\}} x_{a,c} \le z_{g,r}$): [`ScheduleSolver.cpp` (L1696–L1734)](src/solver/ScheduleSolver.cpp#L1696-L1734)
+
 
 ### R6. Limite diário de minutos por professor
 
@@ -296,6 +331,11 @@ $$
 m_{p,d,s} = \sum_{(a,c) \in \mathcal{X}_{p,d,s}} \ell_a\, x_{a,c} \le M_{p,d} \qquad \forall p, d, s.
 
 $$
+
+- **Referência na literatura:** `LimitBusyTimesConstraint` / `LimitWorkloadConstraint` no padrão XHSTT [[Post et al., 2012](#16-referências-bibliográficas); [Santos et al., 2012](#16-referências-bibliográficas)].
+- **Implementação no código:**
+  - CP-SAT: [`ScheduleSolver.cpp` (L420–L441)](src/solver/ScheduleSolver.cpp#L420-L441)
+  - MILP: [`ScheduleSolver.cpp` (L1836–L1860)](src/solver/ScheduleSolver.cpp#L1836-L1860)
 
   
 
@@ -315,11 +355,21 @@ $$
 
 *(No código, quando a aula está fixada, $\mathcal{C}_a$ já é gerado contendo apenas o candidato fixado, e R1 garante $x_{a,\bar{c}_a} = 1$).*
 
+- **Referência na literatura:** *Preassigned Events* / `PreferTimesConstraint` (Hard) [[Schaerf, 1999](#16-referências-bibliográficas); [Post et al., 2012](#16-referências-bibliográficas)].
+- **Implementação no código:**
+  - Pré-processamento (`aula.isPinned()`): [`Preprocessor.cpp` (L338–L351)](src/solver/Preprocessor.cpp#L338-L351)
+  - Priorização na Heurística Gulosa: [`ScheduleSolver.cpp` (L1031)](src/solver/ScheduleSolver.cpp#L1031)
+
   
 
 ### R8. Sincronização de disciplinas anuais entre semestres
 
 Para qualquer aula anual $a$, $\mathcal{S}_a = \{1, 2\}$ e a **mesma variável** $x_{a,c}$ entra nas restrições do 1º e do 2º semestre. Isso garante que a aula anual ocorra exatamente no mesmo dia, horário e sala durante o ano inteiro.
+
+- **Referência na literatura:** Acoplamento multi-período / multi-semestre por compartilhamento de variáveis de decisão [[Daskalaki et al., 2004](#16-referências-bibliográficas)].
+- **Implementação no código:**
+  - CP-SAT (`in_s1` e `in_s2` compartilhando a mesma `BoolVar`): [`ScheduleSolver.cpp` (L180–L243)](src/solver/ScheduleSolver.cpp#L180-L243)
+  - MILP (`in_s1` e `in_s2` compartilhando a mesma coluna `col`): [`ScheduleSolver.cpp` (L1616–L1694)](src/solver/ScheduleSolver.cpp#L1616-L1694)
 
   
 
@@ -347,6 +397,12 @@ x_{a,c} \le B_{g,d,s} \qquad \forall a \in \mathcal{A} \text{ com } g \in \mathc
 
 $$
 
+- **Referência na literatura:** Restrições de eliminação de aulas vagas no início do turno e quebra de simetria temporal em horários escolares [[Santos et al., 2012](#16-referências-bibliográficas); [Dorneles et al., 2014](#16-referências-bibliográficas)].
+- **Implementação no código:**
+  - CP-SAT (`add_turma_inicio_obrigatorio`): [`ScheduleSolver.cpp` (L381–L418)](src/solver/ScheduleSolver.cpp#L381-L418)
+  - MILP (`add_turma_inicio_obrigatorio`): [`ScheduleSolver.cpp` (L1793–L1834)](src/solver/ScheduleSolver.cpp#L1793-L1834)
+  - Heurística Gulosa: [`ScheduleSolver.cpp` (L1129–L1151)](src/solver/ScheduleSolver.cpp#L1129-L1151)
+
 ### R10. Preenchimento integral da jornada 
 
 Quando ativada, exige que todos os slots letivos $\mathcal{F}_{g,d}$ da turma estejam 100% preenchidos com aulas (sem horários vagos na jornada):
@@ -358,6 +414,12 @@ $$
 o^G_{g,d,k,s} = 1 \qquad \forall g \in \mathcal{G},\ \forall d \in \mathcal{D}_g,\ \forall k \in \mathcal{F}_{g,d},\ \forall s \in \mathcal{S}.
 
 $$
+
+- **Referência na literatura:** *Compact Class Schedules* / *Complete Class Timetables* em escolas de ensino básico e médio [[Schaerf, 1999](#16-referências-bibliográficas); [Santos et al., 2012](#16-referências-bibliográficas)].
+- **Implementação no código:**
+  - Validação prévia de minutos letivos: [`Preprocessor.cpp` (L155–L184)](src/solver/Preprocessor.cpp#L155-L184)
+  - CP-SAT (`add_preenchimento_integral`): [`ScheduleSolver.cpp` (L443–L474)](src/solver/ScheduleSolver.cpp#L443-L474)
+  - MILP (`add_preenchimento_integral`): [`ScheduleSolver.cpp` (L1862–L1893)](src/solver/ScheduleSolver.cpp#L1862-L1893)
 
 ### R11. Limite máximo de aulas da mesma disciplina por dia 
 
@@ -371,6 +433,12 @@ $$
 
 $$
 
+- **Referência na literatura:** `DistributeSplitEventsConstraint` / `SpreadEventsConstraint` no padrão XHSTT [[Post et al., 2012](#16-referências-bibliográficas)] e controle de dispersão diária [[Dorneles et al., 2014](#16-referências-bibliográficas)].
+- **Implementação no código:**
+  - CP-SAT: [`ScheduleSolver.cpp` (L476–L499)](src/solver/ScheduleSolver.cpp#L476-L499)
+  - MILP: [`ScheduleSolver.cpp` (L1895–L1921)](src/solver/ScheduleSolver.cpp#L1895-L1921)
+  - Heurística Gulosa: [`ScheduleSolver.cpp` (L1107–L1115)](src/solver/ScheduleSolver.cpp#L1107-L1115)
+
   
 
 ### R12. Aulas consecutivas / geminadas
@@ -378,6 +446,14 @@ $$
   
 
 Aqui é importante distinguir **o que está implementado hoje no código** da **formulação exata de adjacência em MILP**:
+
+- **Referência na literatura:**
+  - Agrupamento por dia ativo ($w_{q,d}$) e aulas geminadas (*Double Lessons*): [[Santos et al., 2012](#16-referências-bibliográficas); [Dorneles et al., 2014](#16-referências-bibliográficas)].
+  - Formulação por enumeração de padrões/configurações de blocos consecutivos ($\beta_{q,f}$): [[Qualizza & Serafini, 2005](#16-referências-bibliográficas); [Daskalaki et al., 2004](#16-referências-bibliográficas)].
+- **Implementação no código (versão por agrupamento diário $w_{q,d}$):**
+  - CP-SAT: [`ScheduleSolver.cpp` (L501–L573)](src/solver/ScheduleSolver.cpp#L501-L573)
+  - MILP: [`ScheduleSolver.cpp` (L1923–L1955)](src/solver/ScheduleSolver.cpp#L1923-L1955)
+  - Heurística Gulosa: [`ScheduleSolver.cpp` (L1119–L1127)](src/solver/ScheduleSolver.cpp#L1119-L1127)
 
    
 
@@ -451,6 +527,11 @@ $$
 
 Assim, basta uma única aula ser alocada para forçar o indicador a $1$; se nenhuma aula for alocada no dia/turno, a segunda desigualdade força o indicador a $0$.
 
+- **Referência na literatura:** Variáveis indicadoras de dia ativo do professor (`ClusterBusyTimesConstraint` no XHSTT) [[Santos et al., 2012](#16-referências-bibliográficas); [Dorneles et al., 2014](#16-referências-bibliográficas); [Post et al., 2012](#16-referências-bibliográficas)].
+- **Implementação no código:**
+  - Indicador de dia trabalhado ($y_{p,d}$): CP-SAT em [`ScheduleSolver.cpp` (L587–L603)](src/solver/ScheduleSolver.cpp#L587-L603) e MILP em [`ScheduleSolver.cpp` (L1959–L1995)](src/solver/ScheduleSolver.cpp#L1959-L1995).
+  - Indicador de turno trabalhado ($v_{p,d,h}$ / `y_shift`): CP-SAT em [`ScheduleSolver.cpp` (L652–L664)](src/solver/ScheduleSolver.cpp#L652-L664) e MILP em [`ScheduleSolver.cpp` (L2015–L2034)](src/solver/ScheduleSolver.cpp#L2015-L2034).
+
   
 
 ---
@@ -513,6 +594,11 @@ j_{i,k} \le u^-_{i,k}, \qquad j_{i,k} \le u^+_{i,k}, \qquad j_{i,k} \le 1 - o_{i
 
 $$
 
+- **Referência na literatura:** Detecção linear de janelas/buracos internos (*Idle Times* / `LimitIdleTimesConstraint`) via variáveis binárias de precedência e sucessão [[Burke et al., 2010](#16-referências-bibliográficas); [Post et al., 2012](#16-referências-bibliográficas); [Fonseca, Santos & Carrano, 2016](#16-referências-bibliográficas)].
+- **Implementação no código:**
+  - **Janelas de professores ($J$):** CP-SAT em [`ScheduleSolver.cpp` (L667–L710)](src/solver/ScheduleSolver.cpp#L667-L710) e MILP (com encadeamento monotônico $u_{k-1} \le u_k$ e $v_{k+1} \le v_k$) em [`ScheduleSolver.cpp` (L2036–L2124)](src/solver/ScheduleSolver.cpp#L2036-L2124).
+  - **Lacunas de turmas ($J_G$):** CP-SAT em [`ScheduleSolver.cpp` (L712–L755)](src/solver/ScheduleSolver.cpp#L712-L755) e MILP em [`ScheduleSolver.cpp` (L2126–L2215)](src/solver/ScheduleSolver.cpp#L2126-L2215).
+
 ---
 
   
@@ -537,6 +623,9 @@ D_{prof} = \sum_{s \in \mathcal{S}} \rho_s \sum_{p \in \mathcal{P}} \sum_{d \in 
 
 $$
 
+- **Referência:** Compactação da jornada docente em menos dias (`ClusterBusyTimesConstraint`) [[Santos et al., 2012](#16-referências-bibliográficas); [Dorneles et al., 2014](#16-referências-bibliográficas); [Souza, Ochi & Maculan, 2003](#16-referências-bibliográficas)].
+- **Código:** CP-SAT em [`ScheduleSolver.cpp` (L605–L606)](src/solver/ScheduleSolver.cpp#L605-L606); MILP em [`ScheduleSolver.cpp` (L1968)](src/solver/ScheduleSolver.cpp#L1968).
+
   
 
 ### 12.2. Preferência de horários ($P_{hora}$)
@@ -550,6 +639,9 @@ $$
 P_{hora} = \sum_{a \in \mathcal{A}} \sum_{c \in \mathcal{C}_a} \left(\sum_{s \in \mathcal{S}_a} \rho_s\right) c^{hora}_{a,c}\, x_{a,c}.
 
 $$
+
+- **Referência:** Custos de preferência de horários (`PreferTimesConstraint` — Soft) [[Schaerf, 1999](#16-referências-bibliográficas); [Post et al., 2012](#16-referências-bibliográficas)].
+- **Código:** Cálculo de `custo_preferencia` em [`Preprocessor.cpp` (L421–L430)](src/solver/Preprocessor.cpp#L421-L430); CP-SAT em [`ScheduleSolver.cpp` (L624–L629)](src/solver/ScheduleSolver.cpp#L624-L629); MILP em [`ScheduleSolver.cpp` (L1656–L1658)](src/solver/ScheduleSolver.cpp#L1656-L1658).
 
   
 
@@ -565,6 +657,9 @@ $$W_{dia} = \sum_{s \in \mathcal{S}} \rho_s \sum_{p \in \mathcal{P}} \sum_{d \in
 
 $$W_{min} = \sum_{s \in \mathcal{S}} \rho_s \sum_{p \in \mathcal{P}} \sum_{d \in \mathcal{D}} (10 - \omega_{p,d})\, m_{p,d,s}.$$
 
+- **Referência:** Ponderação de preferências docentes por dia da semana [ [Santos et al., 2012](#16-referências-bibliográficas)].
+- **Código:** CP-SAT em [`ScheduleSolver.cpp` (L608–L619)](src/solver/ScheduleSolver.cpp#L608-L619); MILP em [`ScheduleSolver.cpp` (L1659–L1667 e L1969–L1971)](src/solver/ScheduleSolver.cpp#L1659-L1667).
+
   
 
 ### 12.4. Turnos pretendidos pelos professores ($T_{prof}$)
@@ -578,6 +673,9 @@ $$
 T_{prof} = \sum_{s \in \mathcal{S}} \rho_s \sum_{p \in \mathcal{P}} \sum_{d \in \mathcal{D}} \sum_{h \in \mathcal{H}} (1 - \pi_{p,d,h})\, v_{p,d,h,s}.
 
 $$
+
+
+- **Código:** CP-SAT em [`ScheduleSolver.cpp` (L651–L665)](src/solver/ScheduleSolver.cpp#L651-L665); MILP em [`ScheduleSolver.cpp` (L2015–L2034)](src/solver/ScheduleSolver.cpp#L2015-L2034).
 
   
 
@@ -595,11 +693,14 @@ J_{G,slots} = \sum_{s \in \mathcal{S}} \rho_s \sum_{g \in \mathcal{G}} \sum_{d \
 
 $$
 
+- **Referência:** `LimitIdleTimesConstraint` para docentes e turmas [[Post et al., 2012](#16-referências-bibliográficas); [Burke et al., 2010](#16-referências-bibliográficas)].
+- **Código:** CP-SAT em [`ScheduleSolver.cpp` (L667–L755)](src/solver/ScheduleSolver.cpp#L667-L755); MILP em [`ScheduleSolver.cpp` (L2036–L2215)](src/solver/ScheduleSolver.cpp#L2036-L2215).
+
   
 
 ### 12.6. Expressão Global da Função Objetivo
 
-No código implementado ([`ScheduleSolver.cpp`](src/solver/ScheduleSolver.cpp#L746-L754)), a função objetivo minimizada pelo solver é exatamente:
+No código implementado ([`ScheduleSolver.cpp` (L758–L766)](src/solver/ScheduleSolver.cpp#L758-L766) para CP-SAT e [`ScheduleSolver.cpp` (L1655–L2215)](src/solver/ScheduleSolver.cpp#L1655-L2215) para MILP), a função objetivo minimizada pelo solver é exatamente:
 
   
 
@@ -643,7 +744,7 @@ Suponha que os slots sejam de 5 minutos desde `00:00`:
 
   
 
-## . Resumo Completo do Modelo de Otimização (Formulação Integrada)
+## 14. Resumo Completo do Modelo de Otimização (Formulação Integrada)
 
   
 
@@ -848,3 +949,52 @@ m_{p,d,s} &\ge 0 && \forall p \in \mathcal{P},\ d \in \mathcal{D},\ s \in \mathc
 \end{aligned}
 
 $$
+
+---
+
+## 15. Matriz de Rastreabilidade (Modelo $\leftrightarrow$ Literatura $\leftrightarrow$ Código-Fonte)
+
+A tabela abaixo consolida a origem teórica na literatura científica e a localização exata da implementação de cada componente do modelo matemático nos arquivos do projeto:
+
+| Elemento / Restrição | Padrão XHSTT / Literatura Base | Implementação no Pré-processador (`Preprocessor.cpp`) | Implementação CP-SAT (`ScheduleSolver.cpp`) | Implementação MILP — SCIP, HiGHS e cuOpt (`ScheduleSolver.cpp`) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Discretização em slots ($\Delta = 5\text{ min}$)** | *Time-Indexed Formulation* [[Sousa & Wolsey, 1992](#16-referências-bibliográficas); [Daskalaki et al., 2004](#16-referências-bibliográficas)] | [`TimeInterval.h` (L16–L35)](include/model/TimeInterval.h#L16-L35) | [`ScheduleSolver.cpp` (L215–L220)](src/solver/ScheduleSolver.cpp#L215-L220) | [`ScheduleSolver.cpp` (L1652–L1672)](src/solver/ScheduleSolver.cpp#L1652-L1672) |
+| **Filtro $\mathcal{C}_a$ — Jornada e intervalos** | Pré-filtragem de domínio [[Schaerf, 1999](#16-referências-bibliográficas)] | [`Preprocessor.cpp` (L199–L214, L361–L396)](src/solver/Preprocessor.cpp#L199-L214) | Implícito em $\mathcal{C}_a$ | Implícito em $\mathcal{C}_a$ |
+| **Filtro $\mathcal{C}_a$ — Disponibilidade docente** | `PreferTimesConstraint` (Hard) [[Post et al., 2012](#16-referências-bibliográficas)] | [`Preprocessor.cpp` (L410–L419)](src/solver/Preprocessor.cpp#L410-L419) | Implícito em $\mathcal{C}_a$ | Implícito em $\mathcal{C}_a$ |
+| **Filtro $\mathcal{C}_a$ — Turnos e Salas** | `AssignResourceConstraint` [[Daskalaki et al., 2004](#16-referências-bibliográficas)] | [`Preprocessor.cpp` (L223–L240, L302–L336)](src/solver/Preprocessor.cpp#L223-L240) | Implícito em $\mathcal{C}_a$ | Implícito em $\mathcal{C}_a$ |
+| **R1. Alocação única de cada aula** | `AssignTimeConstraint` [[Post et al., 2012](#16-referências-bibliográficas); [Schaerf, 1999](#16-referências-bibliográficas)] | — | [`L282–L290`](src/solver/ScheduleSolver.cpp#L282-L290) | [`L1736–L1745`](src/solver/ScheduleSolver.cpp#L1736-L1745) |
+| **R2. Não sobreposição de professores** | `AvoidClashesConstraint` [[Post et al., 2012](#16-referências-bibliográficas); [Laborie & Rogerie, 2008](#16-referências-bibliográficas)] | — | [`L292–L321`](src/solver/ScheduleSolver.cpp#L292-L321) (`AddNoOverlap`) | [`L1747–L1791`](src/solver/ScheduleSolver.cpp#L1747-L1791) (Cliques por slot) |
+| **R3. Não sobreposição de turmas** | `AvoidClashesConstraint` [[Post et al., 2012](#16-referências-bibliográficas); [Santos et al., 2012](#16-referências-bibliográficas)] | — | [`L352–L379`](src/solver/ScheduleSolver.cpp#L352-L379) (`AddNoOverlap`) | [`L1747–L1791`](src/solver/ScheduleSolver.cpp#L1747-L1791) (Cliques por slot) |
+| **R4. Não sobreposição de salas** | `AvoidClashesConstraint` [[Post et al., 2012](#16-referências-bibliográficas); [Daskalaki et al., 2004](#16-referências-bibliográficas)] | — | [`L323–L350`](src/solver/ScheduleSolver.cpp#L323-L350) (`AddNoOverlap`) | [`L1747–L1791`](src/solver/ScheduleSolver.cpp#L1747-L1791) (Cliques por slot) |
+| **R5. Sala teórica fixa ($z_{g,r}$)** | *Room Stability* [[Daskalaki et al., 2004](#16-referências-bibliográficas); [Post et al., 2012](#16-referências-bibliográficas)] | [`Preprocessor.cpp` (L304–L315)](src/solver/Preprocessor.cpp#L304-L315) | [`L245–L278`](src/solver/ScheduleSolver.cpp#L245-L278) | [`L1696–L1734`](src/solver/ScheduleSolver.cpp#L1696-L1734) |
+| **R6. Carga máxima diária ($M_{p,d}$)** | `LimitWorkloadConstraint` [[Post et al., 2012](#16-referências-bibliográficas); [Santos et al., 2012](#16-referências-bibliográficas)] | — | [`L420–L441`](src/solver/ScheduleSolver.cpp#L420-L441) | [`L1836–L1860`](src/solver/ScheduleSolver.cpp#L1836-L1860) |
+| **R7. Aulas fixadas (*Pinned*)** | *Preassignments* [[Schaerf, 1999](#16-referências-bibliográficas); [Post et al., 2012](#16-referências-bibliográficas)] | [`Preprocessor.cpp` (L338–L351)](src/solver/Preprocessor.cpp#L338-L351) | Garantido por $\lvert\mathcal{C}_a\rvert = 1$ + R1 | Garantido por $\lvert\mathcal{C}_a\rvert = 1$ + R1 |
+| **R8. Sincronização anual entre semestres** | Acoplamento multi-semestral [[Daskalaki et al., 2004](#16-referências-bibliográficas)] | — | [`L180–L243`](src/solver/ScheduleSolver.cpp#L180-L243) | [`L1616–L1694`](src/solver/ScheduleSolver.cpp#L1616-L1694) |
+| **R9. Início na abertura da jornada ($T^{ini}_{g,d}$)** | Quebra de simetria / início pontual [[Santos et al., 2012](#16-referências-bibliográficas); [Dorneles et al., 2014](#16-referências-bibliográficas)] | — | [`L381–L418`](src/solver/ScheduleSolver.cpp#L381-L418) | [`L1793–L1834`](src/solver/ScheduleSolver.cpp#L1793-L1834) |
+| **R10. Preenchimento integral da jornada** | *Compact Class Schedules* [[Schaerf, 1999](#16-referências-bibliográficas); [Santos et al., 2012](#16-referências-bibliográficas)] | [`Preprocessor.cpp` (L155–L184)](src/solver/Preprocessor.cpp#L155-L184) | [`L443–L474`](src/solver/ScheduleSolver.cpp#L443-L474) | [`L1862–L1893`](src/solver/ScheduleSolver.cpp#L1862-L1893) |
+| **R11. Limite diário da disciplina ($U_{q,g}$)** | `DistributeSplitEventsConstraint` [[Post et al., 2012](#16-referências-bibliográficas); [Dorneles et al., 2014](#16-referências-bibliográficas)] | — | [`L476–L499`](src/solver/ScheduleSolver.cpp#L476-L499) | [`L1895–L1921`](src/solver/ScheduleSolver.cpp#L1895-L1921) |
+| **R12. Aulas consecutivas / geminadas** | *Double Lessons* / Blocos [[Santos et al., 2012](#16-referências-bibliográficas); [Qualizza & Serafini, 2005](#16-referências-bibliográficas)] | — | [`L501–L573`](src/solver/ScheduleSolver.cpp#L501-L573) | [`L1923–L1955`](src/solver/ScheduleSolver.cpp#L1923-L1955) |
+| **Seção 10 & 12.1. Dias trabalhados ($y_{p,d,s}, D_{prof}$)** | `ClusterBusyTimesConstraint` [[Santos et al., 2012](#16-referências-bibliográficas); [Dorneles et al., 2014](#16-referências-bibliográficas)] | — | [`L587–L606`](src/solver/ScheduleSolver.cpp#L587-L606) | [`L1959–L1995`](src/solver/ScheduleSolver.cpp#L1959-L1995) |
+| **Seção 12.2. Preferência de horários ($P_{hora}$)** | `PreferTimesConstraint` (Soft) [[Post et al., 2012](#16-referências-bibliográficas)] | [`Preprocessor.cpp` (L421–L430)](src/solver/Preprocessor.cpp#L421-L430) | [`L624–L629`](src/solver/ScheduleSolver.cpp#L624-L629) | [`L1656–L1658`](src/solver/ScheduleSolver.cpp#L1656-L1658) |
+| **Seção 12.3. Preferência de dias ($W_{dia}, W_{min}$)** | Preferências docentes | [`L608–L619`](src/solver/ScheduleSolver.cpp#L608-L619) | [`L1659–L1667, L1969–L1971`](src/solver/ScheduleSolver.cpp#L1659-L1667) |
+| **Seção 12.4. Turnos pretendidos ($v_{p,d,h,s}, T_{prof}$)** | Preferência por turno [[Souza, Ochi & Maculan, 2003](#16-referências-bibliográficas)] | — | [`L651–L665`](src/solver/ScheduleSolver.cpp#L651-L665) | [`L2015–L2034`](src/solver/ScheduleSolver.cpp#L2015-L2034) |
+| **Seção 11 & 12.5. Janelas ($J_{slots}$ e $J_{G,slots}$)** | `LimitIdleTimesConstraint` [[Burke et al., 2010](#16-referências-bibliográficas); [Post et al., 2012](#16-referências-bibliográficas)] | — | [`L667–L755`](src/solver/ScheduleSolver.cpp#L667-L755) | [`L2036–L2215`](src/solver/ScheduleSolver.cpp#L2036-L2215) |
+| **Estabilidade / Warm Start ($e_a$)** | *Minimal Perturbation Problem* [[Phillips et al., 2017](#16-referências-bibliográficas)] | — | [`L768–L805`](src/solver/ScheduleSolver.cpp#L768-L805) (`AddHint`) | [`L2218–L2275`](src/solver/ScheduleSolver.cpp#L2218-L2275) (`warm_start_vals`) |
+
+---
+
+## 16. Referências Bibliográficas
+
+1. **Burke, E. K., Mareček, J., Parkes, A. J., & Rudová, H. (2010).** *Decomposition, reformulation, and diving in university course timetabling.* Computers & Operations Research, 37(3), 582–597. https://doi.org/10.1016/j.cor.2009.02.023 *(Linearização em MILP de janelas ociosas e compacidade de grade horária).*
+2. **Daskalaki, S., Birbas, T., & Housos, E. (2004).** *An integer programming formulation for a case study in university timetabling.* European Journal of Operational Research, 153(1), 117–135. https://doi.org/10.1016/S0377-2217(03)00103-6 *(Modelagem inteira para aulas com durações distintas, subconjuntos de salas fixas vs. laboratórios e blocos consecutivos).*
+3. **Dorneles, Á. P., de Araújo, O. C. B., & Buriol, L. S. (2014).** *A fix-and-optimize heuristic for the high school timetabling problem.* Computers & Operations Research, 52, 29–38. https://doi.org/10.1016/j.cor.2014.06.023 *(Formulação MILP para o problema brasileiro de horários escolares: minimização de dias de trabalho $y_{p,d}$, janelas de professores, aulas geminadas e limite diário por disciplina).*
+4. **Even, S., Itai, A., & Shamir, A. (1976).** *On the complexity of timetable and multicommodity flow problems.* SIAM Journal on Computing, 5(4), 691–703. https://doi.org/10.1137/0205048 *(Prova clássica da NP-completude/NP-dificuldade do problema de programação de horários escolares com restrições de disponibilidade docente).*
+5. **Fonseca, G. H. G., Santos, H. G., & Carrano, E. G. (2016).** *Integrating matheuristics and metaheuristics for timetabling.* Computers & Operations Research, 74, 108–117. https://doi.org/10.1016/j.cor.2016.04.016 *(Modelagem híbrida MILP para o problema XHSTT / ITC 2011).*
+6. **Laborie, P., & Rogerie, J. (2008).** *Reasoning with conditional time-intervals.* In *Proceedings of the Twenty-First International Florida Artificial Intelligence Research Society Conference (FLAIRS 2008)* (pp. 555–560). AAAI Press. *(Fundamentação teórica das variáveis de intervalo opcionais `OptionalIntervalVar` e propagadores `NoOverlap` usados no CP-SAT).*
+7. **Perron, L., & Furnon, V. (Google).** *OR-Tools CP-SAT Solver Documentation — Employee & School Scheduling.* Google Developers. Disponível em: https://developers.google.com/optimization/scheduling *(Documentação técnica do solver CP-SAT utilizado em `ScheduleSolver::solveCpSat`).*
+8. **Phillips, A. E., Waterer, H., Ehrgott, M., & Ryan, D. M. (2017).** *Integer programming for minimal perturbation problems in university course timetabling.* Annals of Operations Research, 252(2), 283–304. https://doi.org/10.1007/s10479-015-2094-z *(Modelagem de estabilidade e perturbação mínima $e_a$ na reotimização de grades horárias).*
+9. **Post, G., Ahmadi, S., Daskalaki, S., Kingston, J. H., Kyngas, J., Nurmi, C., & Ranson, D. (2012).** *An XML format for benchmarks in High School Timetabling.* Annals of Operations Research, 194(1), 385–397. https://doi.org/10.1007/s10479-010-0699-9 *(Especificação oficial do padrão internacional XHSTT e catálogo canônico de restrições rígidas e flexíveis).*
+10. **Qualizza, A., & Serafini, P. (2005).** *A column generation scheme for faculty timetabling.* In *Practice and Theory of Automated Timetabling V (PATAT 2004)*, Lecture Notes in Computer Science, vol. 3616 (pp. 161–173). Springer. https://doi.org/10.1007/11593577_10 *(Enumeração de configurações válidas de blocos/padrões de aulas no mesmo dia).*
+11. **Santos, H. G., Uchoa, E., Ochi, L. S., & Maculan, N. (2012).** *Strong bounds with cut and column generation for class-teacher timetabling.* Annals of Operations Research, 194(1), 399–412. https://doi.org/10.1007/s10479-010-0778-y *(Referência fundamental para a formulação de horários escolares no Brasil com minimização de janelas, dias trabalhados $y_{p,d}$ e aulas geminadas).*
+12. **Schaerf, A. (1999).** *A survey of automated timetabling.* Artificial Intelligence Review, 13(2), 87–127. https://doi.org/10.1023/A:1006576209967 *(Revisão clássica sobre problemas de programação de horários escolares e universitários, pré-alocações, indisponibilidades e preferências).*
+13. **Sousa, J. P., & Wolsey, L. A. (1992).** *A time indexed formulation of non-preemptive single machine scheduling problems.* Mathematical Programming, 54(1), 353–367. https://doi.org/10.1007/BF01586059 *(Formulação indexada no tempo discretizada em slots elementares e restrições de clique $\sum H_{a,t,k} x_{a,t} \le 1$).*

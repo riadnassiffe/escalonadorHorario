@@ -7,6 +7,7 @@
 #include "ui/SmartTableWidgetItem.h"
 #include "ui/ModernTheme.h"
 #include "ui/MoveLessonDialog.h"
+#include "ui/SwapLessonDialog.h"
 #include "ui/ChangeRoomDialog.h"
 #include "ui/AddLessonToScheduleDialog.h"
 #include <QVBoxLayout>
@@ -50,15 +51,16 @@ void TimetableView::setupUi() {
     combo_view_type_->addItem(ModernTheme::icon("turma"), "Por Turma", 0);
     combo_view_type_->addItem(ModernTheme::icon("professor"), "Por Professor", 1);
     combo_view_type_->addItem(ModernTheme::icon("room"), "Por Sala", 2);
+    combo_view_type_->addItem(ModernTheme::icon("calendar"), "Todas as Disciplinas e Turmas", 3);
     combo_view_type_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-    combo_view_type_->setMinimumWidth(140);
+    combo_view_type_->setMinimumWidth(180);
     top_panel->addWidget(combo_view_type_);
 
     top_panel->addSpacing(8);
 
-    auto* lbl_entity = new QLabel("Selecionar Alvo:", this);
-    lbl_entity->setStyleSheet("font-weight: bold; color: palette(highlight);");
-    top_panel->addWidget(lbl_entity);
+    lbl_entity_ = new QLabel("Selecionar Alvo:", this);
+    lbl_entity_->setStyleSheet("font-weight: bold; color: palette(highlight);");
+    top_panel->addWidget(lbl_entity_);
 
     combo_target_ = new QComboBox(this);
     combo_target_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -81,6 +83,18 @@ void TimetableView::setupUi() {
     top_panel->addWidget(combo_semestre_filtro_);
 
     top_panel->addStretch();
+
+    btn_toggle_orientation_ = new QPushButton(ModernTheme::icon("calendar"), "Grade: Horário × Dia", this);
+    btn_toggle_orientation_->setObjectName("btnSecondary");
+    btn_toggle_orientation_->setCursor(Qt::PointingHandCursor);
+    btn_toggle_orientation_->setToolTip("Alterna a visualização da grade semanal entre Horário por Dia (linhas = horários, colunas = dias) e Dia por Horário (linhas = dias, colunas = horários)");
+    top_panel->addWidget(btn_toggle_orientation_);
+
+    btn_swap_lesson_ = new QPushButton(ModernTheme::icon("swap"), "Trocar Aulas (Swap)...", this);
+    btn_swap_lesson_->setObjectName("btnSecondary");
+    btn_swap_lesson_->setCursor(Qt::PointingHandCursor);
+    btn_swap_lesson_->setToolTip("Permuta os horários entre a aula selecionada e outra aula da grade semanal");
+    top_panel->addWidget(btn_swap_lesson_);
 
     btn_add_lesson_ = new QPushButton(ModernTheme::icon("add"), "Alocar Disciplina...", this);
     btn_add_lesson_->setObjectName("btnPrimary");
@@ -152,8 +166,33 @@ void TimetableView::setupUi() {
             this, &TimetableView::onCellDoubleClicked);
     connect(table_, &TimetableGridWidget::lessonDropRequested,
             this, &TimetableView::onLessonDropRequested);
+    connect(table_, &TimetableGridWidget::lessonSelected,
+            this, &TimetableView::onLessonSelected);
+    connect(table_, &QTableWidget::cellClicked, this, [this](int row, int col) {
+        auto* it = table_->item(row, col);
+        if (it) {
+            QStringList all_ids = it->data(Qt::UserRole + 3).toStringList();
+            if (all_ids.size() > 1) {
+                QPoint mouse_pos = table_->viewport()->mapFromGlobal(QCursor::pos());
+                QRect cell_rect = table_->visualItemRect(it);
+                int rel_y = mouse_pos.y() - cell_rect.top();
+                int idx = std::clamp((rel_y * static_cast<int>(all_ids.size())) / std::max(1, cell_rect.height()), 0, static_cast<int>(all_ids.size()) - 1);
+                onLessonSelected(all_ids[idx]);
+            } else {
+                QString aid = it->data(Qt::UserRole).toString();
+                if (!aid.isEmpty()) {
+                    onLessonSelected(aid);
+                }
+            }
+        }
+    });
     connect(search_lesson_, &QLineEdit::textChanged,
             this, &TimetableView::onSearchLessonChanged);
+    connect(btn_toggle_orientation_, &QPushButton::clicked,
+            this, &TimetableView::onToggleGridOrientation);
+    connect(btn_swap_lesson_, &QPushButton::clicked, this, [this]() {
+        trocarAulaManual(selected_aula_id_);
+    });
     connect(btn_add_lesson_, &QPushButton::clicked, this, [this]() {
         alocarAulaManual(-1, -1);
     });
@@ -170,6 +209,10 @@ void TimetableView::populateTargetCombo() {
     combo_target_->clear();
 
     int mode = combo_view_type_->currentData().toInt();
+    if (lbl_entity_) {
+        lbl_entity_->setText(mode == 3 ? "Filtro de Turma:" : "Selecionar Alvo:");
+    }
+
     if (mode == 0) { // Por Turma
         for (const auto& t : data_.turmas()) {
             QString label = QString::fromStdString(t.nome());
@@ -184,6 +227,11 @@ void TimetableView::populateTargetCombo() {
         for (const auto& s : data_.salas()) {
             QString label = QString::fromStdString(s.nome());
             combo_target_->addItem(label, QString::fromStdString(s.id()));
+        }
+    } else if (mode == 3) { // Todas as Disciplinas e Turmas
+        combo_target_->addItem(ModernTheme::icon("calendar"), "Todas as Turmas (Visão Geral)", "ALL");
+        for (const auto& t : data_.turmas()) {
+            combo_target_->addItem(QString("Filtrar: %1").arg(QString::fromStdString(t.nome())), QString::fromStdString(t.id()));
         }
     }
 
@@ -252,18 +300,30 @@ void TimetableView::onSemestreFiltroChanged(int /*index*/) {
 }
 
 /**
+ * @brief Alterna a orientação da grade semanal entre Horário por Dia e Dia por Horário.
+ */
+void TimetableView::onToggleGridOrientation() {
+    transpose_grid_ = !transpose_grid_;
+    if (btn_toggle_orientation_) {
+        btn_toggle_orientation_->setText(transpose_grid_ ? "Grade: Dia × Horário" : "Grade: Horário × Dia");
+    }
+    renderTimetable();
+}
+
+/**
  * @brief Renderiza visualmente as células da grade com os horários, intervalos e aulas alocadas.
  */
 void TimetableView::renderTimetable() {
+    table_->clearSpans();
     table_->setRowCount(0);
 
+    int mode = combo_view_type_->currentData().toInt();
     QString target_id = combo_target_->currentData().toString();
-    if (target_id.isEmpty()) {
+    if (target_id.isEmpty() && mode != 3) {
         lbl_info_banner_->setText("Nenhum item selecionado.");
         return;
     }
 
-    int mode = combo_view_type_->currentData().toInt();
     std::string id_str = target_id.toStdString();
 
     int sem_filtro = combo_semestre_filtro_ ? combo_semestre_filtro_->currentData().toInt() : 0;
@@ -356,91 +416,141 @@ void TimetableView::renderTimetable() {
                 horarios_set.insert({a.intervalo.start_slot, a.intervalo.end_slot});
             }
         }
+    } else if (mode == 3) { // Todas as Disciplinas e Turmas
+        int total_aloc = 0;
+        std::set<std::string> turmas_ativas;
+        std::set<std::string> disciplinas_ativas;
+
+        bool filtrar_turma = (!target_id.isEmpty() && target_id != "ALL");
+        for (const auto& a : data_.grade().alocacoes()) {
+            if (match_semestre(a)) {
+                if (!filtrar_turma || std::find(a.turmas.begin(), a.turmas.end(), id_str) != a.turmas.end()) {
+                    horarios_set.insert({a.intervalo.start_slot, a.intervalo.end_slot});
+                    total_aloc++;
+                    for (const auto& tid : a.turmas) turmas_ativas.insert(tid);
+                    disciplinas_ativas.insert(a.disciplina_id);
+                }
+            }
+        }
+
+        // Também incluir os blocos letivos das turmas para exibir slots regulares na grade
+        for (const auto& t : data_.turmas()) {
+            if (filtrar_turma && t.id() != id_str) continue;
+            int dur_slots = 10;
+            for (const auto& d : data_.disciplinas()) {
+                if (std::find(d.turmas().begin(), d.turmas().end(), t.id()) != d.turmas().end()) {
+                    if (d.duracaoSlots() > 0) {
+                        dur_slots = d.duracaoSlots();
+                        break;
+                    }
+                }
+            }
+            for (auto d : t.diasLetivos()) {
+                auto j_dia = t.jornadaParaDia(d);
+                for (const auto& b : j_dia.blocosLetivos()) {
+                    for (int s = b.start_slot; s + dur_slots <= b.end_slot; s += dur_slots) {
+                        horarios_set.insert({s, s + dur_slots});
+                    }
+                }
+            }
+        }
+
+        QString sem_suffix = (sem_filtro == 1) ? " [1º Sem]" : (sem_filtro == 2 ? " [2º Sem]" : "");
+        if (filtrar_turma) {
+            const auto* t = data_.findTurma(id_str);
+            lbl_info_banner_->setText(QString("Visão Filtrada: Turma %1 | %2 aulas alocadas | %3 disciplinas distintas%4")
+                .arg(QString::fromStdString(t ? t->nome() : id_str))
+                .arg(total_aloc)
+                .arg(disciplinas_ativas.size())
+                .arg(sem_suffix));
+        } else {
+            lbl_info_banner_->setText(QString("Visão Geral: %1 aulas alocadas | %2 turmas atendidas | %3 disciplinas distintas%4")
+                .arg(total_aloc)
+                .arg(turmas_ativas.size())
+                .arg(disciplinas_ativas.size())
+                .arg(sem_suffix));
+        }
+    }
+
+    if (!selected_aula_id_.isEmpty()) {
+        const auto* sel_aloc = data_.grade().findAula(selected_aula_id_.toStdString());
+        if (sel_aloc) {
+            QString t_name;
+            if (!sel_aloc->turmas.empty()) {
+                const auto* t = data_.findTurma(sel_aloc->turmas.front());
+                t_name = QString::fromStdString(t ? t->nome() : sel_aloc->turmas.front());
+            }
+            QString p_name;
+            if (!sel_aloc->professores.empty()) {
+                const auto* p = data_.findProfessor(sel_aloc->professores.front());
+                p_name = QString::fromStdString(p ? p->nome() : sel_aloc->professores.front());
+            }
+            QString sel_tag = QString(" | 🎯 <b>Aula Selecionada:</b> [%1] %2 — Prof. %3 (%4 às %5)")
+                .arg(t_name.isEmpty() ? "Turma" : t_name)
+                .arg(QString::fromStdString(sel_aloc->disciplina_nome))
+                .arg(p_name.isEmpty() ? "Sem Prof" : p_name)
+                .arg(QString::fromStdString(sel_aloc->diaString()))
+                .arg(QString::fromStdString(sel_aloc->horarioFormatado()));
+            lbl_info_banner_->setText(lbl_info_banner_->text() + sel_tag);
+        }
+    }
+
+    QStringList day_headers;
+    for (auto d : model::allDays()) {
+        day_headers << QString::fromStdString(model::dayToLongString(d));
     }
 
     row_intervals_.clear();
     if (horarios_set.empty()) {
-        table_->setRowCount(1);
-        auto* empty_item = new QTableWidgetItem("Nenhuma aula gerada ou alocada para este registro neste semestre.");
-        empty_item->setTextAlignment(Qt::AlignCenter);
-        empty_item->setForeground(QColor("#94a3b8"));
-        table_->setItem(0, 0, empty_item);
-        table_->setSpan(0, 0, 1, 5);
+        if (!transpose_grid_) {
+            table_->setColumnCount(5);
+            table_->setHorizontalHeaderLabels(day_headers);
+            table_->setRowCount(1);
+            table_->setVerticalHeaderLabels({""});
+            auto* empty_item = new QTableWidgetItem("Nenhuma aula gerada ou alocada para este registro neste semestre.");
+            empty_item->setTextAlignment(Qt::AlignCenter);
+            empty_item->setForeground(QColor("#94a3b8"));
+            table_->setItem(0, 0, empty_item);
+            table_->setSpan(0, 0, 1, 5);
+        } else {
+            table_->setRowCount(5);
+            table_->setVerticalHeaderLabels(day_headers);
+            table_->setColumnCount(1);
+            table_->setHorizontalHeaderLabels({"Horários"});
+            auto* empty_item = new QTableWidgetItem("Nenhuma aula gerada ou alocada para este registro neste semestre.");
+            empty_item->setTextAlignment(Qt::AlignCenter);
+            empty_item->setForeground(QColor("#94a3b8"));
+            table_->setItem(0, 0, empty_item);
+            table_->setSpan(0, 0, 5, 1);
+        }
         return;
     }
 
+    QStringList time_headers;
     for (const auto& [start_s, end_s] : horarios_set) {
         row_intervals_.emplace_back(start_s, end_s);
+        time_headers << QString::fromStdString(model::TimeInterval(start_s, end_s).toString());
     }
 
-    table_->setRowCount(static_cast<int>(horarios_set.size()));
-    QStringList vertical_headers;
+    if (!transpose_grid_) {
+        table_->setColumnCount(5);
+        table_->setHorizontalHeaderLabels(day_headers);
+        table_->setRowCount(static_cast<int>(horarios_set.size()));
+        table_->setVerticalHeaderLabels(time_headers);
+    } else {
+        table_->setRowCount(5);
+        table_->setVerticalHeaderLabels(day_headers);
+        table_->setColumnCount(static_cast<int>(horarios_set.size()));
+        table_->setHorizontalHeaderLabels(time_headers);
+    }
 
-    int row = 0;
+    int time_idx = 0;
     auto conflitos_map = data_.verificarConflitosGrade();
     for (const auto& [start_s, end_s] : horarios_set) {
-        model::TimeInterval row_inter(start_s, end_s);
-        vertical_headers << QString::fromStdString(row_inter.toString());
-
-        for (int col = 0; col < 5; ++col) {
-            auto dia = static_cast<model::DayOfWeek>(col);
-
-            bool is_recess_for_day = false;
-            bool is_outside_day_jornada = false;
-            bool is_day_off = false;
-
-            if (mode == 0) {
-                const auto* turma = data_.findTurma(id_str);
-                if (turma) {
-                    if (!turma->funcionaNoDia(dia)) {
-                        is_day_off = true;
-                    } else {
-                        auto j_dia = turma->jornadaParaDia(dia);
-                        for (const auto& inter : j_dia.intervalosAtivos()) {
-                            if (start_s == inter.start_slot && end_s == inter.end_slot) {
-                                is_recess_for_day = true;
-                                break;
-                            }
-                        }
-                        if (!is_recess_for_day) {
-                            if (start_s < j_dia.jornada_total.start_slot || end_s > j_dia.jornada_total.end_slot) {
-                                is_outside_day_jornada = true;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (is_recess_for_day) {
-                int dur = (end_s - start_s) * model::SLOT_MINUTES;
-                auto* item = new QTableWidgetItem(ModernTheme::icon("coffee"), QString("☕ INTERVALO (%1 min)").arg(dur));
-                item->setTextAlignment(Qt::AlignCenter);
-                item->setBackground(QColor(245, 158, 11, 40));
-                item->setForeground(QColor("#f59e0b"));
-                item->setFont(QFont("Segoe UI", 10, QFont::Bold));
-                table_->setItem(row, col, item);
-                continue;
-            }
-
-            if (is_day_off) {
-                auto* item = new QTableWidgetItem("—");
-                item->setToolTip("Dia não letivo para a turma");
-                item->setTextAlignment(Qt::AlignCenter);
-                item->setForeground(QColor("#475569"));
-                item->setBackground(QColor(15, 23, 42, 60));
-                table_->setItem(row, col, item);
-                continue;
-            }
-
-            if (is_outside_day_jornada) {
-                auto* item = new QTableWidgetItem("—");
-                item->setToolTip("Fora da jornada letiva da turma neste dia");
-                item->setTextAlignment(Qt::AlignCenter);
-                item->setForeground(QColor("#475569"));
-                item->setBackground(QColor(15, 23, 42, 60));
-                table_->setItem(row, col, item);
-                continue;
-            }
+        for (int day_idx = 0; day_idx < 5; ++day_idx) {
+            int cell_row = transpose_grid_ ? day_idx : time_idx;
+            int cell_col = transpose_grid_ ? time_idx : day_idx;
+            auto dia = static_cast<model::DayOfWeek>(day_idx);
 
             // Buscar se tem aula nesse dia e horário
             std::vector<const model::AllocatedLesson*> found_aulas;
@@ -458,149 +568,315 @@ void TimetableView::renderTimetable() {
                         if (std::find(a.salas.begin(), a.salas.end(), id_str) != a.salas.end()) {
                             found_aulas.push_back(&a);
                         }
+                    } else if (mode == 3) {
+                        if (target_id.isEmpty() || target_id == "ALL") {
+                            found_aulas.push_back(&a);
+                        } else if (std::find(a.turmas.begin(), a.turmas.end(), id_str) != a.turmas.end()) {
+                            found_aulas.push_back(&a);
+                        }
                     }
                 }
             }
 
-            if (!found_aulas.empty()) {
-                QStringList aula_blocks;
-                QString main_aula_id;
-                bool has_lab = false;
-                bool has_special = false;
-                bool cell_has_conflict = false;
-                QStringList cell_conflict_tooltips;
+            if (found_aulas.empty()) {
+                bool is_recess_for_day = false;
+                bool is_outside_day_jornada = false;
+                bool is_day_off = false;
 
-                for (const auto* aula : found_aulas) {
-                    if (main_aula_id.isEmpty()) {
-                        main_aula_id = QString::fromStdString(aula->aula_id);
-                    }
-                    if (aula->tipo == "LABORATORIO") has_lab = true;
-                    if (aula->tipo == "ESPECIAL") has_special = true;
-
-                    bool aula_has_conflict = false;
-                    auto it_conf = conflitos_map.find(aula->aula_id);
-                    if (it_conf != conflitos_map.end() && !it_conf->second.empty()) {
-                        cell_has_conflict = true;
-                        aula_has_conflict = true;
-                        for (const auto& c_msg : it_conf->second) {
-                            cell_conflict_tooltips << QString("• [%1] %2")
-                                .arg(QString::fromStdString(aula->disciplina_nome), QString::fromStdString(c_msg));
+                if (mode == 0 || (mode == 3 && !target_id.isEmpty() && target_id != "ALL")) {
+                    const auto* turma = data_.findTurma(id_str);
+                    if (turma) {
+                        if (!turma->funcionaNoDia(dia)) {
+                            is_day_off = true;
+                        } else {
+                            auto j_dia = turma->jornadaParaDia(dia);
+                            for (const auto& inter : j_dia.intervalosAtivos()) {
+                                if (start_s == inter.start_slot && end_s == inter.end_slot) {
+                                    is_recess_for_day = true;
+                                    break;
+                                }
+                            }
+                            if (!is_recess_for_day) {
+                                if (start_s < j_dia.jornada_total.start_slot || end_s > j_dia.jornada_total.end_slot) {
+                                    is_outside_day_jornada = true;
+                                }
+                            }
                         }
                     }
-
-                    QString reg_tag;
-                    if (aula->regime == model::RegimeDisciplina::ANUAL) {
-                        reg_tag = "[Anual]";
-                    } else if (aula->semestre == model::SemestreLetivo::SEMESTRE_1 || aula->semestre_alocado == 1) {
-                        reg_tag = "[1º Sem]";
-                    } else {
-                        reg_tag = "[2º Sem]";
+                } else if (mode == 3 && (target_id.isEmpty() || target_id == "ALL") && !data_.turmas().empty()) {
+                    bool all_recess = true;
+                    int working_turmas = 0;
+                    for (const auto& t : data_.turmas()) {
+                        if (!t.funcionaNoDia(dia)) continue;
+                        working_turmas++;
+                        auto j_dia = t.jornadaParaDia(dia);
+                        bool t_recess = false;
+                        for (const auto& inter : j_dia.intervalosAtivos()) {
+                            if (start_s == inter.start_slot && end_s == inter.end_slot) {
+                                t_recess = true;
+                                break;
+                            }
+                        }
+                        if (!t_recess) {
+                            all_recess = false;
+                            break;
+                        }
                     }
-
-                    QString title = QString("%1 %2").arg(reg_tag, QString::fromStdString(aula->disciplina_nome));
-                    if (aula_has_conflict) {
-                        title = "⚠️ " + title;
+                    if (working_turmas > 0 && all_recess) {
+                        is_recess_for_day = true;
                     }
-                    if (aula->is_pinned) {
-                        title = "📌 " + title;
-                    }
-
-                    QString line2, line3;
-                    if (mode == 0) { // Turma view -> show professor & room
-                        QString prof_names;
-                        for (size_t i = 0; i < aula->professores.size(); ++i) {
-                            if (i > 0) prof_names += ", ";
-                            const auto* p = data_.findProfessor(aula->professores[i]);
-                            prof_names += QString::fromStdString(p ? p->nome() : aula->professores[i]);
-                        }
-                        QString sala_names;
-                        for (size_t i = 0; i < aula->salas.size(); ++i) {
-                            if (i > 0) sala_names += ", ";
-                            const auto* s = data_.findSala(aula->salas[i]);
-                            sala_names += QString::fromStdString(s ? s->nome() : aula->salas[i]);
-                        }
-                        line2 = prof_names;
-                        line3 = "Sala: " + sala_names;
-                    } else if (mode == 1) { // Professor view -> show turma & room
-                        QString turma_names;
-                        for (size_t i = 0; i < aula->turmas.size(); ++i) {
-                            if (i > 0) turma_names += ", ";
-                            const auto* t = data_.findTurma(aula->turmas[i]);
-                            turma_names += QString::fromStdString(t ? t->nome() : aula->turmas[i]);
-                        }
-                        QString sala_names;
-                        for (size_t i = 0; i < aula->salas.size(); ++i) {
-                            if (i > 0) sala_names += ", ";
-                            const auto* s = data_.findSala(aula->salas[i]);
-                            sala_names += QString::fromStdString(s ? s->nome() : aula->salas[i]);
-                        }
-                        line2 = "Turma: " + turma_names;
-                        line3 = "Sala: " + sala_names;
-                    } else if (mode == 2) { // Sala view -> show turma & professor
-                        QString turma_names;
-                        for (size_t i = 0; i < aula->turmas.size(); ++i) {
-                            if (i > 0) turma_names += ", ";
-                            const auto* t = data_.findTurma(aula->turmas[i]);
-                            turma_names += QString::fromStdString(t ? t->nome() : aula->turmas[i]);
-                        }
-                        QString prof_names;
-                        for (size_t i = 0; i < aula->professores.size(); ++i) {
-                            if (i > 0) prof_names += ", ";
-                            const auto* p = data_.findProfessor(aula->professores[i]);
-                            prof_names += QString::fromStdString(p ? p->nome() : aula->professores[i]);
-                        }
-                        line2 = "Turma: " + turma_names;
-                        line3 = prof_names;
-                    }
-
-                    aula_blocks << QString("%1\n%2\n%3").arg(title, line2, line3);
                 }
 
-                QString cell_text = aula_blocks.join("\n───────────────\n");
-                auto* item = new QTableWidgetItem(cell_text);
-                item->setData(Qt::UserRole, main_aula_id);
-
-                bool is_dark = ModernTheme::isDarkTheme();
-                if (cell_has_conflict) {
-                    // Destaque em cor vermelha para aulas que geraram conflito
-                    item->setBackground(is_dark ? QColor(153, 27, 27, 180) : QColor(254, 202, 202, 230));
-                    item->setForeground(is_dark ? QColor("#fca5a5") : QColor("#991b1b"));
-                    QFont font = item->font();
-                    font.setBold(true);
-                    item->setFont(font);
-
-                    cell_conflict_tooltips.removeDuplicates();
-                    QString tooltip = QString("⚠️ <b>AULA COM CONFLITO DE RESTRIÇÕES:</b><br>%1")
-                        .arg(cell_conflict_tooltips.join("<br>"));
-                    item->setToolTip(tooltip);
-                } else if (has_lab) {
-                    item->setBackground(is_dark ? QColor(236, 72, 153, 40) : QColor(251, 207, 232, 160));
-                    item->setForeground(is_dark ? QColor("#f472b6") : QColor("#9d174d"));
-                } else if (has_special) {
-                    item->setBackground(is_dark ? QColor(139, 92, 246, 40) : QColor(233, 213, 255, 160));
-                    item->setForeground(is_dark ? QColor("#c4b5fd") : QColor("#6b21a8"));
-                } else {
-                    item->setBackground(is_dark ? QColor(37, 99, 235, 40) : QColor(219, 234, 254, 160));
-                    item->setForeground(is_dark ? QColor("#60a5fa") : QColor("#1e40af"));
+                if (is_recess_for_day) {
+                    int dur = (end_s - start_s) * model::SLOT_MINUTES;
+                    auto* item = new QTableWidgetItem(ModernTheme::icon("coffee"), QString("☕ INTERVALO (%1 min)").arg(dur));
+                    item->setTextAlignment(Qt::AlignCenter);
+                    item->setBackground(QColor(245, 158, 11, 40));
+                    item->setForeground(QColor("#f59e0b"));
+                    item->setFont(QFont("Segoe UI", 10, QFont::Bold));
+                    table_->setItem(cell_row, cell_col, item);
+                    continue;
                 }
 
-                item->setData(Qt::UserRole + 1, item->background());
-                item->setData(Qt::UserRole + 2, item->foreground());
-                table_->setItem(row, col, item);
-            } else {
+                if (is_day_off) {
+                    auto* item = new QTableWidgetItem("—");
+                    item->setToolTip("Dia não letivo para a turma");
+                    item->setTextAlignment(Qt::AlignCenter);
+                    item->setForeground(QColor("#475569"));
+                    item->setBackground(QColor(15, 23, 42, 60));
+                    table_->setItem(cell_row, cell_col, item);
+                    continue;
+                }
+
+                if (is_outside_day_jornada) {
+                    auto* item = new QTableWidgetItem("—");
+                    item->setToolTip("Fora da jornada letiva da turma neste dia");
+                    item->setTextAlignment(Qt::AlignCenter);
+                    item->setForeground(QColor("#475569"));
+                    item->setBackground(QColor(15, 23, 42, 60));
+                    table_->setItem(cell_row, cell_col, item);
+                    continue;
+                }
+
                 auto* item = new QTableWidgetItem("-");
                 item->setTextAlignment(Qt::AlignCenter);
                 bool is_dark = ModernTheme::isDarkTheme();
                 item->setForeground(is_dark ? QColor("#64748b") : QColor("#94a3b8"));
                 item->setData(Qt::UserRole + 1, item->background());
                 item->setData(Qt::UserRole + 2, item->foreground());
-                table_->setItem(row, col, item);
+                table_->setItem(cell_row, cell_col, item);
+                continue;
             }
-        }
-        row++;
-    }
 
-    table_->setVerticalHeaderLabels(vertical_headers);
+            if (mode == 3) {
+                std::sort(found_aulas.begin(), found_aulas.end(), [this](const model::AllocatedLesson* l1, const model::AllocatedLesson* l2) {
+                    std::string t1 = l1->turmas.empty() ? "" : l1->turmas.front();
+                    std::string t2 = l2->turmas.empty() ? "" : l2->turmas.front();
+                    const auto* turma1 = data_.findTurma(t1);
+                    const auto* turma2 = data_.findTurma(t2);
+                    std::string n1 = turma1 ? turma1->nome() : t1;
+                    std::string n2 = turma2 ? turma2->nome() : t2;
+                    if (n1 != n2) return n1 < n2;
+                    return l1->disciplina_nome < l2->disciplina_nome;
+                });
+            }
+
+            QStringList aula_blocks;
+            QString main_aula_id;
+            bool has_lab = false;
+            bool has_special = false;
+            bool cell_has_conflict = false;
+            QStringList cell_conflict_tooltips;
+
+            for (const auto* aula : found_aulas) {
+                if (main_aula_id.isEmpty()) {
+                    main_aula_id = QString::fromStdString(aula->aula_id);
+                }
+                if (aula->tipo == "LABORATORIO") has_lab = true;
+                if (aula->tipo == "ESPECIAL") has_special = true;
+
+                bool aula_has_conflict = false;
+                auto it_conf = conflitos_map.find(aula->aula_id);
+                if (it_conf != conflitos_map.end() && !it_conf->second.empty()) {
+                    cell_has_conflict = true;
+                    aula_has_conflict = true;
+                    for (const auto& c_msg : it_conf->second) {
+                        cell_conflict_tooltips << QString("• [%1] %2")
+                            .arg(QString::fromStdString(aula->disciplina_nome), QString::fromStdString(c_msg));
+                    }
+                }
+
+                QString reg_tag;
+                if (aula->regime == model::RegimeDisciplina::ANUAL) {
+                    reg_tag = "[Anual]";
+                } else if (aula->semestre == model::SemestreLetivo::SEMESTRE_1 || aula->semestre_alocado == 1) {
+                    reg_tag = "[1º Sem]";
+                } else {
+                    reg_tag = "[2º Sem]";
+                }
+
+                QString title = QString("%1 %2").arg(reg_tag, QString::fromStdString(aula->disciplina_nome));
+                bool is_this_selected = (!selected_aula_id_.isEmpty() && aula->aula_id == selected_aula_id_.toStdString());
+                if (is_this_selected) {
+                    title = "👉 [SELECIONADA] " + title;
+                }
+                if (aula_has_conflict) {
+                    title = "⚠️ " + title;
+                }
+                if (aula->is_pinned) {
+                    title = "📌 " + title;
+                }
+
+                QString line2, line3;
+                if (mode == 0) { // Turma view -> show professor & room
+                    QString prof_names;
+                    for (size_t i = 0; i < aula->professores.size(); ++i) {
+                        if (i > 0) prof_names += ", ";
+                        const auto* p = data_.findProfessor(aula->professores[i]);
+                        prof_names += QString::fromStdString(p ? p->nome() : aula->professores[i]);
+                    }
+                    QString sala_names;
+                    for (size_t i = 0; i < aula->salas.size(); ++i) {
+                        if (i > 0) sala_names += ", ";
+                        const auto* s = data_.findSala(aula->salas[i]);
+                        sala_names += QString::fromStdString(s ? s->nome() : aula->salas[i]);
+                    }
+                    line2 = prof_names;
+                    line3 = "Sala: " + sala_names;
+                } else if (mode == 1) { // Professor view -> show turma & room
+                    QString turma_names;
+                    for (size_t i = 0; i < aula->turmas.size(); ++i) {
+                        if (i > 0) turma_names += ", ";
+                        const auto* t = data_.findTurma(aula->turmas[i]);
+                        turma_names += QString::fromStdString(t ? t->nome() : aula->turmas[i]);
+                    }
+                    QString sala_names;
+                    for (size_t i = 0; i < aula->salas.size(); ++i) {
+                        if (i > 0) sala_names += ", ";
+                        const auto* s = data_.findSala(aula->salas[i]);
+                        sala_names += QString::fromStdString(s ? s->nome() : aula->salas[i]);
+                    }
+                    line2 = "Turma: " + turma_names;
+                    line3 = "Sala: " + sala_names;
+                } else if (mode == 2) { // Sala view -> show turma & professor
+                    QString turma_names;
+                    for (size_t i = 0; i < aula->turmas.size(); ++i) {
+                        if (i > 0) turma_names += ", ";
+                        const auto* t = data_.findTurma(aula->turmas[i]);
+                        turma_names += QString::fromStdString(t ? t->nome() : aula->turmas[i]);
+                    }
+                    QString prof_names;
+                    for (size_t i = 0; i < aula->professores.size(); ++i) {
+                        if (i > 0) prof_names += ", ";
+                        const auto* p = data_.findProfessor(aula->professores[i]);
+                        prof_names += QString::fromStdString(p ? p->nome() : aula->professores[i]);
+                    }
+                    line2 = "Turma: " + turma_names;
+                    line3 = prof_names;
+                } else if (mode == 3) { // Todas as Disciplinas e Turmas
+                    QString turma_names;
+                    for (size_t i = 0; i < aula->turmas.size(); ++i) {
+                        if (i > 0) turma_names += ", ";
+                        const auto* t = data_.findTurma(aula->turmas[i]);
+                        turma_names += QString::fromStdString(t ? t->nome() : aula->turmas[i]);
+                    }
+                    QString prof_names;
+                    for (size_t i = 0; i < aula->professores.size(); ++i) {
+                        if (i > 0) prof_names += ", ";
+                        const auto* p = data_.findProfessor(aula->professores[i]);
+                        prof_names += QString::fromStdString(p ? p->nome() : aula->professores[i]);
+                    }
+                    QString sala_names;
+                    for (size_t i = 0; i < aula->salas.size(); ++i) {
+                        if (i > 0) sala_names += ", ";
+                        const auto* s = data_.findSala(aula->salas[i]);
+                        sala_names += QString::fromStdString(s ? s->nome() : aula->salas[i]);
+                    }
+                    line2 = "Turma: " + (turma_names.isEmpty() ? "(sem turma)" : turma_names);
+                    line3 = QString("Prof: %1 | Sala: %2")
+                        .arg(prof_names.isEmpty() ? "(sem prof)" : prof_names,
+                             sala_names.isEmpty() ? "(sem sala)" : sala_names);
+                }
+
+                aula_blocks << QString("%1\n%2\n%3").arg(title, line2, line3);
+            }
+
+            QString cell_text = aula_blocks.join("\n───────────────\n");
+            auto* item = new QTableWidgetItem(cell_text);
+            item->setData(Qt::UserRole, main_aula_id);
+
+            QStringList all_aulas_ids;
+            for (const auto* aula : found_aulas) {
+                all_aulas_ids << QString::fromStdString(aula->aula_id);
+            }
+            item->setData(Qt::UserRole + 3, all_aulas_ids);
+
+            bool is_dark = ModernTheme::isDarkTheme();
+            bool cell_has_selected = (!selected_aula_id_.isEmpty() &&
+                std::find(all_aulas_ids.begin(), all_aulas_ids.end(), selected_aula_id_) != all_aulas_ids.end());
+
+            if (cell_has_conflict) {
+                // Destaque em cor vermelha para aulas que geraram conflito
+                item->setBackground(is_dark ? QColor(153, 27, 27, 180) : QColor(254, 202, 202, 230));
+                item->setForeground(is_dark ? QColor("#fca5a5") : QColor("#991b1b"));
+                QFont font = item->font();
+                font.setBold(true);
+                item->setFont(font);
+
+                cell_conflict_tooltips.removeDuplicates();
+                QString tooltip = QString("⚠️ <b>AULA COM CONFLITO DE RESTRIÇÕES:</b><br>%1")
+                    .arg(cell_conflict_tooltips.join("<br>"));
+                item->setToolTip(tooltip);
+            } else if (cell_has_selected) {
+                // Destaque visual suave para a célula contendo a aula selecionada
+                item->setBackground(is_dark ? QColor(30, 64, 175, 140) : QColor(191, 219, 254, 220));
+                item->setForeground(is_dark ? QColor("#bfdbfe") : QColor("#1e3a8a"));
+                QFont font = item->font();
+                font.setBold(true);
+                item->setFont(font);
+            } else if (has_lab) {
+                item->setBackground(is_dark ? QColor(236, 72, 153, 40) : QColor(251, 207, 232, 160));
+                item->setForeground(is_dark ? QColor("#f472b6") : QColor("#9d174d"));
+            } else if (has_special) {
+                item->setBackground(is_dark ? QColor(139, 92, 246, 40) : QColor(233, 213, 255, 160));
+                item->setForeground(is_dark ? QColor("#c4b5fd") : QColor("#6b21a8"));
+            } else {
+                item->setBackground(is_dark ? QColor(37, 99, 235, 40) : QColor(219, 234, 254, 160));
+                item->setForeground(is_dark ? QColor("#60a5fa") : QColor("#1e40af"));
+            }
+
+            if (!cell_has_conflict && found_aulas.size() > 1) {
+                QStringList tip_lines;
+                tip_lines << QString("<b>📋 %1 aulas alocadas neste horário:</b>").arg(found_aulas.size());
+                for (const auto* a : found_aulas) {
+                    QString t_names, p_names, s_names;
+                    for (const auto& tid : a->turmas) {
+                        const auto* t = data_.findTurma(tid);
+                        t_names += (t_names.isEmpty() ? "" : ", ") + QString::fromStdString(t ? t->nome() : tid);
+                    }
+                    for (const auto& pid : a->professores) {
+                        const auto* p = data_.findProfessor(pid);
+                        p_names += (p_names.isEmpty() ? "" : ", ") + QString::fromStdString(p ? p->nome() : pid);
+                    }
+                    for (const auto& sid : a->salas) {
+                        const auto* s = data_.findSala(sid);
+                        s_names += (s_names.isEmpty() ? "" : ", ") + QString::fromStdString(s ? s->nome() : sid);
+                    }
+                    tip_lines << QString("• <b>[%1] %2</b><br>&nbsp;&nbsp;&nbsp;&nbsp;👤 Prof: %3 | 🏢 Sala: %4")
+                        .arg(t_names.isEmpty() ? "Sem Turma" : t_names,
+                             QString::fromStdString(a->disciplina_nome),
+                             p_names.isEmpty() ? "—" : p_names,
+                             s_names.isEmpty() ? "—" : s_names);
+                }
+                item->setToolTip(tip_lines.join("<br>"));
+            }
+
+            item->setData(Qt::UserRole + 1, item->background());
+            item->setData(Qt::UserRole + 2, item->foreground());
+            table_->setItem(cell_row, cell_col, item);
+        }
+        time_idx++;
+    }
 
     if (search_lesson_ && !search_lesson_->text().trimmed().isEmpty()) {
         onSearchLessonChanged(search_lesson_->text());
@@ -698,6 +974,151 @@ void TimetableView::onCellContextMenu(const QPoint& pos) {
         return;
     }
 
+    QStringList all_aulas_ids = item->data(Qt::UserRole + 3).toStringList();
+    if (all_aulas_ids.isEmpty() && !aula_id.isEmpty()) {
+        all_aulas_ids << aula_id;
+    }
+
+    if (!all_aulas_ids.isEmpty()) {
+        QRect cell_rect = table_->visualItemRect(item);
+        int rel_y = pos.y() - cell_rect.top();
+        int idx = std::clamp((rel_y * static_cast<int>(all_aulas_ids.size())) / std::max(1, cell_rect.height()), 0, static_cast<int>(all_aulas_ids.size()) - 1);
+        selected_aula_id_ = all_aulas_ids[idx];
+    }
+
+    if (all_aulas_ids.size() > 1) {
+        QMenu menu(this);
+        for (const auto& aid_q : all_aulas_ids) {
+            std::string cur_aid = aid_q.toStdString();
+            auto* cur_aloc = data_.grade().findAula(cur_aid);
+            auto* cur_model = data_.findAula(cur_aid);
+            if (!cur_aloc || !cur_model) continue;
+
+            QString t_name;
+            if (!cur_aloc->turmas.empty()) {
+                const auto* t = data_.findTurma(cur_aloc->turmas.front());
+                t_name = QString::fromStdString(t ? t->nome() : cur_aloc->turmas.front());
+            }
+            QString sub_title = QString("[%1] %2").arg(t_name.isEmpty() ? "Turma" : t_name, QString::fromStdString(cur_aloc->disciplina_nome));
+            if (cur_aloc->is_pinned) sub_title = "📌 " + sub_title;
+
+            auto* sub = menu.addMenu(ModernTheme::icon(cur_aloc->tipo == "LABORATORIO" ? "room" : "disciplina"), sub_title);
+
+            auto* swap_act = sub->addAction(ModernTheme::icon("swap"), "Trocar Horário Com Outra Aula (Swap)...");
+            connect(swap_act, &QAction::triggered, [this, aid_q]() {
+                selected_aula_id_ = aid_q;
+                trocarAulaManual(aid_q);
+            });
+
+            auto* m_act = sub->addAction(ModernTheme::icon("swap"), "Mover Horário / Sala...");
+            connect(m_act, &QAction::triggered, [this, aid_q]() {
+                selected_aula_id_ = aid_q;
+                moverAulaManual(aid_q);
+            });
+
+            auto* r_act = sub->addAction(ModernTheme::icon("room"), "Alterar Sala de Aula...");
+            connect(r_act, &QAction::triggered, [this, aid_q]() {
+                mudarSalaManual(aid_q);
+            });
+
+            sub->addSeparator();
+
+            if (cur_model->isPinned()) {
+                auto* unpin_act = sub->addAction(ModernTheme::icon("unpin"), "Desafixar Horário Desta Aula");
+                connect(unpin_act, &QAction::triggered, [this, cur_aid]() {
+                    auto* a_m = data_.findAula(cur_aid);
+                    auto* a_a = data_.grade().findAula(cur_aid);
+                    if (a_m && a_a) {
+                        a_m->unpin();
+                        a_a->is_pinned = false;
+                        renderTimetable();
+                        emit lessonPinChanged(QString::fromStdString(a_m->id()), false);
+                    }
+                });
+            } else {
+                auto* pin_act = sub->addAction(ModernTheme::icon("pin"), "Fixar Horário Desta Aula (Bloquear para Reotimização)");
+                connect(pin_act, &QAction::triggered, [this, cur_aid]() {
+                    auto* a_m = data_.findAula(cur_aid);
+                    auto* a_a = data_.grade().findAula(cur_aid);
+                    if (a_m && a_a) {
+                        a_m->setPinned(true);
+                        a_m->setPinnedDay(a_a->dia);
+                        a_m->setPinnedStartSlot(a_a->intervalo.start_slot);
+                        a_m->setPinnedRooms(a_a->salas);
+                        a_a->is_pinned = true;
+                        renderTimetable();
+                        emit lessonPinChanged(QString::fromStdString(a_m->id()), true);
+                    }
+                });
+            }
+
+            auto* desalocar_act = sub->addAction(ModernTheme::icon("delete"), "Desalocar Aula da Grade");
+            connect(desalocar_act, &QAction::triggered, [this, cur_aid]() {
+                auto resp = QMessageBox::question(this, "Confirmar Desalocação",
+                    "Deseja remover esta aula da grade de horários?\n(A aula ficará como não alocada até a próxima otimização)",
+                    QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+                if (resp == QMessageBox::Yes) {
+                    auto& alocs = data_.grade().alocacoes();
+                    alocs.erase(std::remove_if(alocs.begin(), alocs.end(), [&](const model::AllocatedLesson& a) {
+                        return a.aula_id == cur_aid;
+                    }), alocs.end());
+                    auto* a_model = data_.findAula(cur_aid);
+                    if (a_model) a_model->unpin();
+                    auto stats = data_.grade().estatisticas();
+                    stats.total_aulas_alocadas = static_cast<int>(alocs.size());
+                    data_.grade().setEstatisticas(stats);
+                    data_.grade().addMensagemDiagnostico("[MANUAL] Aula " + cur_aid + " desalocada da grade pelo usuário.");
+                    renderTimetable();
+                    emit timetableModified();
+                    emit lessonMoved(QString::fromStdString(cur_aid), "Desalocada da grade");
+                }
+            });
+        }
+
+        menu.addSeparator();
+
+        auto* add_act = menu.addAction(ModernTheme::icon("add"), "Alocar Outra Disciplina na Grade...");
+        connect(add_act, &QAction::triggered, [this]() {
+            alocarAulaManual(-1, -1);
+        });
+
+        menu.addSeparator();
+
+        auto* pin_all_act = menu.addAction(ModernTheme::icon("pin"), "Fixar Todas as Aulas da Grade Atual (Bloquear para Próximo Solver)");
+        connect(pin_all_act, &QAction::triggered, [this]() {
+            for (auto& aloc : data_.grade().alocacoes()) {
+                auto* a_model = data_.findAula(aloc.aula_id);
+                if (a_model) {
+                    a_model->setPinned(true);
+                    a_model->setPinnedDay(aloc.dia);
+                    a_model->setPinnedStartSlot(aloc.intervalo.start_slot);
+                    a_model->setPinnedRooms(aloc.salas);
+                    aloc.is_pinned = true;
+                }
+            }
+            renderTimetable();
+        });
+
+        auto* unpin_all_act = menu.addAction(ModernTheme::icon("unpin"), "Desafixar Todas as Aulas da Grade Atual");
+        connect(unpin_all_act, &QAction::triggered, [this]() {
+            for (auto& aloc : data_.grade().alocacoes()) {
+                auto* a_model = data_.findAula(aloc.aula_id);
+                if (a_model) {
+                    a_model->unpin();
+                    aloc.is_pinned = false;
+                }
+            }
+            renderTimetable();
+        });
+
+        menu.addSeparator();
+        auto* clear_act = menu.addAction(ModernTheme::icon("delete"), "Limpar Toda a Grade...");
+        connect(clear_act, &QAction::triggered, this, &TimetableView::limparGradeCompleta);
+
+        menu.exec(table_->viewport()->mapToGlobal(pos));
+        return;
+    }
+
     std::string aid = aula_id.toStdString();
     auto* aula_aloc = data_.grade().findAula(aid);
     auto* aula_model = data_.findAula(aid);
@@ -705,8 +1126,15 @@ void TimetableView::onCellContextMenu(const QPoint& pos) {
 
     QMenu menu(this);
 
+    auto* swap_act = menu.addAction(ModernTheme::icon("swap"), "Trocar Horário Com Outra Aula (Swap)...");
+    connect(swap_act, &QAction::triggered, [this, aula_id]() {
+        selected_aula_id_ = aula_id;
+        trocarAulaManual(aula_id);
+    });
+
     auto* move_act = menu.addAction(ModernTheme::icon("swap"), "Mover Horário / Sala...");
     connect(move_act, &QAction::triggered, [this, aula_id]() {
+        selected_aula_id_ = aula_id;
         moverAulaManual(aula_id);
     });
 
@@ -818,9 +1246,45 @@ void TimetableView::onCellContextMenu(const QPoint& pos) {
 void TimetableView::onCellDoubleClicked(int row, int col) {
     auto* item = table_->item(row, col);
     if (!item) return;
+
+    QStringList all_aulas_ids = item->data(Qt::UserRole + 3).toStringList();
+    if (all_aulas_ids.size() > 1) {
+        QMenu menu(this);
+        menu.setTitle("Ações para a Aula:");
+        for (const auto& aid_q : all_aulas_ids) {
+            std::string aid = aid_q.toStdString();
+            auto* a_aloc = data_.grade().findAula(aid);
+            if (!a_aloc) continue;
+            QString t_name;
+            if (!a_aloc->turmas.empty()) {
+                const auto* t = data_.findTurma(a_aloc->turmas.front());
+                t_name = QString::fromStdString(t ? t->nome() : a_aloc->turmas.front());
+            }
+            auto* sub = menu.addMenu(ModernTheme::icon("disciplina"), QString("[%1] %2").arg(t_name.isEmpty() ? "Turma" : t_name, QString::fromStdString(a_aloc->disciplina_nome)));
+            auto* act_swap = sub->addAction(ModernTheme::icon("swap"), "🔄 Trocar Esta Aula com Outra (Swap)...");
+            connect(act_swap, &QAction::triggered, [this, aid_q]() {
+                selected_aula_id_ = aid_q;
+                trocarAulaManual(aid_q);
+            });
+            auto* act_move = sub->addAction(ModernTheme::icon("swap"), "✏️ Mover Horário / Sala...");
+            connect(act_move, &QAction::triggered, [this, aid_q]() {
+                selected_aula_id_ = aid_q;
+                moverAulaManual(aid_q);
+            });
+            auto* act_room = sub->addAction(ModernTheme::icon("room"), "🏢 Alterar Sala de Aula...");
+            connect(act_room, &QAction::triggered, [this, aid_q]() {
+                selected_aula_id_ = aid_q;
+                mudarSalaManual(aid_q);
+            });
+        }
+        menu.exec(QCursor::pos());
+        return;
+    }
+
     QString aid = item->data(Qt::UserRole).toString();
     if (!aid.isEmpty()) {
-        moverAulaManual(aid);
+        selected_aula_id_ = aid;
+        trocarAulaManual(aid);
     } else {
         QString text = item->text();
         if (!text.startsWith("☕") && text != "—") {
@@ -855,14 +1319,16 @@ void TimetableView::moverAulaManual(const QString& aula_id) {
             room_changed = true;
         }
 
-        int target_row = -1;
+        int time_idx = -1;
         for (size_t r = 0; r < row_intervals_.size(); ++r) {
             if (row_intervals_[r].start_slot == target_interval.start_slot) {
-                target_row = static_cast<int>(r);
+                time_idx = static_cast<int>(r);
                 break;
             }
         }
-        int target_col = static_cast<int>(target_day);
+        int day_idx = static_cast<int>(target_day);
+        int target_row = transpose_grid_ ? day_idx : time_idx;
+        int target_col = transpose_grid_ ? time_idx : day_idx;
         if (target_row >= 0 && target_col >= 0) {
             if (a_aloc->dia != target_day || a_aloc->intervalo.start_slot != target_interval.start_slot) {
                 onLessonDropRequested(aula_id, target_row, target_col);
@@ -998,11 +1464,13 @@ void TimetableView::alocarAulaManual(int row, int col) {
 
     model::DayOfWeek default_day = model::DayOfWeek::SEG;
     model::TimeInterval default_interval;
-    if (col >= 0 && col < static_cast<int>(model::allDays().size())) {
-        default_day = model::allDays()[col];
+    int time_idx = transpose_grid_ ? col : row;
+    int day_idx = transpose_grid_ ? row : col;
+    if (day_idx >= 0 && day_idx < static_cast<int>(model::allDays().size())) {
+        default_day = model::allDays()[day_idx];
     }
-    if (row >= 0 && row < static_cast<int>(row_intervals_.size())) {
-        default_interval = row_intervals_[row];
+    if (time_idx >= 0 && time_idx < static_cast<int>(row_intervals_.size())) {
+        default_interval = row_intervals_[time_idx];
     }
 
     std::string def_turma, def_prof, def_sala;
@@ -1011,6 +1479,9 @@ void TimetableView::alocarAulaManual(int row, int col) {
     if (mode == 0) def_turma = target_id;
     else if (mode == 1) def_prof = target_id;
     else if (mode == 2) def_sala = target_id;
+    else if (mode == 3 && !target_id.empty() && target_id != "ALL") {
+        def_turma = target_id;
+    }
 
     AddLessonToScheduleDialog dlg(data_, this, default_day, default_interval, def_turma, def_prof, def_sala);
     if (dlg.exec() == QDialog::Accepted) {
@@ -1223,11 +1694,13 @@ std::vector<std::string> TimetableView::verificarConflitosMovimentacao(
  * @param target_col Coluna da célula de destino.
  */
 void TimetableView::onLessonDropRequested(const QString& aula_id, int target_row, int target_col) {
-    if (target_row < 0 || target_row >= static_cast<int>(row_intervals_.size())) return;
-    if (target_col < 0 || target_col >= 5) return;
+    int time_idx = transpose_grid_ ? target_col : target_row;
+    int day_idx = transpose_grid_ ? target_row : target_col;
+    if (time_idx < 0 || time_idx >= static_cast<int>(row_intervals_.size())) return;
+    if (day_idx < 0 || day_idx >= 5) return;
 
-    auto target_day = static_cast<model::DayOfWeek>(target_col);
-    const auto& target_interval = row_intervals_[target_row];
+    auto target_day = static_cast<model::DayOfWeek>(day_idx);
+    const auto& target_interval = row_intervals_[time_idx];
 
     auto* target_item = table_->item(target_row, target_col);
     if (target_item) {
@@ -1253,31 +1726,81 @@ void TimetableView::onLessonDropRequested(const QString& aula_id, int target_row
     }
 
     // Verificar se o slot destino já possui uma aula alocada para o alvo atual
-    QString target_aid_q = target_item ? target_item->data(Qt::UserRole).toString() : QString();
-    std::string target_aid = target_aid_q.toStdString();
-    auto* target_aloc = !target_aid.empty() ? data_.grade().findAula(target_aid) : nullptr;
-    auto* target_model = !target_aid.empty() ? data_.findAula(target_aid) : nullptr;
+    QStringList target_ids = target_item ? target_item->data(Qt::UserRole + 3).toStringList() : QStringList();
+    if (target_ids.isEmpty() && target_item && !target_item->data(Qt::UserRole).toString().isEmpty()) {
+        target_ids << target_item->data(Qt::UserRole).toString();
+    }
+    target_ids.removeAll(QString::fromStdString(aid));
 
-    if (target_aloc && target_aid != aid) {
+    std::string target_aid;
+    if (target_ids.size() > 1) {
         QMessageBox box(this);
         box.setWindowTitle("Trocar ou Mover Aula");
         box.setIcon(QMessageBox::Question);
-        box.setText(QString("O horário de destino (%1 às %2) já possui a aula:\n\n"
-                            "  📌 %3\n\n"
-                            "Deseja trocar os horários entre as duas aulas (Swap) ou cancelar?")
+        box.setText(QString("O horário de destino (%1 às %2) possui %3 aulas alocadas.\n\n"
+                            "Com qual aula deseja trocar os horários (Swap)?")
                     .arg(QString::fromStdString(model::dayToLongString(target_day)))
                     .arg(QString::fromStdString(target_interval.toString()))
-                    .arg(QString::fromStdString(target_aloc->disciplina_nome)));
+                    .arg(target_ids.size()));
 
-        auto* btn_swap = box.addButton("🔄 Trocar Horários (Swap)", QMessageBox::ActionRole);
+        std::vector<QAbstractButton*> swap_btns;
+        for (const auto& tid_q : target_ids) {
+            std::string tid = tid_q.toStdString();
+            const auto* al = data_.grade().findAula(tid);
+            if (al) {
+                QString t_name;
+                if (!al->turmas.empty()) {
+                    const auto* t = data_.findTurma(al->turmas.front());
+                    t_name = QString::fromStdString(t ? t->nome() : al->turmas.front());
+                }
+                QString btn_text = QString("🔄 Trocar com: [%1] %2").arg(t_name.isEmpty() ? "Turma" : t_name, QString::fromStdString(al->disciplina_nome));
+                swap_btns.push_back(box.addButton(btn_text, QMessageBox::ActionRole));
+            }
+        }
         auto* btn_force = box.addButton("➡️ Alocar Juntas", QMessageBox::ActionRole);
         auto* btn_cancel = box.addButton("Cancelar", QMessageBox::RejectRole);
-        box.setDefaultButton(btn_swap);
         box.exec();
 
         if (box.clickedButton() == btn_cancel) return;
+        if (box.clickedButton() != btn_force) {
+            for (size_t i = 0; i < swap_btns.size(); ++i) {
+                if (box.clickedButton() == swap_btns[i]) {
+                    target_aid = target_ids[i].toStdString();
+                    break;
+                }
+            }
+        }
+    } else if (target_ids.size() == 1) {
+        target_aid = target_ids.front().toStdString();
+        auto* target_aloc = data_.grade().findAula(target_aid);
+        if (target_aloc && target_aid != aid) {
+            QMessageBox box(this);
+            box.setWindowTitle("Trocar ou Mover Aula");
+            box.setIcon(QMessageBox::Question);
+            box.setText(QString("O horário de destino (%1 às %2) já possui a aula:\n\n"
+                                "  📌 %3\n\n"
+                                "Deseja trocar os horários entre as duas aulas (Swap) ou cancelar?")
+                        .arg(QString::fromStdString(model::dayToLongString(target_day)))
+                        .arg(QString::fromStdString(target_interval.toString()))
+                        .arg(QString::fromStdString(target_aloc->disciplina_nome)));
 
-        if (box.clickedButton() == btn_swap) {
+            auto* btn_swap = box.addButton("🔄 Trocar Horários (Swap)", QMessageBox::ActionRole);
+            auto* btn_force = box.addButton("➡️ Alocar Juntas", QMessageBox::ActionRole);
+            auto* btn_cancel = box.addButton("Cancelar", QMessageBox::RejectRole);
+            box.setDefaultButton(btn_swap);
+            box.exec();
+
+            if (box.clickedButton() == btn_cancel) return;
+            if (box.clickedButton() != btn_swap) {
+                target_aid.clear();
+            }
+        }
+    }
+
+    if (!target_aid.empty()) {
+        auto* target_aloc = data_.grade().findAula(target_aid);
+        auto* target_model = data_.findAula(target_aid);
+        if (target_aloc) {
             auto old_dia = a_aloc->dia;
             auto old_inter = a_aloc->intervalo;
 
@@ -1303,6 +1826,7 @@ void TimetableView::onLessonDropRequested(const QString& aula_id, int target_row
 
             data_.grade().addMensagemDiagnostico("[MANUAL] Troca de horários: Aula " + aid + " (" + a_aloc->disciplina_nome + ") trocada com Aula " + target_aid + " (" + target_aloc->disciplina_nome + ").");
 
+            selected_aula_id_ = QString::fromStdString(aid);
             renderTimetable();
             emit timetableModified();
             emit lessonMoved(QString::fromStdString(aid), QString("Trocada com %1").arg(QString::fromStdString(target_aloc->disciplina_nome)));
@@ -1326,7 +1850,7 @@ void TimetableView::onLessonDropRequested(const QString& aula_id, int target_row
         if (resp != QMessageBox::Yes) return;
     }
 
-    int mode = combo_view_type_->currentIndex();
+    int mode = combo_view_type_->currentData().toInt();
     if (mode == 2 && combo_target_->currentIndex() >= 0) {
         std::string room_id = combo_target_->currentData().toString().toStdString();
         if (!room_id.empty()) {
@@ -1351,9 +1875,102 @@ void TimetableView::onLessonDropRequested(const QString& aula_id, int target_row
     }
     data_.grade().addMensagemDiagnostico(diag_entry);
 
+    selected_aula_id_ = QString::fromStdString(aid);
     renderTimetable();
     emit timetableModified();
     emit lessonMoved(QString::fromStdString(aid), QString::fromStdString(model::dayToLongString(target_day) + " às " + a_aloc->intervalo.toString()));
+}
+
+/**
+ * @brief Trata a seleção individual de uma aula pelo usuário na grade horária.
+ * @param aula_id ID da aula selecionada.
+ */
+void TimetableView::onLessonSelected(const QString& aula_id) {
+    if (selected_aula_id_ == aula_id) {
+        return;
+    }
+    selected_aula_id_ = aula_id;
+    renderTimetable();
+}
+
+/**
+ * @brief Abre o diálogo de permuta direta de horários (Swap) entre a aula e outra aula da grade.
+ * @param aula_id ID da aula de origem.
+ */
+void TimetableView::trocarAulaManual(const QString& aula_id) {
+    if (data_.grade().alocacoes().size() < 2) {
+        QMessageBox::information(this, "Aulas Insuficientes",
+            "É necessário ter pelo menos 2 aulas alocadas na grade para realizar a permuta (troca de horários).");
+        return;
+    }
+
+    std::string initial_id = aula_id.toStdString();
+    if (initial_id.empty() && !selected_aula_id_.isEmpty()) {
+        initial_id = selected_aula_id_.toStdString();
+    }
+
+    SwapLessonDialog dlg(data_, initial_id, this);
+    if (dlg.exec() == QDialog::Accepted) {
+        std::string aid_a = dlg.aulaOrigemId();
+        std::string aid_b = dlg.aulaDestinoId();
+
+        auto* aloc_a = data_.grade().findAula(aid_a);
+        auto* aloc_b = data_.grade().findAula(aid_b);
+        auto* model_a = data_.findAula(aid_a);
+        auto* model_b = data_.findAula(aid_b);
+
+        if (!aloc_a || !aloc_b) return;
+
+        auto dia_a = aloc_a->dia;
+        auto inter_a = aloc_a->intervalo;
+        auto dia_b = aloc_b->dia;
+        auto inter_b = aloc_b->intervalo;
+
+        // Troca os horários
+        aloc_a->dia = dia_b;
+        aloc_a->intervalo = model::TimeInterval(inter_b.start_slot, inter_b.start_slot + aloc_a->intervalo.durationSlots());
+
+        aloc_b->dia = dia_a;
+        aloc_b->intervalo = model::TimeInterval(inter_a.start_slot, inter_a.start_slot + aloc_b->intervalo.durationSlots());
+
+        if (dlg.isPinned()) {
+            aloc_a->is_pinned = true;
+            aloc_b->is_pinned = true;
+            if (model_a) {
+                model_a->setPinned(true);
+                model_a->setPinnedDay(aloc_a->dia);
+                model_a->setPinnedStartSlot(aloc_a->intervalo.start_slot);
+                model_a->setPinnedRooms(aloc_a->salas);
+            }
+            if (model_b) {
+                model_b->setPinned(true);
+                model_b->setPinnedDay(aloc_b->dia);
+                model_b->setPinnedStartSlot(aloc_b->intervalo.start_slot);
+                model_b->setPinnedRooms(aloc_b->salas);
+            }
+        }
+
+        data_.grade().addMensagemDiagnostico(
+            "[MANUAL] Permuta (Swap) realizada entre Aula " + aid_a + " (" + aloc_a->disciplina_nome + ") e Aula " +
+            aid_b + " (" + aloc_b->disciplina_nome + ").");
+
+        selected_aula_id_ = QString::fromStdString(aid_a);
+        renderTimetable();
+        emit timetableModified();
+        emit lessonMoved(QString::fromStdString(aid_a),
+                         QString("Trocada com %1").arg(QString::fromStdString(aloc_b->disciplina_nome)));
+
+        QMessageBox::information(this, "Troca Realizada",
+            QString("A permuta de horários entre as aulas foi concluída com sucesso:\n\n"
+                    "• %1 agora está em %2 às %3\n"
+                    "• %4 agora está em %5 às %6")
+                .arg(QString::fromStdString(aloc_a->disciplina_nome),
+                     QString::fromStdString(aloc_a->diaString()),
+                     QString::fromStdString(aloc_a->horarioFormatado()),
+                     QString::fromStdString(aloc_b->disciplina_nome),
+                     QString::fromStdString(aloc_b->diaString()),
+                     QString::fromStdString(aloc_b->horarioFormatado())));
+    }
 }
 
 } // namespace scheduler::ui

@@ -8,8 +8,10 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+    "copt>=0.9.2",
     "cuopt-server-cu13>=26.10.0",
     "cuopt-sh-client>=26.10.0",
+    "cvxpy>=1.9.3",
     "libcuopt-cu13>=26.10.0",
 ]
 
