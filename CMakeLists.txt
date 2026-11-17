@@ -42,6 +42,12 @@ set(SOURCES
     src/model/InstitutionData.cpp
     src/solver/Preprocessor.cpp
     src/solver/ScheduleSolver.cpp
+    src/solver/CpSatSolver.cpp
+    src/solver/GreedyHeuristicSolver.cpp
+    src/solver/MilpSolver.cpp
+    src/solver/ScipSolver.cpp
+    src/solver/HighsSolver.cpp
+    src/solver/CuOptSolver.cpp
     src/serialization/JsonSerialization.cpp
     src/ui/ModernTheme.cpp
     src/ui/TimetableGridWidget.cpp
@@ -73,6 +79,8 @@ set(HEADERS
     include/solver/CandidateAllocation.h
     include/solver/Preprocessor.h
     include/solver/ScheduleSolver.h
+    include/solver/SolverCommon.h
+    include/solver/MilpModel.h
     include/serialization/JsonSerialization.h
     include/ui/ModernTheme.h
     include/ui/SmartTableWidgetItem.h
