@@ -666,13 +666,13 @@ void ProfessorEditorDialog::loadProfessor(const model::Professor& prof) {
             combo->setCurrentIndex(combo->findData(static_cast<int>(d)));
             table_disp_->setCellWidget(r, 0, combo);
 
-            int start_min = inter.start_slot * model::SLOT_MINUTES;
+            int start_min = inter.start_min;
             auto* t_ini = new QTimeEdit(QTime(start_min / 60, start_min % 60), table_disp_);
             t_ini->setDisplayFormat("HH:mm");
             t_ini->setMinimumHeight(28);
             table_disp_->setCellWidget(r, 1, t_ini);
 
-            int end_min = inter.end_slot * model::SLOT_MINUTES;
+            int end_min = inter.end_min;
             auto* t_fim = new QTimeEdit(QTime(end_min / 60, end_min % 60), table_disp_);
             t_fim->setDisplayFormat("HH:mm");
             t_fim->setMinimumHeight(28);

@@ -131,8 +131,9 @@ void LessonEditorDialog::setupUi() {
 
         for (auto d : t.diasLetivos()) {
             auto j = t.jornadaParaDia(d);
-            int start_min = j.jornada_total.start_slot * model::SLOT_MINUTES;
-            int end_min = j.jornada_total.end_slot * model::SLOT_MINUTES;
+            auto jt = j.jornadaTotal();
+            int start_min = jt.start_min;
+            int end_min = jt.end_min;
             if (start_min < 12 * 60 + 30) tem_manha = true;
             if (end_min > 12 * 60 + 30 && start_min < 18 * 60) tem_tarde = true;
             if (end_min > 18 * 60) tem_noite = true;

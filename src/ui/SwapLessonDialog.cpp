@@ -311,7 +311,7 @@ std::vector<std::string> SwapLessonDialog::verificarConflitosTroca(
     if (!a || !b) return conflitos;
 
     auto time_overlaps = [](const model::TimeInterval& t1, const model::TimeInterval& t2) {
-        return std::max(t1.start_slot, t2.start_slot) < std::min(t1.end_slot, t2.end_slot);
+        return std::max(t1.start_min, t2.start_min) < std::min(t1.end_min, t2.end_min);
     };
 
     auto semestres_conflitam = [](const model::AllocatedLesson& l1, const model::AllocatedLesson& l2) {
@@ -321,19 +321,29 @@ std::vector<std::string> SwapLessonDialog::verificarConflitosTroca(
         return s1 == s2;
     };
 
+    if (a->intervalo.durationMinutes() != b->intervalo.durationMinutes()) {
+        conflitos.push_back("Duração incompatível: '" + a->disciplina_nome + "' (" +
+                            std::to_string(a->intervalo.durationMinutes()) + " min) difere de '" +
+                            b->disciplina_nome + "' (" + std::to_string(b->intervalo.durationMinutes()) + " min).");
+    }
+
     // A vai para dia_b e intervalo_b
     auto dia_novo_a = b->dia;
-    auto inter_novo_a = model::TimeInterval(b->intervalo.start_slot, b->intervalo.start_slot + a->intervalo.durationSlots());
+    auto inter_novo_a = model::TimeInterval(b->intervalo.start_min, b->intervalo.start_min + a->intervalo.durationMinutes());
 
     // B vai para dia_a e intervalo_a
     auto dia_novo_b = a->dia;
-    auto inter_novo_b = model::TimeInterval(a->intervalo.start_slot, a->intervalo.start_slot + b->intervalo.durationSlots());
+    auto inter_novo_b = model::TimeInterval(a->intervalo.start_min, a->intervalo.start_min + b->intervalo.durationMinutes());
 
     // 1. Validar A no novo horário (excluindo B)
     for (const auto& t_id : a->turmas) {
         const auto* t = data_.findTurma(t_id);
-        if (t && !t->funcionaNoDia(dia_novo_a)) {
-            conflitos.push_back("Turma " + t->nome() + " (Aula " + a->disciplina_nome + ") não funciona na " + model::dayToLongString(dia_novo_a) + ".");
+        if (t) {
+            if (!t->funcionaNoDia(dia_novo_a)) {
+                conflitos.push_back("Turma " + t->nome() + " (Aula " + a->disciplina_nome + ") não funciona na " + model::dayToLongString(dia_novo_a) + ".");
+            } else if (!t->jornadaParaDia(dia_novo_a).contemSlotExato(inter_novo_a)) {
+                conflitos.push_back("Slot incompatível: Turma " + t->nome() + " não possui o slot " + inter_novo_a.toString() + " na " + model::dayToLongString(dia_novo_a) + ".");
+            }
         }
         for (const auto& other : data_.grade().alocacoes()) {
             if (other.aula_id != aid_a && other.aula_id != aid_b && other.dia == dia_novo_a &&
@@ -346,7 +356,7 @@ std::vector<std::string> SwapLessonDialog::verificarConflitosTroca(
     }
     for (const auto& p_id : a->professores) {
         const auto* p = data_.findProfessor(p_id);
-        if (p && !p->isDisponivelNoIntervalo(dia_novo_a, inter_novo_a.start_slot, inter_novo_a.end_slot)) {
+        if (p && !p->isDisponivelNoIntervalo(dia_novo_a, inter_novo_a.start_min, inter_novo_a.end_min)) {
             conflitos.push_back("Indisponibilidade: Prof. " + (p ? p->nome() : p_id) + " não está disponível na " + model::dayToLongString(dia_novo_a) + " às " + inter_novo_a.toString() + ".");
         }
         for (const auto& other : data_.grade().alocacoes()) {
@@ -373,8 +383,12 @@ std::vector<std::string> SwapLessonDialog::verificarConflitosTroca(
     // 2. Validar B no novo horário (excluindo A)
     for (const auto& t_id : b->turmas) {
         const auto* t = data_.findTurma(t_id);
-        if (t && !t->funcionaNoDia(dia_novo_b)) {
-            conflitos.push_back("Turma " + t->nome() + " (Aula " + b->disciplina_nome + ") não funciona na " + model::dayToLongString(dia_novo_b) + ".");
+        if (t) {
+            if (!t->funcionaNoDia(dia_novo_b)) {
+                conflitos.push_back("Turma " + t->nome() + " (Aula " + b->disciplina_nome + ") não funciona na " + model::dayToLongString(dia_novo_b) + ".");
+            } else if (!t->jornadaParaDia(dia_novo_b).contemSlotExato(inter_novo_b)) {
+                conflitos.push_back("Slot incompatível: Turma " + t->nome() + " não possui o slot " + inter_novo_b.toString() + " na " + model::dayToLongString(dia_novo_b) + ".");
+            }
         }
         for (const auto& other : data_.grade().alocacoes()) {
             if (other.aula_id != aid_a && other.aula_id != aid_b && other.dia == dia_novo_b &&
@@ -387,7 +401,7 @@ std::vector<std::string> SwapLessonDialog::verificarConflitosTroca(
     }
     for (const auto& p_id : b->professores) {
         const auto* p = data_.findProfessor(p_id);
-        if (p && !p->isDisponivelNoIntervalo(dia_novo_b, inter_novo_b.start_slot, inter_novo_b.end_slot)) {
+        if (p && !p->isDisponivelNoIntervalo(dia_novo_b, inter_novo_b.start_min, inter_novo_b.end_min)) {
             conflitos.push_back("Indisponibilidade: Prof. " + (p ? p->nome() : p_id) + " não está disponível na " + model::dayToLongString(dia_novo_b) + " às " + inter_novo_b.toString() + ".");
         }
         for (const auto& other : data_.grade().alocacoes()) {

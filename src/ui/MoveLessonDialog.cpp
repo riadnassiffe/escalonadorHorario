@@ -103,14 +103,29 @@ void MoveLessonDialog::setupUi() {
 
     combo_horario_ = new QComboBox(grp_destino);
     int selected_slot_idx = 0;
+    int dur_aula = aula_model ? aula_model->duracaoMinutos() : (aula_aloc ? aula_aloc->intervalo.durationMinutes() : 0);
     for (size_t i = 0; i < available_slots_.size(); ++i) {
         const auto& slot = available_slots_[i];
-        combo_horario_->addItem(QString::fromStdString(slot.toString()), static_cast<int>(i));
-        if (aula_aloc && slot.start_slot == aula_aloc->intervalo.start_slot) {
-            selected_slot_idx = static_cast<int>(i);
+        if (dur_aula > 0 && slot.durationMinutes() != dur_aula) {
+            continue;
+        }
+        combo_horario_->addItem(QString("%1 (%2 min)").arg(QString::fromStdString(slot.toString())).arg(slot.durationMinutes()), static_cast<int>(i));
+        if (aula_aloc && slot == aula_aloc->intervalo) {
+            selected_slot_idx = combo_horario_->count() - 1;
         }
     }
-    combo_horario_->setCurrentIndex(selected_slot_idx);
+    if (combo_horario_->count() == 0) {
+        for (size_t i = 0; i < available_slots_.size(); ++i) {
+            const auto& slot = available_slots_[i];
+            combo_horario_->addItem(QString::fromStdString(slot.toString()), static_cast<int>(i));
+            if (aula_aloc && slot.start_min == aula_aloc->intervalo.start_min) {
+                selected_slot_idx = static_cast<int>(i);
+            }
+        }
+    }
+    if (combo_horario_->count() > 0) {
+        combo_horario_->setCurrentIndex(selected_slot_idx);
+    }
     form_destino->addRow("Novo Horário:", combo_horario_);
 
     combo_sala_ = new QComboBox(grp_destino);
@@ -215,7 +230,7 @@ void MoveLessonDialog::updateValidationStatus() {
 
     std::string sel_room = selectedRoomId();
     bool same_day = (a_aloc->dia == target_day);
-    bool same_time = (a_aloc->intervalo.start_slot == target_inter.start_slot);
+    bool same_time = (a_aloc->intervalo == target_inter);
     bool same_room = (!a_aloc->salas.empty() && a_aloc->salas.front() == sel_room);
 
     // Se for exatamente o mesmo horário e mesma sala
@@ -225,17 +240,23 @@ void MoveLessonDialog::updateValidationStatus() {
         return;
     }
 
-    // Verificar se cruza com intervalo da turma
+    // Verificar compatibilidade exata com slot da(s) turma(s)
     for (const auto& t_id : a_aloc->turmas) {
         const auto* t = data_.findTurma(t_id);
         if (t) {
             auto j = t->jornadaParaDia(target_day);
             for (const auto& inter : j.intervalosAtivos()) {
-                if (std::max(inter.start_slot, target_inter.start_slot) < std::min(inter.end_slot, target_inter.end_slot)) {
+                if (std::max(inter.start_min, target_inter.start_min) < std::min(inter.end_min, target_inter.end_min)) {
                     lbl_conflito_status_->setText("❌ Conflito: O horário selecionado sobrepõe o intervalo da turma " + QString::fromStdString(t->nome()) + ".");
                     lbl_conflito_status_->setStyleSheet("background-color: rgba(239, 68, 68, 0.15); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.4);");
                     return;
                 }
+            }
+            if (!j.contemSlotExato(target_inter)) {
+                lbl_conflito_status_->setText("❌ Conflito: O horário " + QString::fromStdString(target_inter.toString()) +
+                                              " não corresponde a um slot cadastrado na turma " + QString::fromStdString(t->nome()) + ".");
+                lbl_conflito_status_->setStyleSheet("background-color: rgba(239, 68, 68, 0.15); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.4);");
+                return;
             }
         }
     }
@@ -244,7 +265,8 @@ void MoveLessonDialog::updateValidationStatus() {
     bool has_target_lesson = false;
     QString target_lesson_name;
     for (const auto& a : data_.grade().alocacoes()) {
-        if (a.aula_id != aula_id_ && a.dia == target_day && a.intervalo.start_slot == target_inter.start_slot) {
+        if (a.aula_id != aula_id_ && a.dia == target_day &&
+            std::max(a.intervalo.start_min, target_inter.start_min) < std::min(a.intervalo.end_min, target_inter.end_min)) {
             for (const auto& t_id : a_aloc->turmas) {
                 if (std::find(a.turmas.begin(), a.turmas.end(), t_id) != a.turmas.end()) {
                     has_target_lesson = true;
@@ -264,7 +286,8 @@ void MoveLessonDialog::updateValidationStatus() {
     // Verificar conflitos de agenda docente
     for (const auto& p_id : a_aloc->professores) {
         for (const auto& a : data_.grade().alocacoes()) {
-            if (a.aula_id != aula_id_ && a.dia == target_day && a.intervalo.start_slot == target_inter.start_slot) {
+            if (a.aula_id != aula_id_ && a.dia == target_day &&
+                std::max(a.intervalo.start_min, target_inter.start_min) < std::min(a.intervalo.end_min, target_inter.end_min)) {
                 if (std::find(a.professores.begin(), a.professores.end(), p_id) != a.professores.end()) {
                     const auto* p = data_.findProfessor(p_id);
                     lbl_conflito_status_->setText(QString("⚠️ Choque de Horário: O Prof. %1 já possui a aula '%2' neste mesmo horário.")
@@ -281,7 +304,8 @@ void MoveLessonDialog::updateValidationStatus() {
     if (!sel_room.empty()) {
         const auto* s = data_.findSala(sel_room);
         for (const auto& a : data_.grade().alocacoes()) {
-            if (a.aula_id != aula_id_ && a.dia == target_day && a.intervalo.start_slot == target_inter.start_slot) {
+            if (a.aula_id != aula_id_ && a.dia == target_day &&
+                std::max(a.intervalo.start_min, target_inter.start_min) < std::min(a.intervalo.end_min, target_inter.end_min)) {
                 if (std::find(a.salas.begin(), a.salas.end(), sel_room) != a.salas.end()) {
                     lbl_conflito_status_->setText(QString("⚠️ Choque de Sala: A sala '%1' já está ocupada pela aula '%2' neste mesmo horário.")
                         .arg(QString::fromStdString(s ? s->nome() : sel_room))

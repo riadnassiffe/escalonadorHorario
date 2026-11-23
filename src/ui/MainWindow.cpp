@@ -65,6 +65,9 @@ void MainWindow::setupUi() {
 
     timetable_view_ = new TimetableView(data_, this);
     connect(timetable_view_, &TimetableView::timetableModified, this, &MainWindow::updateKpiBanner);
+    connect(timetable_view_, &TimetableView::lessonPinChanged, this, [this](const QString&, bool) {
+        updateKpiBanner();
+    });
     connect(timetable_view_, &TimetableView::lessonMoved, this, [this](const QString& aid, const QString& details) {
         statusBar()->showMessage("Aula " + aid + " modificada na grade: " + details, 6000);
         updateKpiBanner();
@@ -119,7 +122,7 @@ void MainWindow::setupMenuBar() {
             if (a_model) {
                 a_model->setPinned(true);
                 a_model->setPinnedDay(aloc.dia);
-                a_model->setPinnedStartSlot(aloc.intervalo.start_slot);
+                a_model->setPinnedInterval(aloc.intervalo);
                 a_model->setPinnedRooms(aloc.salas);
                 aloc.is_pinned = true;
             }
@@ -272,6 +275,7 @@ void MainWindow::setupKpiBanner() {
     layout->addLayout(make_kpi("Janelas Professores (J)", lbl_kpi_janelas_, "0 min", "#d97706"));
     layout->addLayout(make_kpi("Dias Trabalhados (D)", lbl_kpi_dias_, "0"));
     layout->addLayout(make_kpi("Penalidade Pref. Dias (W)", lbl_kpi_pref_dias_, "0"));
+    layout->addLayout(make_kpi("Choques Ativos", lbl_kpi_choques_, "0", "#16a34a"));
     layout->addStretch();
 }
 
@@ -316,6 +320,32 @@ void MainWindow::updateKpiBanner() {
     lbl_kpi_janelas_->setText(QString::number(s.penalidade_janelas_J) + " min");
     lbl_kpi_dias_->setText(QString::number(s.penalidade_dias_D));
     lbl_kpi_pref_dias_->setText(QString::number(s.penalidade_preferencia_dias_W));
+
+    const auto conflitos = data_.verificarConflitosGradeDetalhado();
+    if (conflitos.empty()) {
+        lbl_kpi_choques_->setText("0");
+        lbl_kpi_choques_->setStyleSheet("font-size: 15px; font-weight: bold; color: #16a34a;");
+        lbl_kpi_choques_->setToolTip("Nenhum choque de turma, professor, sala ou indisponibilidade detectado.");
+    } else {
+        int n = static_cast<int>(conflitos.size());
+        lbl_kpi_choques_->setText(QString("⚠️ %1 %2").arg(n).arg(n == 1 ? "aula" : "aulas"));
+        lbl_kpi_choques_->setStyleSheet("font-size: 15px; font-weight: bold; color: #dc2626;");
+        QStringList tip_lines;
+        int shown = 0;
+        for (const auto& [aid, infos] : conflitos) {
+            if (shown >= 6) {
+                tip_lines << QString("... e mais %1 aula(s) com choque.").arg(n - shown);
+                break;
+            }
+            const auto* al = data_.grade().findAula(aid);
+            QString title = al ? QString::fromStdString(al->disciplina_nome) : QString::fromStdString(aid);
+            if (!infos.empty()) {
+                tip_lines << QString("• %1: %2").arg(title, QString::fromStdString(infos.front().short_label));
+            }
+            shown++;
+        }
+        lbl_kpi_choques_->setToolTip(tip_lines.join("\n"));
+    }
 }
 
 /**
@@ -770,29 +800,31 @@ void MainWindow::refreshTurmasTable() {
             for (const auto& inter : jd.intervalosAtivos()) {
                 ints << QString::fromStdString(inter.toString());
             }
-            tooltip_str += QString("• <b>%1</b>: %2 [Intervalos: %3]<br>")
+            tooltip_str += QString("• <b>%1</b>: %2 (%3 slots) [Intervalos: %4]<br>")
                 .arg(QString::fromStdString(model::dayToString(d)))
-                .arg(QString::fromStdString(jd.jornada_total.toString()))
+                .arg(QString::fromStdString(jd.jornadaTotal().toString()))
+                .arg(jd.slots_letivos.size())
                 .arg(ints.isEmpty() ? "Nenhum" : ints.join(", "));
         }
 
         if (t.temExcecoes()) {
             QStringList diff_parts;
             for (const auto& [d, exc] : t.excecoesPorDia()) {
-                diff_parts << QString("%1: %2").arg(QString::fromStdString(model::dayToString(d)),
-                                                     QString::fromStdString(exc.jornada_total.toString()));
+                diff_parts << QString("%1: %2 (%3 slots)").arg(QString::fromStdString(model::dayToString(d)),
+                                                                QString::fromStdString(exc.jornadaTotal().toString()))
+                                                           .arg(exc.slots_letivos.size());
             }
             jornada_str = QString("%1 (%2)")
-                .arg(QString::fromStdString(t.jornadaPadrao().jornada_total.toString()),
+                .arg(QString::fromStdString(t.jornadaPadrao().jornadaTotal().toString()),
                      diff_parts.join("; "));
             intervals_str = "Personalizado por dia (passe o mouse)";
         } else {
             const auto& jp = t.jornadaPadrao();
-            jornada_str = QString::fromStdString(jp.jornada_total.toString());
+            jornada_str = QString("%1 (%2 slots)").arg(QString::fromStdString(jp.jornadaTotal().toString())).arg(jp.slots_letivos.size());
             QStringList int_strs;
-            if (jp.int1_ativo) int_strs << QString("Int1: %1").arg(QString::fromStdString(jp.intervalo_1.toString()));
-            if (jp.int2_ativo) int_strs << QString("Int2: %1").arg(QString::fromStdString(jp.intervalo_2.toString()));
-            if (jp.int3_ativo) int_strs << QString("Int3: %1").arg(QString::fromStdString(jp.intervalo_3.toString()));
+            for (size_t idx_i = 0; idx_i < jp.intervalosAtivos().size(); ++idx_i) {
+                int_strs << QString("Int%1: %2").arg(idx_i + 1).arg(QString::fromStdString(jp.intervalosAtivos()[idx_i].toString()));
+            }
             intervals_str = int_strs.isEmpty() ? "Nenhum" : int_strs.join(" | ");
         }
 
@@ -813,9 +845,7 @@ void MainWindow::refreshTurmasTable() {
         int min_disp = 0;
         for (auto d : model::allDays()) {
             if (t.funcionaNoDia(d)) {
-                for (const auto& bl : t.jornadaParaDia(d).blocosLetivos()) {
-                    min_disp += bl.durationMinutes();
-                }
+                min_disp += t.jornadaParaDia(d).minutosLetivos();
             }
         }
 
@@ -950,6 +980,7 @@ void MainWindow::onAddProfessor() {
         data_.addProfessor(dlg.getProfessor());
         refreshProfessoresTable();
         timetable_view_->refreshView();
+        updateKpiBanner();
     }
 }
 
@@ -967,6 +998,7 @@ void MainWindow::onEditProfessor() {
             data_.addProfessor(dlg.getProfessor());
             refreshProfessoresTable();
             timetable_view_->refreshView();
+            updateKpiBanner();
         }
     }
 }
@@ -1027,6 +1059,7 @@ void MainWindow::onRemoveProfessor() {
         refreshProfessoresTable();
         refreshDisciplinasTable();
         timetable_view_->refreshView();
+        updateKpiBanner();
     }
 }
 
@@ -1034,11 +1067,12 @@ void MainWindow::onRemoveProfessor() {
  * @brief Abre o diálogo de cadastro para adicionar uma nova turma.
  */
 void MainWindow::onAddTurma() {
-    TurmaEditorDialog dlg(data_.salas(), this, nullptr, data_.nextTurmaId());
+    TurmaEditorDialog dlg(data_.salas(), this, nullptr, data_.nextTurmaId(), data_.slotTemplates());
     if (dlg.exec() == QDialog::Accepted) {
         data_.addTurma(dlg.getTurma());
         refreshTurmasTable();
         timetable_view_->refreshView();
+        updateKpiBanner();
     }
 }
 
@@ -1051,11 +1085,12 @@ void MainWindow::onEditTurma() {
     std::string id = table_turmas_->item(r, 0)->text().toStdString();
     auto* t = data_.findTurma(id);
     if (t) {
-        TurmaEditorDialog dlg(data_.salas(), this, t);
+        TurmaEditorDialog dlg(data_.salas(), this, t, "", data_.slotTemplates());
         if (dlg.exec() == QDialog::Accepted) {
             data_.addTurma(dlg.getTurma());
             refreshTurmasTable();
             timetable_view_->refreshView();
+            updateKpiBanner();
         }
     }
 }
@@ -1116,6 +1151,7 @@ void MainWindow::onRemoveTurma() {
         refreshTurmasTable();
         refreshDisciplinasTable();
         timetable_view_->refreshView();
+        updateKpiBanner();
     }
 }
 
@@ -1128,6 +1164,7 @@ void MainWindow::onAddSala() {
         data_.addSala(dlg.getRoom());
         refreshSalasTable();
         timetable_view_->refreshView();
+        updateKpiBanner();
     }
 }
 
@@ -1145,6 +1182,7 @@ void MainWindow::onEditSala() {
             data_.addSala(dlg.getRoom());
             refreshSalasTable();
             timetable_view_->refreshView();
+            updateKpiBanner();
         }
     }
 }
@@ -1205,6 +1243,7 @@ void MainWindow::onRemoveSala() {
         refreshSalasTable();
         refreshDisciplinasTable();
         timetable_view_->refreshView();
+        updateKpiBanner();
     }
 }
 
@@ -1294,6 +1333,7 @@ void MainWindow::onRemoveDisciplina() {
         data_.gerarOcorrenciasAulas(true, data_.config().escopo_semestre);
         refreshDisciplinasTable();
         timetable_view_->refreshView();
+        updateKpiBanner();
     }
 }
 

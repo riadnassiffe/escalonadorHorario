@@ -1,1 +1,574 @@
 Aula_ID;Disciplina;Tipo;Regime;Semestre;Dia;Inicio;Fim;Duracao_Min;Professores;Turmas;Salas;Fixada
+T01_D001_1;Materiais de Construção Mecânica;TEORICA;Anual;Ano Todo;QUI;10:30;11:15;45;Rafael Gonçalves de Souza;EMI Mecatrônica 101;Sala D04;NAO
+T01_D001_2;Materiais de Construção Mecânica;TEORICA;Anual;Ano Todo;SEG;13:15;14:00;45;Rafael Gonçalves de Souza;EMI Mecatrônica 101;Sala D04;NAO
+T01_D003_1;Química;TEORICA;Anual;Ano Todo;TER;10:30;11:15;45;Heloize Cunha;EMI Mecatrônica 101;Sala D04;NAO
+T01_D003_2;Química;TEORICA;Anual;Ano Todo;QUA;08:45;09:30;45;Heloize Cunha;EMI Mecatrônica 101;Sala D04;NAO
+T01_D004_1;Geografia;TEORICA;Anual;Ano Todo;SEX;13:15;14:00;45;Ludmila Losada da Fonseca;EMI Mecatrônica 101;Sala D04;NAO
+T01_D004_2;Geografia;TEORICA;Anual;Ano Todo;QUA;14:00;14:45;45;Ludmila Losada da Fonseca;EMI Mecatrônica 101;Sala D04;NAO
+T01_D005_1;História;TEORICA;Anual;Ano Todo;QUA;16:30;17:15;45;Anderson Nereu Galcowski;EMI Mecatrônica 101;Sala D04;NAO
+T01_D005_2;História;TEORICA;Anual;Ano Todo;QUA;15:45;16:30;45;Anderson Nereu Galcowski;EMI Mecatrônica 101;Sala D04;NAO
+T01_D006_1;Eletrotécnica I;TEORICA;Anual;Ano Todo;SEX;14:45;15:30;45;Ailson Barbizan;EMI Mecatrônica 101;Sala D04;NAO
+T01_D006_2;Eletrotécnica I;TEORICA;Anual;Ano Todo;QUA;11:15;12:00;45;Ailson Barbizan;EMI Mecatrônica 101;Sala D04;NAO
+T01_D007_1;Sociologia;TEORICA;Anual;Ano Todo;SEX;11:15;12:00;45;Dalton Luiz De Menezes Reis;EMI Mecatrônica 101;Sala D04;NAO
+T01_D007_2;Sociologia;TEORICA;Anual;Ano Todo;TER;08:00;08:45;45;Dalton Luiz De Menezes Reis;EMI Mecatrônica 101;Sala D04;NAO
+T01_D008_1;Matemática;TEORICA;Anual;Ano Todo;TER;09:45;10:30;45;Alexandre Veloso dos Santos;EMI Mecatrônica 101;Sala D04;NAO
+T01_D008_2;Matemática;TEORICA;Anual;Ano Todo;QUA;10:30;11:15;45;Alexandre Veloso dos Santos;EMI Mecatrônica 101;Sala D04;NAO
+T01_D008_3;Matemática;TEORICA;Anual;Ano Todo;SEG;14:00;14:45;45;Alexandre Veloso dos Santos;EMI Mecatrônica 101;Sala D04;NAO
+T01_D008_4;Matemática;TEORICA;Anual;Ano Todo;SEG;08:00;08:45;45;Alexandre Veloso dos Santos;EMI Mecatrônica 101;Sala D04;NAO
+T01_D009_1;Filosofia;TEORICA;Anual;Ano Todo;SEG;11:15;12:00;45;Adaltro Prochnov Nunes;EMI Mecatrônica 101;Sala D04;NAO
+T01_D009_2;Filosofia;TEORICA;Anual;Ano Todo;QUI;08:00;08:45;45;Adaltro Prochnov Nunes;EMI Mecatrônica 101;Sala D04;NAO
+T01_D010_1;Artes;TEORICA;Anual;Ano Todo;SEG;08:45;09:30;45;Rudimar;EMI Mecatrônica 101;Sala D04;NAO
+T01_D010_2;Artes;TEORICA;Anual;Ano Todo;SEX;10:30;11:15;45;Rudimar;EMI Mecatrônica 101;Sala D04;NAO
+T01_D011_1;Biologia;TEORICA;Anual;Ano Todo;SEX;08:45;09:30;45;Karlan Rau;EMI Mecatrônica 101;Sala D04;NAO
+T01_D011_2;Biologia;TEORICA;Anual;Ano Todo;QUI;09:45;10:30;45;Karlan Rau;EMI Mecatrônica 101;Sala D04;NAO
+T01_D012_1;Segurança do Trabalho;TEORICA;Anual;Ano Todo;QUA;08:00;08:45;45;Joana Fontanela;EMI Mecatrônica 101;Sala D04;NAO
+T01_D012_2;Segurança do Trabalho;TEORICA;Anual;Ano Todo;SEG;15:45;16:30;45;Joana Fontanela;EMI Mecatrônica 101;Sala D04;NAO
+T01_D013_1;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEG;09:45;10:30;45;Cleonice Naedzold;EMI Mecatrônica 101;Sala D04;NAO
+T01_D013_2;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEX;09:45;10:30;45;Cleonice Naedzold;EMI Mecatrônica 101;Sala D04;NAO
+T01_D013_3;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEX;08:00;08:45;45;Cleonice Naedzold;EMI Mecatrônica 101;Sala D04;NAO
+T01_D013_4;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;QUA;13:15;14:00;45;Cleonice Naedzold;EMI Mecatrônica 101;Sala D04;NAO
+T01_D014_1;Educação Física;TEORICA;Anual;Ano Todo;SEG;10:30;11:15;45;Catiane Souza;EMI Mecatrônica 101;Sala D04;NAO
+T01_D014_2;Educação Física;TEORICA;Anual;Ano Todo;QUA;09:45;10:30;45;Catiane Souza;EMI Mecatrônica 101;Sala D04;NAO
+T01_D016_1;Inglês - Básico I;TEORICA;Anual;Ano Todo;TER;08:45;09:30;45;Célia Dias da Silva;EMI Mecatrônica 101;Sala D04;NAO
+T01_D016_2;Inglês - Básico I;TEORICA;Anual;Ano Todo;QUA;14:45;15:30;45;Célia Dias da Silva;EMI Mecatrônica 101;Sala D04;NAO
+T01_D017_1;Física;TEORICA;Anual;Ano Todo;SEG;14:45;15:30;45;Fábio Pra da Silva de Souza;EMI Mecatrônica 101;Sala D04;NAO
+T01_D017_2;Física;TEORICA;Anual;Ano Todo;QUI;08:45;09:30;45;Fábio Pra da Silva de Souza;EMI Mecatrônica 101;Sala D04;NAO
+T01_D018_1;Elementos de Máquinas;TEORICA;Anual;Ano Todo;QUI;11:15;12:00;45;Luciano Sena;EMI Mecatrônica 101;Sala D04;NAO
+T02_D019_1;Lógica de Programação;LABORATORIO;Anual;Ano Todo;SEG;11:15;12:00;45;Adriano Pizzini;EMI Mecatrônica 201;Laboratório D06;NAO
+T02_D019_2;Lógica de Programação;LABORATORIO;Anual;Ano Todo;QUA;09:45;10:30;45;Adriano Pizzini;EMI Mecatrônica 201;Laboratório A04;NAO
+T02_D019_3;Lógica de Programação;LABORATORIO;Anual;Ano Todo;SEG;08:45;09:30;45;Adriano Pizzini;EMI Mecatrônica 201;Laboratório D06;NAO
+T02_D020_1;Filosofia;TEORICA;Anual;Ano Todo;TER;08:00;08:45;45;Adaltro Prochnov Nunes;EMI Mecatrônica 201;Sala C20;NAO
+T02_D020_2;Filosofia;TEORICA;Anual;Ano Todo;TER;10:30;11:15;45;Adaltro Prochnov Nunes;EMI Mecatrônica 201;Sala C20;NAO
+T02_D021_1;Geografia;TEORICA;Anual;Ano Todo;QUI;08:45;09:30;45;André Torelli Salatino;EMI Mecatrônica 201;Sala C20;NAO
+T02_D021_2;Geografia;TEORICA;Anual;Ano Todo;QUI;11:15;12:00;45;André Torelli Salatino;EMI Mecatrônica 201;Sala C20;NAO
+T02_D022_1;Educação Física;TEORICA;Anual;Ano Todo;QUA;15:45;16:30;45;Catiane Souza;EMI Mecatrônica 201;Sala C20;NAO
+T02_D022_2;Educação Física;TEORICA;Anual;Ano Todo;QUA;14:45;15:30;45;Catiane Souza;EMI Mecatrônica 201;Sala C20;NAO
+T02_D023_1;História;TEORICA;Anual;Ano Todo;SEX;14:45;15:30;45;Anderson Nereu Galcowski;EMI Mecatrônica 201;Sala C20;NAO
+T02_D023_2;História;TEORICA;Anual;Ano Todo;QUI;09:45;10:30;45;Anderson Nereu Galcowski;EMI Mecatrônica 201;Sala C20;NAO
+T02_D024_1;Inglês - Básico II;TEORICA;Anual;Ano Todo;SEX;08:00;08:45;45;Rita de Cássia da Silveira Cordeiro;EMI Mecatrônica 201;Sala C20;NAO
+T02_D024_2;Inglês - Básico II;TEORICA;Anual;Ano Todo;SEX;08:45;09:30;45;Rita de Cássia da Silveira Cordeiro;EMI Mecatrônica 201;Sala C20;NAO
+T02_D025_1;Artes;TEORICA;Anual;Ano Todo;QUI;10:30;11:15;45;Rudimar;EMI Mecatrônica 201;Sala C20;NAO
+T02_D025_2;Artes;TEORICA;Anual;Ano Todo;QUA;08:00;08:45;45;Rudimar;EMI Mecatrônica 201;Sala C20;NAO
+T02_D026_1;Biologia;TEORICA;Anual;Ano Todo;QUA;10:30;11:15;45;Péricles Rocha da Silva;EMI Mecatrônica 201;Sala C20;NAO
+T02_D026_2;Biologia;TEORICA;Anual;Ano Todo;QUA;08:45;09:30;45;Péricles Rocha da Silva;EMI Mecatrônica 201;Sala C20;NAO
+T02_D027_1;Física;TEORICA;Anual;Ano Todo;QUA;16:30;17:15;45;Josefa Surek de Souza;EMI Mecatrônica 201;Sala C20;NAO
+T02_D027_2;Física;TEORICA;Anual;Ano Todo;TER;11:15;12:00;45;Josefa Surek de Souza;EMI Mecatrônica 201;Sala C20;NAO
+T02_D029_1;Hidráulica e Pneumática;TEORICA;Anual;Ano Todo;SEG;08:00;08:45;45;Gustavo Nuernberg;EMI Mecatrônica 201;Sala C20;NAO
+T02_D029_2;Hidráulica e Pneumática;TEORICA;Anual;Ano Todo;SEX;11:15;12:00;45;Gustavo Nuernberg;EMI Mecatrônica 201;Sala C20;NAO
+T02_D030_1;Eletrotécnica II;TEORICA;Anual;Ano Todo;SEX;14:00;14:45;45;Ailson Barbizan;EMI Mecatrônica 201;Sala C20;NAO
+T02_D030_2;Eletrotécnica II;TEORICA;Anual;Ano Todo;TER;09:45;10:30;45;Ailson Barbizan;EMI Mecatrônica 201;Sala C20;NAO
+T02_D031_1;Gestão e Controle da Qualidade;TEORICA;Anual;Ano Todo;SEX;10:30;11:15;45;Fani Martendal;EMI Mecatrônica 201;Sala C20;NAO
+T02_D032_1;Matemática;TEORICA;Anual;Ano Todo;QUA;13:15;14:00;45;Jeovani Schmitt;EMI Mecatrônica 201;Sala C20;NAO
+T02_D032_2;Matemática;TEORICA;Anual;Ano Todo;SEX;16:30;17:15;45;Jeovani Schmitt;EMI Mecatrônica 201;Sala C20;NAO
+T02_D032_3;Matemática;TEORICA;Anual;Ano Todo;SEG;09:45;10:30;45;Jeovani Schmitt;EMI Mecatrônica 201;Sala C20;NAO
+T02_D033_1;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;QUA;11:15;12:00;45;Marcelo Cordeiro do Nascimento;EMI Mecatrônica 201;Sala C20;NAO
+T02_D033_2;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEG;10:30;11:15;45;Marcelo Cordeiro do Nascimento;EMI Mecatrônica 201;Sala C20;NAO
+T02_D034_1;Sociologia;TEORICA;Anual;Ano Todo;TER;08:45;09:30;45;Dalton Luiz De Menezes Reis;EMI Mecatrônica 201;Sala C20;NAO
+T02_D035_1;Eletrônica Analógica e Digital;TEORICA;Anual;Ano Todo;QUA;14:00;14:45;45;Jomar Alberto Andreata;EMI Mecatrônica 201;Sala C20;NAO
+T02_D035_2;Eletrônica Analógica e Digital;TEORICA;Anual;Ano Todo;SEG;14:00;14:45;45;Jomar Alberto Andreata;EMI Mecatrônica 201;Sala C20;NAO
+T02_D035_3;Eletrônica Analógica e Digital;TEORICA;Anual;Ano Todo;SEX;15:45;16:30;45;Jomar Alberto Andreata;EMI Mecatrônica 201;Sala C20;NAO
+T02_D036_1;Química;TEORICA;Anual;Ano Todo;SEG;15:45;16:30;45;Heloize Cunha;EMI Mecatrônica 201;Sala C20;NAO
+T02_D036_2;Química;TEORICA;Anual;Ano Todo;SEX;13:15;14:00;45;Heloize Cunha;EMI Mecatrônica 201;Sala C20;NAO
+T02_D037_1;Princípios de manufatura;TEORICA;Anual;Ano Todo;SEX;09:45;10:30;45;Luciano Sena;EMI Mecatrônica 201;Sala C20;NAO
+T02_D037_2;Princípios de manufatura;TEORICA;Anual;Ano Todo;QUI;08:00;08:45;45;Luciano Sena;EMI Mecatrônica 201;Sala C20;NAO
+T03_D038_1;Microcontroladores;TEORICA;Anual;Ano Todo;QUA;09:45;10:30;45;Vitor Moraes;EMI Mecatrônica 301;Sala C3;NAO
+T03_D038_2;Microcontroladores;TEORICA;Anual;Ano Todo;QUA;11:15;12:00;45;Vitor Moraes;EMI Mecatrônica 301;Sala C3;NAO
+T03_D039_1;Automação Industrial;TEORICA;Anual;Ano Todo;SEX;08:00;08:45;45;Alessandro Braatz;EMI Mecatrônica 301;Sala C3;NAO
+T03_D039_2;Automação Industrial;TEORICA;Anual;Ano Todo;TER;08:45;09:30;45;Alessandro Braatz;EMI Mecatrônica 301;Sala C3;NAO
+T03_D040_1;Língua Portuguesa;TEORICA;Anual;Ano Todo;QUI;08:00;08:45;45;Juliene Marques;EMI Mecatrônica 301;Sala C3;NAO
+T03_D040_2;Língua Portuguesa;TEORICA;Anual;Ano Todo;SEX;10:30;11:15;45;Juliene Marques;EMI Mecatrônica 301;Sala C3;NAO
+T03_D041_1;Matemática;TEORICA;Anual;Ano Todo;QUI;08:45;09:30;45;Jeovani Schmitt;EMI Mecatrônica 301;Sala C3;NAO
+T03_D041_2;Matemática;TEORICA;Anual;Ano Todo;QUI;10:30;11:15;45;Jeovani Schmitt;EMI Mecatrônica 301;Sala C3;NAO
+T03_D042_1;História;TEORICA;Anual;Ano Todo;SEG;10:30;11:15;45;Anderson Nereu Galcowski;EMI Mecatrônica 301;Sala C3;NAO
+T03_D042_2;História;TEORICA;Anual;Ano Todo;TER;09:45;10:30;45;Anderson Nereu Galcowski;EMI Mecatrônica 301;Sala C3;NAO
+T03_D043_1;Química;TEORICA;Anual;Ano Todo;SEG;08:45;09:30;45;Carlos Eduardo Bencke;EMI Mecatrônica 301;Sala C3;NAO
+T03_D043_2;Química;TEORICA;Anual;Ano Todo;SEX;11:15;12:00;45;Carlos Eduardo Bencke;EMI Mecatrônica 301;Sala C3;NAO
+T03_D044_1;Geografia;TEORICA;Anual;Ano Todo;SEX;09:45;10:30;45;Ludmila Losada da Fonseca;EMI Mecatrônica 301;Sala C3;NAO
+T03_D044_2;Geografia;TEORICA;Anual;Ano Todo;TER;10:30;11:15;45;Ludmila Losada da Fonseca;EMI Mecatrônica 301;Sala C3;NAO
+T03_D045_1;Projeto Integrador III;LABORATORIO;Anual;Ano Todo;QUI;11:15;12:00;45;Ailson Barbizan;EMI Mecatrônica 301;Laboratório D06;NAO
+T03_D046_1;Princípios de Robótica Industrial;TEORICA;Anual;Ano Todo;SEX;08:45;09:30;45;Luciano Sena;EMI Mecatrônica 301;Sala C3;NAO
+T03_D046_2;Princípios de Robótica Industrial;TEORICA;Anual;Ano Todo;QUI;09:45;10:30;45;Luciano Sena;EMI Mecatrônica 301;Sala C3;NAO
+T03_D047_1;Resistência dos Materiais;TEORICA;Anual;Ano Todo;SEG;09:45;10:30;45;Rafael Gonçalves de Souza;EMI Mecatrônica 301;Sala C3;NAO
+T03_D047_2;Resistência dos Materiais;TEORICA;Anual;Ano Todo;TER;08:00;08:45;45;Rafael Gonçalves de Souza;EMI Mecatrônica 301;Sala C3;NAO
+T03_D048_1;Biologia;TEORICA;Anual;Ano Todo;TER;11:15;12:00;45;Péricles Rocha da Silva;EMI Mecatrônica 301;Sala C3;NAO
+T03_D048_2;Biologia;TEORICA;Anual;Ano Todo;QUA;08:00;08:45;45;Péricles Rocha da Silva;EMI Mecatrônica 301;Sala C3;NAO
+T03_D049_1;Física;TEORICA;Anual;Ano Todo;SEG;08:00;08:45;45;Josefa Surek de Souza;EMI Mecatrônica 301;Sala C3;NAO
+T03_D049_2;Física;TEORICA;Anual;Ano Todo;QUA;10:30;11:15;45;Josefa Surek de Souza;EMI Mecatrônica 301;Sala C3;NAO
+T03_D050_1;Sociologia;TEORICA;Anual;Ano Todo;QUA;08:45;09:30;45;Viviani Teixeira;EMI Mecatrônica 301;Sala C3;NAO
+T04_D051_1;Optativa - Empreende dorismo;TEORICA;Anual;Ano Todo;TER;13:15;14:00;45;Fani Martendal;EMI Mecatrônica Optativas;Sala C08;NAO
+T04_D051_2;Optativa - Empreende dorismo;TEORICA;Anual;Ano Todo;TER;15:45;16:30;45;Fani Martendal;EMI Mecatrônica Optativas;Sala C08;NAO
+T05_D052_1;Física;TEORICA;Anual;Ano Todo;SEG;15:45;16:30;45;Fábio Pra da Silva de Souza;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D052_2;Física;TEORICA;Anual;Ano Todo;TER;10:30;11:15;45;Fábio Pra da Silva de Souza;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D053_1;Geografia;TEORICA;Anual;Ano Todo;SEX;09:45;10:30;45;André Torelli Salatino;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D054_1;História;TEORICA;Anual;Ano Todo;QUA;14:00;14:45;45;Anderson Nereu Galcowski;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D054_2;História;TEORICA;Anual;Ano Todo;TER;08:45;09:30;45;Anderson Nereu Galcowski;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D055_1;Inglês - Básico I;TEORICA;Anual;Ano Todo;SEX;14:45;15:30;45;Célia Dias da Silva;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D055_2;Inglês - Básico I;TEORICA;Anual;Ano Todo;TER;11:15;12:00;45;Célia Dias da Silva;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D056_1;Matemática;TEORICA;Anual;Ano Todo;QUI;08:45;09:30;45;Alexandre Veloso dos Santos;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D056_2;Matemática;TEORICA;Anual;Ano Todo;SEX;14:00;14:45;45;Alexandre Veloso dos Santos;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D057_1;Desenho Técnico;TEORICA;Anual;Ano Todo;QUI;09:45;10:30;45;Cícero José de Oliveira Lima;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D057_2;Desenho Técnico;TEORICA;Anual;Ano Todo;SEG;09:45;10:30;45;Cícero José de Oliveira Lima;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D058_1;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEX;11:15;12:00;45;Cleonice Naedzold;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D058_2;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEX;16:30;17:15;45;Cleonice Naedzold;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D058_3;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEG;08:45;09:30;45;Cleonice Naedzold;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D058_4;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEG;16:30;17:15;45;Cleonice Naedzold;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D059_1;Eletrotécnica I;TEORICA;Anual;Ano Todo;QUI;10:30;11:15;45;Ailson Barbizan;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D059_2;Eletrotécnica I;TEORICA;Anual;Ano Todo;SEX;08:00;08:45;45;Ailson Barbizan;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D060_1;Elementos de Máquinas;TEORICA;Anual;Ano Todo;SEG;13:15;14:00;45;Gustavo Nuernberg;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D061_1;Biologia;TEORICA;Anual;Ano Todo;SEG;14:00;14:45;45;Karlan Rau;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D061_2;Biologia;TEORICA;Anual;Ano Todo;TER;08:00;08:45;45;Karlan Rau;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D062_1;Sociologia;TEORICA;Anual;Ano Todo;SEX;10:30;11:15;45;Dalton Luiz De Menezes Reis;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D062_2;Sociologia;TEORICA;Anual;Ano Todo;TER;09:45;10:30;45;Dalton Luiz De Menezes Reis;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D063_1;Filosofia;TEORICA;Anual;Ano Todo;QUA;09:45;10:30;45;Adaltro Prochnov Nunes;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D063_2;Filosofia;TEORICA;Anual;Ano Todo;QUA;11:15;12:00;45;Adaltro Prochnov Nunes;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D064_1;Educação Física;TEORICA;Anual;Ano Todo;SEG;11:15;12:00;45;Catiane Souza;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D064_2;Educação Física;TEORICA;Anual;Ano Todo;QUA;13:15;14:00;45;Catiane Souza;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D065_1;Metrologia;TEORICA;Anual;Ano Todo;SEG;08:00;08:45;45;Ricardo Toledo Bergamo;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D065_2;Metrologia;TEORICA;Anual;Ano Todo;QUA;10:30;11:15;45;Ricardo Toledo Bergamo;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D066_1;Artes;TEORICA;Anual;Ano Todo;QUI;11:15;12:00;45;Suzana Back;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D066_2;Artes;TEORICA;Anual;Ano Todo;SEX;08:45;09:30;45;Suzana Back;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D067_1;Química;TEORICA;Anual;Ano Todo;QUA;16:30;17:15;45;Heloize Cunha;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D067_2;Química;TEORICA;Anual;Ano Todo;QUA;08:00;08:45;45;Heloize Cunha;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D068_1;Segurança do Trabalho;TEORICA;Anual;Ano Todo;QUI;08:00;08:45;45;Joana Fontanela;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D068_2;Segurança do Trabalho;TEORICA;Anual;Ano Todo;QUA;15:45;16:30;45;Joana Fontanela;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D069_1;Projeto Integrador I;LABORATORIO;Anual;Ano Todo;SEX;15:45;16:30;45;Vitor Moraes;EMI Eletrotecnica 101;Laboratório D06;NAO
+T05_D070_1;Materiais de Construção Mecânica;TEORICA;Anual;Ano Todo;QUA;08:45;09:30;45;Ricardo Toledo Bergamo;EMI Eletrotecnica 101;Sala C10;NAO
+T05_D070_2;Materiais de Construção Mecânica;TEORICA;Anual;Ano Todo;QUA;14:45;15:30;45;Ricardo Toledo Bergamo;EMI Eletrotecnica 101;Sala C10;NAO
+T06_D071_1;Inglês - Básico I;TEORICA;Anual;Ano Todo;SEX;08:00;08:45;45;Célia Dias da Silva;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D071_2;Inglês - Básico I;TEORICA;Anual;Ano Todo;TER;10:30;11:15;45;Célia Dias da Silva;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D072_1;Química;TEORICA;Anual;Ano Todo;TER;08:45;09:30;45;Heloize Cunha;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D072_2;Química;TEORICA;Anual;Ano Todo;SEG;10:30;11:15;45;Heloize Cunha;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D073_1;Matemática;TEORICA;Anual;Ano Todo;QUI;09:45;10:30;45;Alexandre Veloso dos Santos;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D073_2;Matemática;TEORICA;Anual;Ano Todo;TER;08:00;08:45;45;Alexandre Veloso dos Santos;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D073_3;Matemática;TEORICA;Anual;Ano Todo;SEG;13:15;14:00;45;Alexandre Veloso dos Santos;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D073_4;Matemática;TEORICA;Anual;Ano Todo;QUA;08:00;08:45;45;Alexandre Veloso dos Santos;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D074_1;Desenho Técnico;LABORATORIO;Anual;Ano Todo;SEG;14:45;15:30;45;Cícero José de Oliveira Lima;EMI Eletrotecnica 102;Sala C3;NAO
+T06_D074_2;Desenho Técnico;LABORATORIO;Anual;Ano Todo;SEG;11:15;12:00;45;Cícero José de Oliveira Lima;EMI Eletrotecnica 102;Sala C3;NAO
+T06_D075_1;Artes;TEORICA;Anual;Ano Todo;QUA;10:30;11:15;45;Suzana Back;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D075_2;Artes;TEORICA;Anual;Ano Todo;SEX;14:45;15:30;45;Suzana Back;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D076_1;Filosofia;TEORICA;Anual;Ano Todo;SEX;09:45;10:30;45;Adaltro Prochnov Nunes;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D076_2;Filosofia;TEORICA;Anual;Ano Todo;SEX;11:15;12:00;45;Adaltro Prochnov Nunes;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D077_1;Sociologia;TEORICA;Anual;Ano Todo;SEG;15:45;16:30;45;Dalton Luiz De Menezes Reis;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D077_2;Sociologia;TEORICA;Anual;Ano Todo;QUA;09:45;10:30;45;Dalton Luiz De Menezes Reis;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D078_1;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;QUA;15:45;16:30;45;Cleonice Naedzold;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D078_2;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEX;10:30;11:15;45;Cleonice Naedzold;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D078_3;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;QUA;14:45;15:30;45;Cleonice Naedzold;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D078_4;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEG;08:00;08:45;45;Cleonice Naedzold;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D079_1;Eletrotécnica I;TEORICA;Anual;Ano Todo;SEX;08:45;09:30;45;Ailson Barbizan;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D079_2;Eletrotécnica I;TEORICA;Anual;Ano Todo;QUI;08:45;09:30;45;Ailson Barbizan;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D080_1;Segurança do Trabalho;TEORICA;Anual;Ano Todo;QUA;16:30;17:15;45;Joana Fontanela;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D080_2;Segurança do Trabalho;TEORICA;Anual;Ano Todo;SEX;14:00;14:45;45;Joana Fontanela;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D081_1;História;TEORICA;Anual;Ano Todo;SEG;16:30;17:15;45;Anderson Nereu Galcowski;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D081_2;História;TEORICA;Anual;Ano Todo;SEX;16:30;17:15;45;Anderson Nereu Galcowski;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D082_1;Educação Física;TEORICA;Anual;Ano Todo;SEG;14:00;14:45;45;Catiane Souza;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D082_2;Educação Física;TEORICA;Anual;Ano Todo;QUA;14:00;14:45;45;Catiane Souza;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D083_1;Metrologia;TEORICA;Anual;Ano Todo;SEX;15:45;16:30;45;Ricardo Toledo Bergamo;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D083_2;Metrologia;TEORICA;Anual;Ano Todo;TER;11:15;12:00;45;Ricardo Toledo Bergamo;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D084_1;Geografia;TEORICA;Anual;Ano Todo;SEX;13:15;14:00;45;André Torelli Salatino;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D085_1;Biologia;TEORICA;Anual;Ano Todo;QUI;08:00;08:45;45;Karlan Rau;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D085_2;Biologia;TEORICA;Anual;Ano Todo;SEG;09:45;10:30;45;Karlan Rau;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D086_1;Projeto Integrador I;LABORATORIO;Anual;Ano Todo;QUA;08:45;09:30;45;Vitor Moraes;EMI Eletrotecnica 102;Laboratório D05;NAO
+T06_D087_1;Elementos de Máquinas;TEORICA;Anual;Ano Todo;QUA;11:15;12:00;45;Luciano Sena;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D088_1;Materiais de Construção Mecânica;TEORICA;Anual;Ano Todo;QUA;13:15;14:00;45;Ricardo Toledo Bergamo;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D088_2;Materiais de Construção Mecânica;TEORICA;Anual;Ano Todo;TER;09:45;10:30;45;Ricardo Toledo Bergamo;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D089_1;Física;TEORICA;Anual;Ano Todo;QUI;10:30;11:15;45;Fábio Pra da Silva de Souza;EMI Eletrotecnica 102;Sala C11;NAO
+T06_D089_2;Física;TEORICA;Anual;Ano Todo;QUI;11:15;12:00;45;Fábio Pra da Silva de Souza;EMI Eletrotecnica 102;Sala C11;NAO
+T07_D090_1;Filosofia;TEORICA;Anual;Ano Todo;SEG;08:45;09:30;45;Adaltro Prochnov Nunes;EMI Eletromecânica 201;Sala C05;NAO
+T07_D090_2;Filosofia;TEORICA;Anual;Ano Todo;TER;09:45;10:30;45;Adaltro Prochnov Nunes;EMI Eletromecânica 201;Sala C05;NAO
+T07_D091_1;Artes;TEORICA;Anual;Ano Todo;SEX;15:45;16:30;45;Cláudia Zimmer de Cerqueira Cezar;EMI Eletromecânica 201;Sala C05;NAO
+T07_D091_2;Artes;TEORICA;Anual;Ano Todo;SEX;11:15;12:00;45;Cláudia Zimmer de Cerqueira Cezar;EMI Eletromecânica 201;Sala C05;NAO
+T07_D091_3;Artes;TEORICA;Anual;Ano Todo;QUI;08:00;08:45;45;Cláudia Zimmer de Cerqueira Cezar;EMI Eletromecânica 201;Sala C05;NAO
+T07_D092_1;História;TEORICA;Anual;Ano Todo;SEX;08:45;09:30;45;Sara Nunes;EMI Eletromecânica 201;Sala C05;NAO
+T07_D092_2;História;TEORICA;Anual;Ano Todo;QUA;14:45;15:30;45;Sara Nunes;EMI Eletromecânica 201;Sala C05;NAO
+T07_D093_1;Gestão e Controle da Qualidade;TEORICA;Anual;Ano Todo;QUA;13:15;14:00;45;Fani Martendal;EMI Eletromecânica 201;Sala C05;NAO
+T07_D094_1;Sociologia;TEORICA;Anual;Ano Todo;SEG;13:15;14:00;45;Dalton Luiz De Menezes Reis;EMI Eletromecânica 201;Sala C05;NAO
+T07_D095_1;Eletrônica Analógica;TEORICA;Anual;Ano Todo;SEG;16:30;17:15;45;Alessandro Braatz;EMI Eletromecânica 201;Sala C05;NAO
+T07_D095_2;Eletrônica Analógica;TEORICA;Anual;Ano Todo;SEX;14:45;15:30;45;Alessandro Braatz;EMI Eletromecânica 201;Sala C05;NAO
+T07_D096_1;Educação Física;TEORICA;Anual;Ano Todo;SEG;14:45;15:30;45;Catiane Souza;EMI Eletromecânica 201;Sala C05;NAO
+T07_D096_2;Educação Física;TEORICA;Anual;Ano Todo;QUA;08:45;09:30;45;Catiane Souza;EMI Eletromecânica 201;Sala C05;NAO
+T07_D097_1;Processos de Fabricação;TEORICA;Anual;Ano Todo;TER;11:15;12:00;45;Gustavo Nuernberg;EMI Eletromecânica 201;Sala C05;NAO
+T07_D097_2;Processos de Fabricação;TEORICA;Anual;Ano Todo;SEG;10:30;11:15;45;Gustavo Nuernberg;EMI Eletromecânica 201;Sala C05;NAO
+T07_D097_3;Processos de Fabricação;TEORICA;Anual;Ano Todo;QUA;16:30;17:15;45;Gustavo Nuernberg;EMI Eletromecânica 201;Sala C05;NAO
+T07_D097_4;Processos de Fabricação;TEORICA;Anual;Ano Todo;QUA;11:15;12:00;45;Gustavo Nuernberg;EMI Eletromecânica 201;Sala C05;NAO
+T07_D098_1;Geografia;TEORICA;Anual;Ano Todo;SEX;14:00;14:45;45;André Torelli Salatino;EMI Eletromecânica 201;Sala C05;NAO
+T07_D098_2;Geografia;TEORICA;Anual;Ano Todo;SEX;08:00;08:45;45;André Torelli Salatino;EMI Eletromecânica 201;Sala C05;NAO
+T07_D099_1;Eletrotécnica II;TEORICA;Anual;Ano Todo;SEX;13:15;14:00;45;Ailson Barbizan;EMI Eletromecânica 201;Sala C05;NAO
+T07_D099_2;Eletrotécnica II;TEORICA;Anual;Ano Todo;SEX;09:45;10:30;45;Ailson Barbizan;EMI Eletromecânica 201;Sala C05;NAO
+T07_D100_1;Inglês - Básico II;TEORICA;Anual;Ano Todo;SEX;16:30;17:15;45;Rita de Cássia da Silveira Cordeiro;EMI Eletromecânica 201;Sala C05;NAO
+T07_D100_2;Inglês - Básico II;TEORICA;Anual;Ano Todo;QUA;08:00;08:45;45;Rita de Cássia da Silveira Cordeiro;EMI Eletromecânica 201;Sala C05;NAO
+T07_D101_1;Projeto Integrador II;LABORATORIO;Anual;Ano Todo;QUI;10:30;11:15;45;Cássio Espíndola Antunes;EMI Eletromecânica 201;Laboratório D07;NAO
+T07_D101_2;Projeto Integrador II;LABORATORIO;Anual;Ano Todo;SEG;08:00;08:45;45;Cássio Espíndola Antunes;EMI Eletromecânica 201;Laboratório A04;NAO
+T07_D102_1;Hidráulica e Pneumática;TEORICA;Anual;Ano Todo;SEX;10:30;11:15;45;Gustavo Nuernberg;EMI Eletromecânica 201;Sala C05;NAO
+T07_D102_2;Hidráulica e Pneumática;TEORICA;Anual;Ano Todo;SEG;14:00;14:45;45;Gustavo Nuernberg;EMI Eletromecânica 201;Sala C05;NAO
+T07_D103_1;Física;TEORICA;Anual;Ano Todo;QUA;14:00;14:45;45;Josefa Surek de Souza;EMI Eletromecânica 201;Sala C05;NAO
+T07_D103_2;Física;TEORICA;Anual;Ano Todo;QUA;15:45;16:30;45;Josefa Surek de Souza;EMI Eletromecânica 201;Sala C05;NAO
+T07_D104_1;Química;TEORICA;Anual;Ano Todo;QUA;10:30;11:15;45;Helvio Silvester Andrade de Sousa;EMI Eletromecânica 201;Sala C05;NAO
+T07_D104_2;Química;TEORICA;Anual;Ano Todo;TER;08:00;08:45;45;Helvio Silvester Andrade de Sousa;EMI Eletromecânica 201;Sala C05;NAO
+T07_D105_1;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEG;11:15;12:00;45;Marcelo Cordeiro do Nascimento;EMI Eletromecânica 201;Sala C05;NAO
+T07_D105_2;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;QUA;09:45;10:30;45;Marcelo Cordeiro do Nascimento;EMI Eletromecânica 201;Sala C05;NAO
+T07_D106_1;Matemática;TEORICA;Anual;Ano Todo;QUI;09:45;10:30;45;Jaqueline Horbach;EMI Eletromecânica 201;Sala C05;NAO
+T07_D106_2;Matemática;TEORICA;Anual;Ano Todo;QUI;11:15;12:00;45;Jaqueline Horbach;EMI Eletromecânica 201;Sala C05;NAO
+T07_D106_3;Matemática;TEORICA;Anual;Ano Todo;TER;08:45;09:30;45;Jaqueline Horbach;EMI Eletromecânica 201;Sala C05;NAO
+T07_D107_1;Biologia;TEORICA;Anual;Ano Todo;TER;10:30;11:15;45;Péricles Rocha da Silva;EMI Eletromecânica 201;Sala C05;NAO
+T07_D107_2;Biologia;TEORICA;Anual;Ano Todo;QUI;08:45;09:30;45;Péricles Rocha da Silva;EMI Eletromecânica 201;Sala C05;NAO
+T08_D108_1;Artes;TEORICA;Anual;Ano Todo;SEG;13:15;14:00;45;Cláudia Zimmer de Cerqueira Cezar;EMI Eletromecânica 202;Sala C06;NAO
+T08_D108_2;Artes;TEORICA;Anual;Ano Todo;SEX;16:30;17:15;45;Cláudia Zimmer de Cerqueira Cezar;EMI Eletromecânica 202;Sala C06;NAO
+T08_D108_3;Artes;TEORICA;Anual;Ano Todo;SEX;08:00;08:45;45;Cláudia Zimmer de Cerqueira Cezar;EMI Eletromecânica 202;Sala C06;NAO
+T08_D109_1;História;TEORICA;Anual;Ano Todo;SEX;14:45;15:30;45;Sara Nunes;EMI Eletromecânica 202;Sala C06;NAO
+T08_D109_2;História;TEORICA;Anual;Ano Todo;TER;11:15;12:00;45;Sara Nunes;EMI Eletromecânica 202;Sala C06;NAO
+T08_D110_1;Inglês - Básico II;TEORICA;Anual;Ano Todo;SEG;16:30;17:15;45;Rita de Cássia da Silveira Cordeiro;EMI Eletromecânica 202;Sala C06;NAO
+T08_D110_2;Inglês - Básico II;TEORICA;Anual;Ano Todo;QUA;13:15;14:00;45;Rita de Cássia da Silveira Cordeiro;EMI Eletromecânica 202;Sala C06;NAO
+T08_D111_1;Sociologia;TEORICA;Anual;Ano Todo;QUA;15:45;16:30;45;Dalton Luiz De Menezes Reis;EMI Eletromecânica 202;Sala C06;NAO
+T08_D112_1;Eletrônica Analógica;TEORICA;Anual;Ano Todo;SEG;14:00;14:45;45;Alessandro Braatz;EMI Eletromecânica 202;Sala C06;NAO
+T08_D112_2;Eletrônica Analógica;TEORICA;Anual;Ano Todo;SEX;10:30;11:15;45;Alessandro Braatz;EMI Eletromecânica 202;Sala C06;NAO
+T08_D113_1;Hidráulica e Pneumática;TEORICA;Anual;Ano Todo;QUI;11:15;12:00;45;Gustavo Nuernberg;EMI Eletromecânica 202;Sala C06;NAO
+T08_D113_2;Hidráulica e Pneumática;TEORICA;Anual;Ano Todo;TER;10:30;11:15;45;Gustavo Nuernberg;EMI Eletromecânica 202;Sala C06;NAO
+T08_D114_1;Matemática;TEORICA;Anual;Ano Todo;QUI;10:30;11:15;45;Jaqueline Horbach;EMI Eletromecânica 202;Sala C06;NAO
+T08_D114_2;Matemática;TEORICA;Anual;Ano Todo;TER;08:00;08:45;45;Jaqueline Horbach;EMI Eletromecânica 202;Sala C06;NAO
+T08_D114_3;Matemática;TEORICA;Anual;Ano Todo;SEG;11:15;12:00;45;Jaqueline Horbach;EMI Eletromecânica 202;Sala C06;NAO
+T08_D115_1;Educação Física;TEORICA;Anual;Ano Todo;QUA;11:15;12:00;45;Catiane Souza;EMI Eletromecânica 202;Sala C06;NAO
+T08_D115_2;Educação Física;TEORICA;Anual;Ano Todo;QUA;16:30;17:15;45;Catiane Souza;EMI Eletromecânica 202;Sala C06;NAO
+T08_D116_1;Física;TEORICA;Anual;Ano Todo;QUI;09:45;10:30;45;Josefa Surek de Souza;EMI Eletromecânica 202;Sala C06;NAO
+T08_D116_2;Física;TEORICA;Anual;Ano Todo;QUA;14:45;15:30;45;Josefa Surek de Souza;EMI Eletromecânica 202;Sala C06;NAO
+T08_D117_1;Geografia;TEORICA;Anual;Ano Todo;QUA;14:00;14:45;45;André Torelli Salatino;EMI Eletromecânica 202;Sala C06;NAO
+T08_D117_2;Geografia;TEORICA;Anual;Ano Todo;QUA;08:00;08:45;45;André Torelli Salatino;EMI Eletromecânica 202;Sala C06;NAO
+T08_D118_1;Eletrotécnica II;TEORICA;Anual;Ano Todo;TER;08:45;09:30;45;Ailson Barbizan;EMI Eletromecânica 202;Sala C06;NAO
+T08_D118_2;Eletrotécnica II;TEORICA;Anual;Ano Todo;QUI;08:00;08:45;45;Ailson Barbizan;EMI Eletromecânica 202;Sala C06;NAO
+T08_D119_1;Gestão e Controle da Qualidade;TEORICA;Anual;Ano Todo;QUA;08:45;09:30;45;Fani Martendal;EMI Eletromecânica 202;Sala C06;NAO
+T08_D120_1;Projeto Integrador II;LABORATORIO;Anual;Ano Todo;SEX;08:45;09:30;45;Cássio Espíndola Antunes;EMI Eletromecânica 202;Laboratório D07;NAO
+T08_D120_2;Projeto Integrador II;LABORATORIO;Anual;Ano Todo;QUI;08:45;09:30;45;Cássio Espíndola Antunes;EMI Eletromecânica 202;Laboratório D07;NAO
+T08_D121_1;Filosofia;TEORICA;Anual;Ano Todo;SEG;10:30;11:15;45;Adaltro Prochnov Nunes;EMI Eletromecânica 202;Sala C06;NAO
+T08_D121_2;Filosofia;TEORICA;Anual;Ano Todo;SEG;09:45;10:30;45;Adaltro Prochnov Nunes;EMI Eletromecânica 202;Sala C06;NAO
+T08_D122_1;Processos de Fabricação;TEORICA;Anual;Ano Todo;SEG;08:45;09:30;45;Gustavo Nuernberg;EMI Eletromecânica 202;Sala C06;NAO
+T08_D122_2;Processos de Fabricação;TEORICA;Anual;Ano Todo;TER;09:45;10:30;45;Gustavo Nuernberg;EMI Eletromecânica 202;Sala C06;NAO
+T08_D122_3;Processos de Fabricação;TEORICA;Anual;Ano Todo;SEX;09:45;10:30;45;Gustavo Nuernberg;EMI Eletromecânica 202;Sala C06;NAO
+T08_D122_4;Processos de Fabricação;TEORICA;Anual;Ano Todo;SEX;14:00;14:45;45;Gustavo Nuernberg;EMI Eletromecânica 202;Sala C06;NAO
+T08_D123_1;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;QUA;10:30;11:15;45;Marcelo Cordeiro do Nascimento;EMI Eletromecânica 202;Sala C06;NAO
+T08_D123_2;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEX;11:15;12:00;45;Marcelo Cordeiro do Nascimento;EMI Eletromecânica 202;Sala C06;NAO
+T08_D124_1;Química;TEORICA;Anual;Ano Todo;SEX;15:45;16:30;45;Helvio Silvester Andrade de Sousa;EMI Eletromecânica 202;Sala C06;NAO
+T08_D124_2;Química;TEORICA;Anual;Ano Todo;SEX;13:15;14:00;45;Helvio Silvester Andrade de Sousa;EMI Eletromecânica 202;Sala C06;NAO
+T08_D125_1;Biologia;TEORICA;Anual;Ano Todo;QUA;09:45;10:30;45;Péricles Rocha da Silva;EMI Eletromecânica 202;Sala C06;NAO
+T08_D125_2;Biologia;TEORICA;Anual;Ano Todo;SEG;08:00;08:45;45;Péricles Rocha da Silva;EMI Eletromecânica 202;Sala C06;NAO
+T09_D126_1;Automação Industrial;TEORICA;Anual;Ano Todo;SEG;08:45;09:30;45;Alessandro Braatz;EMI Eletromecânica 301;Sala C07;NAO
+T09_D126_2;Automação Industrial;TEORICA;Anual;Ano Todo;QUA;11:15;12:00;45;Alessandro Braatz;EMI Eletromecânica 301;Sala C07;NAO
+T09_D127_1;Química;TEORICA;Anual;Ano Todo;SEX;08:45;09:30;45;Carlos Eduardo Bencke;EMI Eletromecânica 301;Sala C07;NAO
+T09_D127_2;Química;TEORICA;Anual;Ano Todo;QUI;10:30;11:15;45;Carlos Eduardo Bencke;EMI Eletromecânica 301;Sala C07;NAO
+T09_D128_1;Resistência dos Materiais;TEORICA;Anual;Ano Todo;TER;08:45;09:30;45;Rafael Gonçalves de Souza;EMI Eletromecânica 301;Sala C07;NAO
+T09_D128_2;Resistência dos Materiais;TEORICA;Anual;Ano Todo;TER;10:30;11:15;45;Rafael Gonçalves de Souza;EMI Eletromecânica 301;Sala C07;NAO
+T09_D129_1;Física;TEORICA;Anual;Ano Todo;SEG;10:30;11:15;45;Josefa Surek de Souza;EMI Eletromecânica 301;Sala C07;NAO
+T09_D129_2;Física;TEORICA;Anual;Ano Todo;QUA;09:45;10:30;45;Josefa Surek de Souza;EMI Eletromecânica 301;Sala C07;NAO
+T09_D130_1;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;QUI;08:45;09:30;45;Juliene Marques;EMI Eletromecânica 301;Sala C07;NAO
+T09_D130_2;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEX;09:45;10:30;45;Juliene Marques;EMI Eletromecânica 301;Sala C07;NAO
+T09_D131_1;Sociologia;TEORICA;Anual;Ano Todo;QUA;08:00;08:45;45;Viviani Teixeira;EMI Eletromecânica 301;Sala C07;NAO
+T09_D132_1;Geografia;TEORICA;Anual;Ano Todo;SEX;10:30;11:15;45;Ludmila Losada da Fonseca;EMI Eletromecânica 301;Sala C07;NAO
+T09_D132_2;Geografia;TEORICA;Anual;Ano Todo;TER;08:00;08:45;45;Ludmila Losada da Fonseca;EMI Eletromecânica 301;Sala C07;NAO
+T09_D133_1;História;TEORICA;Anual;Ano Todo;SEX;08:00;08:45;45;Anderson Nereu Galcowski;EMI Eletromecânica 301;Sala C07;NAO
+T09_D133_2;História;TEORICA;Anual;Ano Todo;QUI;08:00;08:45;45;Anderson Nereu Galcowski;EMI Eletromecânica 301;Sala C07;NAO
+T09_D134_1;Biologia;TEORICA;Anual;Ano Todo;SEG;11:15;12:00;45;Karlan Rau;EMI Eletromecânica 301;Sala C07;NAO
+T09_D134_2;Biologia;TEORICA;Anual;Ano Todo;QUA;08:45;09:30;45;Karlan Rau;EMI Eletromecânica 301;Sala C07;NAO
+T09_D135_1;Projeto Integrador III;LABORATORIO;Anual;Ano Todo;SEG;08:00;08:45;45;Alessandro Braatz;EMI Eletromecânica 301;Laboratório D06;NAO
+T09_D135_2;Projeto Integrador III;LABORATORIO;Anual;Ano Todo;SEG;09:45;10:30;45;Alessandro Braatz;EMI Eletromecânica 301;Laboratório D05;NAO
+T09_D136_1;Instalações Elétricas Prediais;TEORICA;Anual;Ano Todo;QUA;10:30;11:15;45;Jomar Alberto Andreata;EMI Eletromecânica 301;Sala C07;NAO
+T09_D136_2;Instalações Elétricas Prediais;TEORICA;Anual;Ano Todo;SEX;11:15;12:00;45;Jomar Alberto Andreata;EMI Eletromecânica 301;Sala C07;NAO
+T09_D137_1;Máquinas e Acionamentos Elétricos;TEORICA;Anual;Ano Todo;QUI;09:45;10:30;45;Cássio Espíndola Antunes;EMI Eletromecânica 301;Sala C07;NAO
+T09_D137_2;Máquinas e Acionamentos Elétricos;TEORICA;Anual;Ano Todo;TER;11:15;12:00;45;Cássio Espíndola Antunes;EMI Eletromecânica 301;Sala C07;NAO
+T09_D138_1;Matemática;TEORICA;Anual;Ano Todo;QUI;11:15;12:00;45;Jeovani Schmitt;EMI Eletromecânica 301;Sala C07;NAO
+T09_D138_2;Matemática;TEORICA;Anual;Ano Todo;TER;09:45;10:30;45;Jeovani Schmitt;EMI Eletromecânica 301;Sala C07;NAO
+T10_D139_1;Geografia;TEORICA;Anual;Ano Todo;QUA;10:30;11:15;45;Ludmila Losada da Fonseca;EMI Eletromecânica 302;Sala C08;NAO
+T10_D139_2;Geografia;TEORICA;Anual;Ano Todo;SEG;08:00;08:45;45;Ludmila Losada da Fonseca;EMI Eletromecânica 302;Sala C08;NAO
+T10_D140_1;História;TEORICA;Anual;Ano Todo;SEX;10:30;11:15;45;Anderson Nereu Galcowski;EMI Eletromecânica 302;Sala C08;NAO
+T10_D140_2;História;TEORICA;Anual;Ano Todo;TER;10:30;11:15;45;Anderson Nereu Galcowski;EMI Eletromecânica 302;Sala C08;NAO
+T10_D141_1;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;QUI;10:30;11:15;45;Juliene Marques;EMI Eletromecânica 302;Sala C08;NAO
+T10_D141_2;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;QUA;08:45;09:30;45;Juliene Marques;EMI Eletromecânica 302;Sala C08;NAO
+T10_D142_1;Matemática;TEORICA;Anual;Ano Todo;QUI;08:00;08:45;45;Fabricio Alves Oliveira;EMI Eletromecânica 302;Sala C08;NAO
+T10_D142_2;Matemática;TEORICA;Anual;Ano Todo;SEG;08:45;09:30;45;Fabricio Alves Oliveira;EMI Eletromecânica 302;Sala C08;NAO
+T10_D143_1;Química;TEORICA;Anual;Ano Todo;QUA;11:15;12:00;45;Carlos Eduardo Bencke;EMI Eletromecânica 302;Sala C08;NAO
+T10_D143_2;Química;TEORICA;Anual;Ano Todo;SEX;08:00;08:45;45;Carlos Eduardo Bencke;EMI Eletromecânica 302;Sala C08;NAO
+T10_D144_1;Biologia;TEORICA;Anual;Ano Todo;QUI;11:15;12:00;45;Karlan Rau;EMI Eletromecânica 302;Sala C08;NAO
+T10_D144_2;Biologia;TEORICA;Anual;Ano Todo;QUA;09:45;10:30;45;Karlan Rau;EMI Eletromecânica 302;Sala C08;NAO
+T10_D145_1;Instalações Elétricas Prediais;TEORICA;Anual;Ano Todo;QUI;09:45;10:30;45;Jomar Alberto Andreata;EMI Eletromecânica 302;Sala C08;NAO
+T10_D145_2;Instalações Elétricas Prediais;TEORICA;Anual;Ano Todo;TER;08:00;08:45;45;Jomar Alberto Andreata;EMI Eletromecânica 302;Sala C08;NAO
+T10_D146_1;Física;TEORICA;Anual;Ano Todo;TER;08:45;09:30;45;Josefa Surek de Souza;EMI Eletromecânica 302;Sala C08;NAO
+T10_D146_2;Física;TEORICA;Anual;Ano Todo;QUI;08:45;09:30;45;Josefa Surek de Souza;EMI Eletromecânica 302;Sala C08;NAO
+T10_D147_1;Resistência dos Materiais;TEORICA;Anual;Ano Todo;TER;11:15;12:00;45;Rafael Gonçalves de Souza;EMI Eletromecânica 302;Sala C08;NAO
+T10_D147_2;Resistência dos Materiais;TEORICA;Anual;Ano Todo;TER;09:45;10:30;45;Rafael Gonçalves de Souza;EMI Eletromecânica 302;Sala C08;NAO
+T10_D148_1;Projeto Integrador III;LABORATORIO;Anual;Ano Todo;SEG;11:15;12:00;45;Alessandro Braatz;EMI Eletromecânica 302;Laboratório A04;NAO
+T10_D148_2;Projeto Integrador III;LABORATORIO;Anual;Ano Todo;QUA;08:00;08:45;45;Alessandro Braatz;EMI Eletromecânica 302;Laboratório D07;NAO
+T10_D149_1;Sociologia;TEORICA;Anual;Ano Todo;SEG;09:45;10:30;45;Viviani Teixeira;EMI Eletromecânica 302;Sala C08;NAO
+T10_D150_1;Automação Industrial;TEORICA;Anual;Ano Todo;SEG;10:30;11:15;45;Alessandro Braatz;EMI Eletromecânica 302;Sala C08;NAO
+T10_D150_2;Automação Industrial;TEORICA;Anual;Ano Todo;SEX;08:45;09:30;45;Alessandro Braatz;EMI Eletromecânica 302;Sala C08;NAO
+T10_D151_1;Máquinas e Acionamentos Elétricos;TEORICA;Anual;Ano Todo;SEX;09:45;10:30;45;Cássio Espíndola Antunes;EMI Eletromecânica 302;Sala C08;NAO
+T10_D151_2;Máquinas e Acionamentos Elétricos;TEORICA;Anual;Ano Todo;SEX;11:15;12:00;45;Cássio Espíndola Antunes;EMI Eletromecânica 302;Sala C08;NAO
+T11_D152_1;Eletrônica Digital;TEORICA;Anual;Ano Todo;TER;14:00;14:45;45;Vitor Moraes;EMI Eletromecânica Optativas;Sala C3;NAO
+T11_D152_2;Eletrônica Digital;TEORICA;Anual;Ano Todo;TER;13:15;14:00;45;Vitor Moraes;EMI Eletromecânica Optativas;Sala C3;NAO
+T12_D153_1;Geografia;TEORICA;Anual;Ano Todo;SEG;15:45;16:30;45;André Torelli Salatino;EMI Informática 101;Sala C14;NAO
+T12_D153_2;Geografia;TEORICA;Anual;Ano Todo;SEG;13:15;14:00;45;André Torelli Salatino;EMI Informática 101;Sala C14;NAO
+T12_D154_1;História;TEORICA;Anual;Ano Todo;SEG;14:00;14:45;45;Anderson Nereu Galcowski;EMI Informática 101;Sala C14;NAO
+T12_D154_2;História;TEORICA;Anual;Ano Todo;SEX;15:45;16:30;45;Anderson Nereu Galcowski;EMI Informática 101;Sala C14;NAO
+T12_D155_1;Artes;TEORICA;Anual;Ano Todo;QUI;10:30;11:15;45;Suzana Back;EMI Informática 101;Sala C14;NAO
+T12_D155_2;Artes;TEORICA;Anual;Ano Todo;QUI;08:45;09:30;45;Suzana Back;EMI Informática 101;Sala C14;NAO
+T12_D156_1;Biologia;TEORICA;Anual;Ano Todo;SEG;08:00;08:45;45;Karlan Rau;EMI Informática 101;Sala C14;NAO
+T12_D156_2;Biologia;TEORICA;Anual;Ano Todo;TER;08:45;09:30;45;Karlan Rau;EMI Informática 101;Sala C14;NAO
+T12_D157_1;Hardware e Sistemas Operacionais;TEORICA;Anual;Ano Todo;QUI;11:15;12:00;45;Guilherme Stanga;EMI Informática 101;Sala C14;NAO
+T12_D157_2;Hardware e Sistemas Operacionais;TEORICA;Anual;Ano Todo;SEG;11:15;12:00;45;Guilherme Stanga;EMI Informática 101;Sala C14;NAO
+T12_D157_3;Hardware e Sistemas Operacionais;TEORICA;Anual;Ano Todo;SEG;08:45;09:30;45;Guilherme Stanga;EMI Informática 101;Sala C14;NAO
+T12_D157_4;Hardware e Sistemas Operacionais;TEORICA;Anual;Ano Todo;SEX;10:30;11:15;45;Guilherme Stanga;EMI Informática 101;Sala C14;NAO
+T12_D158_1;Matemática;TEORICA;Anual;Ano Todo;QUA;14:45;15:30;45;Alexandre Veloso dos Santos;EMI Informática 101;Sala C14;NAO
+T12_D158_2;Matemática;TEORICA;Anual;Ano Todo;QUI;08:00;08:45;45;Alexandre Veloso dos Santos;EMI Informática 101;Sala C14;NAO
+T12_D158_3;Matemática;TEORICA;Anual;Ano Todo;SEG;09:45;10:30;45;Alexandre Veloso dos Santos;EMI Informática 101;Sala C14;NAO
+T12_D158_4;Matemática;TEORICA;Anual;Ano Todo;QUA;16:30;17:15;45;Alexandre Veloso dos Santos;EMI Informática 101;Sala C14;NAO
+T12_D159_1;Metodologia Científica;TEORICA;Anual;Ano Todo;SEX;16:30;17:15;45;Fani Martendal;EMI Informática 101;Sala C14;NAO
+T12_D159_2;Metodologia Científica;TEORICA;Anual;Ano Todo;SEG;14:45;15:30;45;Fani Martendal;EMI Informática 101;Sala C14;NAO
+T12_D160_1;Lógica de Programação;LABORATORIO;Anual;Ano Todo;TER;11:15;12:00;45;Adriano Pizzini;EMI Informática 101;Laboratório A03;NAO
+T12_D160_2;Lógica de Programação;LABORATORIO;Anual;Ano Todo;QUI;09:45;10:30;45;Adriano Pizzini;EMI Informática 101;Laboratório D05;NAO
+T12_D160_3;Lógica de Programação;LABORATORIO;Anual;Ano Todo;QUA;14:00;14:45;45;Adriano Pizzini;EMI Informática 101;Laboratório A03;NAO
+T12_D160_4;Lógica de Programação;LABORATORIO;Anual;Ano Todo;SEX;09:45;10:30;45;Adriano Pizzini;EMI Informática 101;Laboratório D06;NAO
+T12_D161_1;Educação Física;TEORICA;Anual;Ano Todo;QUA;11:15;12:00;45;Daniel Minuzzi de Souza;EMI Informática 101;Sala C14;NAO
+T12_D161_2;Educação Física;TEORICA;Anual;Ano Todo;TER;09:45;10:30;45;Daniel Minuzzi de Souza;EMI Informática 101;Sala C14;NAO
+T12_D162_1;Filosofia;TEORICA;Anual;Ano Todo;SEX;08:00;08:45;45;Adaltro Prochnov Nunes;EMI Informática 101;Sala C14;NAO
+T12_D162_2;Filosofia;TEORICA;Anual;Ano Todo;QUA;08:45;09:30;45;Adaltro Prochnov Nunes;EMI Informática 101;Sala C14;NAO
+T12_D163_1;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEX;14:45;15:30;45;Cleonice Naedzold;EMI Informática 101;Sala C14;NAO
+T12_D163_2;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEX;13:15;14:00;45;Cleonice Naedzold;EMI Informática 101;Sala C14;NAO
+T12_D163_3;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;QUA;08:00;08:45;45;Cleonice Naedzold;EMI Informática 101;Sala C14;NAO
+T12_D164_1;Fundamentos da Informática;TEORICA;Anual;Ano Todo;SEX;14:00;14:45;45;Adriano Pizzini;EMI Informática 101;Sala C14;NAO
+T12_D164_2;Fundamentos da Informática;TEORICA;Anual;Ano Todo;SEG;10:30;11:15;45;Adriano Pizzini;EMI Informática 101;Sala C14;NAO
+T12_D165_1;Web Design;TEORICA;Anual;Ano Todo;TER;10:30;11:15;45;Fabio Busnardo;EMI Informática 101;Sala C14;NAO
+T12_D165_2;Web Design;TEORICA;Anual;Ano Todo;SEX;11:15;12:00;45;Fabio Busnardo;EMI Informática 101;Sala C14;NAO
+T12_D166_1;Química;TEORICA;Anual;Ano Todo;QUA;10:30;11:15;45;Heloize Cunha;EMI Informática 101;Sala C14;NAO
+T12_D166_2;Química;TEORICA;Anual;Ano Todo;TER;08:00;08:45;45;Heloize Cunha;EMI Informática 101;Sala C14;NAO
+T12_D167_1;Física;TEORICA;Anual;Ano Todo;SEX;08:45;09:30;45;Cíntia Barbosa Passos;EMI Informática 101;Sala C14;NAO
+T12_D167_2;Física;TEORICA;Anual;Ano Todo;QUA;09:45;10:30;45;Cíntia Barbosa Passos;EMI Informática 101;Sala C14;NAO
+T12_D168_1;Inglês - Básico I;TEORICA;Anual;Ano Todo;QUA;13:15;14:00;45;Célia Dias da Silva;EMI Informática 101;Sala C14;NAO
+T12_D168_2;Inglês - Básico I;TEORICA;Anual;Ano Todo;QUA;15:45;16:30;45;Célia Dias da Silva;EMI Informática 101;Sala C14;NAO
+T13_D169_1;Matemática;TEORICA;Anual;Ano Todo;QUA;14:00;14:45;45;Alexandre Veloso dos Santos;EMI Informática 102;Sala C15;NAO
+T13_D169_2;Matemática;TEORICA;Anual;Ano Todo;SEG;14:45;15:30;45;Alexandre Veloso dos Santos;EMI Informática 102;Sala C15;NAO
+T13_D169_3;Matemática;TEORICA;Anual;Ano Todo;SEX;13:15;14:00;45;Alexandre Veloso dos Santos;EMI Informática 102;Sala C15;NAO
+T13_D169_4;Matemática;TEORICA;Anual;Ano Todo;QUA;15:45;16:30;45;Alexandre Veloso dos Santos;EMI Informática 102;Sala C15;NAO
+T13_D170_1;Filosofia;TEORICA;Anual;Ano Todo;QUA;10:30;11:15;45;Adaltro Prochnov Nunes;EMI Informática 102;Sala C15;NAO
+T13_D170_2;Filosofia;TEORICA;Anual;Ano Todo;SEX;10:30;11:15;45;Adaltro Prochnov Nunes;EMI Informática 102;Sala C15;NAO
+T13_D171_1;Lógica de Programação;LABORATORIO;Anual;Ano Todo;QUA;08:45;09:30;45;Adriano Pizzini;EMI Informática 102;Laboratório D06;NAO
+T13_D171_2;Lógica de Programação;LABORATORIO;Anual;Ano Todo;QUI;11:15;12:00;45;Adriano Pizzini;EMI Informática 102;Laboratório D07;NAO
+T13_D171_3;Lógica de Programação;LABORATORIO;Anual;Ano Todo;SEX;11:15;12:00;45;Adriano Pizzini;EMI Informática 102;Laboratório D06;NAO
+T13_D171_4;Lógica de Programação;LABORATORIO;Anual;Ano Todo;QUA;08:00;08:45;45;Adriano Pizzini;EMI Informática 102;Laboratório A04;NAO
+T13_D172_1;Artes;TEORICA;Anual;Ano Todo;QUA;13:15;14:00;45;Suzana Back;EMI Informática 102;Sala C15;NAO
+T13_D172_2;Artes;TEORICA;Anual;Ano Todo;SEX;16:30;17:15;45;Suzana Back;EMI Informática 102;Sala C15;NAO
+T13_D173_1;Hardware e Sistemas Operacionais;TEORICA;Anual;Ano Todo;SEG;15:45;16:30;45;Guilherme Stanga;EMI Informática 102;Sala C15;NAO
+T13_D173_2;Hardware e Sistemas Operacionais;TEORICA;Anual;Ano Todo;QUI;08:00;08:45;45;Guilherme Stanga;EMI Informática 102;Sala C15;NAO
+T13_D173_3;Hardware e Sistemas Operacionais;TEORICA;Anual;Ano Todo;SEG;09:45;10:30;45;Guilherme Stanga;EMI Informática 102;Sala C15;NAO
+T13_D173_4;Hardware e Sistemas Operacionais;TEORICA;Anual;Ano Todo;QUI;08:45;09:30;45;Guilherme Stanga;EMI Informática 102;Sala C15;NAO
+T13_D174_1;História;TEORICA;Anual;Ano Todo;SEX;09:45;10:30;45;Anderson Nereu Galcowski;EMI Informática 102;Sala C15;NAO
+T13_D174_2;História;TEORICA;Anual;Ano Todo;SEX;08:45;09:30;45;Anderson Nereu Galcowski;EMI Informática 102;Sala C15;NAO
+T13_D175_1;Metodologia Científica;TEORICA;Anual;Ano Todo;QUA;16:30;17:15;45;Fani Martendal;EMI Informática 102;Sala C15;NAO
+T13_D175_2;Metodologia Científica;TEORICA;Anual;Ano Todo;SEG;13:15;14:00;45;Fani Martendal;EMI Informática 102;Sala C15;NAO
+T13_D176_1;Fundamentos da Informática;TEORICA;Anual;Ano Todo;SEX;15:45;16:30;45;Adriano Pizzini;EMI Informática 102;Sala C15;NAO
+T13_D176_2;Fundamentos da Informática;TEORICA;Anual;Ano Todo;SEG;08:00;08:45;45;Adriano Pizzini;EMI Informática 102;Sala C15;NAO
+T13_D177_1;Educação Física;TEORICA;Anual;Ano Todo;SEX;14:45;15:30;45;Daniel Minuzzi de Souza;EMI Informática 102;Sala C15;NAO
+T13_D177_2;Educação Física;TEORICA;Anual;Ano Todo;TER;10:30;11:15;45;Daniel Minuzzi de Souza;EMI Informática 102;Sala C15;NAO
+T13_D178_1;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEG;14:00;14:45;45;Cleonice Naedzold;EMI Informática 102;Sala C15;NAO
+T13_D178_2;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;TER;08:45;09:30;45;Cleonice Naedzold;EMI Informática 102;Sala C15;NAO
+T13_D178_3;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEX;14:00;14:45;45;Cleonice Naedzold;EMI Informática 102;Sala C15;NAO
+T13_D179_1;Biologia;TEORICA;Anual;Ano Todo;SEG;08:45;09:30;45;Karlan Rau;EMI Informática 102;Sala C15;NAO
+T13_D179_2;Biologia;TEORICA;Anual;Ano Todo;SEG;10:30;11:15;45;Karlan Rau;EMI Informática 102;Sala C15;NAO
+T13_D180_1;Física;TEORICA;Anual;Ano Todo;SEX;08:00;08:45;45;Cíntia Barbosa Passos;EMI Informática 102;Sala C15;NAO
+T13_D180_2;Física;TEORICA;Anual;Ano Todo;QUI;09:45;10:30;45;Cíntia Barbosa Passos;EMI Informática 102;Sala C15;NAO
+T13_D181_1;Geografia;TEORICA;Anual;Ano Todo;TER;11:15;12:00;45;André Torelli Salatino;EMI Informática 102;Sala C15;NAO
+T13_D181_2;Geografia;TEORICA;Anual;Ano Todo;TER;08:00;08:45;45;André Torelli Salatino;EMI Informática 102;Sala C15;NAO
+T13_D182_1;Web Design;TEORICA;Anual;Ano Todo;SEG;11:15;12:00;45;Fabio Busnardo;EMI Informática 102;Sala C15;NAO
+T13_D182_2;Web Design;TEORICA;Anual;Ano Todo;QUI;10:30;11:15;45;Fabio Busnardo;EMI Informática 102;Sala C15;NAO
+T13_D183_1;Inglês - Básico I;TEORICA;Anual;Ano Todo;QUA;09:45;10:30;45;Célia Dias da Silva;EMI Informática 102;Sala C15;NAO
+T13_D183_2;Inglês - Básico I;TEORICA;Anual;Ano Todo;TER;09:45;10:30;45;Célia Dias da Silva;EMI Informática 102;Sala C15;NAO
+T13_D184_1;Química;TEORICA;Anual;Ano Todo;QUA;14:45;15:30;45;Heloize Cunha;EMI Informática 102;Sala C15;NAO
+T13_D184_2;Química;TEORICA;Anual;Ano Todo;QUA;11:15;12:00;45;Heloize Cunha;EMI Informática 102;Sala C15;NAO
+T14_D185_1;Química;TEORICA;Anual;Ano Todo;SEX;10:30;11:15;45;Helvio Silvester Andrade de Sousa;EMI Informática 201;Sala C16;NAO
+T14_D185_2;Química;TEORICA;Anual;Ano Todo;QUA;13:15;14:00;45;Helvio Silvester Andrade de Sousa;EMI Informática 201;Sala C16;NAO
+T14_D186_1;Física;TEORICA;Anual;Ano Todo;QUI;11:15;12:00;45;Cíntia Barbosa Passos;EMI Informática 201;Sala C16;NAO
+T14_D186_2;Física;TEORICA;Anual;Ano Todo;QUA;11:15;12:00;45;Cíntia Barbosa Passos;EMI Informática 201;Sala C16;NAO
+T14_D187_1;Artes;TEORICA;Anual;Ano Todo;QUA;14:00;14:45;45;Rudimar;EMI Informática 201;Sala C16;NAO
+T14_D187_2;Artes;TEORICA;Anual;Ano Todo;TER;09:45;10:30;45;Rudimar;EMI Informática 201;Sala C16;NAO
+T14_D188_1;História;TEORICA;Anual;Ano Todo;TER;10:30;11:15;45;Sara Nunes;EMI Informática 201;Sala C16;NAO
+T14_D188_2;História;TEORICA;Anual;Ano Todo;SEX;09:45;10:30;45;Sara Nunes;EMI Informática 201;Sala C16;NAO
+T14_D189_1;Sociologia;TEORICA;Anual;Ano Todo;SEG;14:45;15:30;45;Dalton Luiz De Menezes Reis;EMI Informática 201;Sala C16;NAO
+T14_D189_2;Sociologia;TEORICA;Anual;Ano Todo;QUA;16:30;17:15;45;Dalton Luiz De Menezes Reis;EMI Informática 201;Sala C16;NAO
+T14_D190_1;Programação I;TEORICA;Anual;Ano Todo;SEG;08:00;08:45;45;Hylson Vescovi Netto;EMI Informática 201;Sala C16;NAO
+T14_D190_2;Programação I;TEORICA;Anual;Ano Todo;QUI;08:45;09:30;45;Hylson Vescovi Netto;EMI Informática 201;Sala C16;NAO
+T14_D190_3;Programação I;TEORICA;Anual;Ano Todo;QUA;08:45;09:30;45;Hylson Vescovi Netto;EMI Informática 201;Sala C16;NAO
+T14_D190_4;Programação I;TEORICA;Anual;Ano Todo;SEX;08:00;08:45;45;Hylson Vescovi Netto;EMI Informática 201;Sala C16;NAO
+T14_D191_1;Geografia;TEORICA;Anual;Ano Todo;QUI;09:45;10:30;45;André Torelli Salatino;EMI Informática 201;Sala C16;NAO
+T14_D191_2;Geografia;TEORICA;Anual;Ano Todo;QUI;10:30;11:15;45;André Torelli Salatino;EMI Informática 201;Sala C16;NAO
+T14_D192_1;Filosofia;TEORICA;Anual;Ano Todo;QUA;08:00;08:45;45;Adaltro Prochnov Nunes;EMI Informática 201;Sala C16;NAO
+T14_D192_2;Filosofia;TEORICA;Anual;Ano Todo;TER;08:45;09:30;45;Adaltro Prochnov Nunes;EMI Informática 201;Sala C16;NAO
+T14_D193_1;Matemática;TEORICA;Anual;Ano Todo;SEX;15:45;16:30;45;Jeovani Schmitt;EMI Informática 201;Sala C16;NAO
+T14_D193_2;Matemática;TEORICA;Anual;Ano Todo;TER;11:15;12:00;45;Jeovani Schmitt;EMI Informática 201;Sala C16;NAO
+T14_D193_3;Matemática;TEORICA;Anual;Ano Todo;QUA;10:30;11:15;45;Jeovani Schmitt;EMI Informática 201;Sala C16;NAO
+T14_D194_1;Engenharia de Software;TEORICA;Anual;Ano Todo;QUA;15:45;16:30;45;Luiz Ricardo Uriarte;EMI Informática 201;Sala C16;NAO
+T14_D194_2;Engenharia de Software;TEORICA;Anual;Ano Todo;QUI;08:00;08:45;45;Luiz Ricardo Uriarte;EMI Informática 201;Sala C16;NAO
+T14_D195_1;Biologia;TEORICA;Anual;Ano Todo;SEX;16:30;17:15;45;Péricles Rocha da Silva;EMI Informática 201;Sala C16;NAO
+T14_D195_2;Biologia;TEORICA;Anual;Ano Todo;SEG;16:30;17:15;45;Péricles Rocha da Silva;EMI Informática 201;Sala C16;NAO
+T14_D196_1;Inglês - Básico II;TEORICA;Anual;Ano Todo;QUA;14:45;15:30;45;Rita de Cássia da Silveira Cordeiro;EMI Informática 201;Sala C16;NAO
+T14_D196_2;Inglês - Básico II;TEORICA;Anual;Ano Todo;SEX;14:45;15:30;45;Rita de Cássia da Silveira Cordeiro;EMI Informática 201;Sala C16;NAO
+T14_D197_1;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEX;13:15;14:00;45;Marcelo Cordeiro do Nascimento;EMI Informática 201;Sala C16;NAO
+T14_D197_2;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEG;13:15;14:00;45;Marcelo Cordeiro do Nascimento;EMI Informática 201;Sala C16;NAO
+T14_D197_3;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEX;14:00;14:45;45;Marcelo Cordeiro do Nascimento;EMI Informática 201;Sala C16;NAO
+T14_D198_1;Bancos de Dados;TEORICA;Anual;Ano Todo;SEG;15:45;16:30;45;Fabio Busnardo;EMI Informática 201;Sala C16;NAO
+T14_D198_2;Bancos de Dados;TEORICA;Anual;Ano Todo;QUA;09:45;10:30;45;Fabio Busnardo;EMI Informática 201;Sala C16;NAO
+T14_D198_3;Bancos de Dados;TEORICA;Anual;Ano Todo;SEG;14:00;14:45;45;Fabio Busnardo;EMI Informática 201;Sala C16;NAO
+T14_D199_1;Desenvolvimento de Projeto I;LABORATORIO;Anual;Ano Todo;SEG;08:45;09:30;45;Riad Nassiffe;EMI Informática 201;Laboratório D05;NAO
+T14_D199_2;Desenvolvimento de Projeto I;LABORATORIO;Anual;Ano Todo;SEG;09:45;10:30;45;Riad Nassiffe;EMI Informática 201;Laboratório A04;NAO
+T14_D200_1;Redes de Computadores;TEORICA;Anual;Ano Todo;TER;08:00;08:45;45;Guilherme Stanga;EMI Informática 201;Sala C16;NAO
+T14_D200_2;Redes de Computadores;TEORICA;Anual;Ano Todo;SEG;10:30;11:15;45;Guilherme Stanga;EMI Informática 201;Sala C16;NAO
+T14_D201_1;Educação Física;TEORICA;Anual;Ano Todo;SEX;08:45;09:30;45;Daniel Minuzzi de Souza;EMI Informática 201;Sala C16;NAO
+T14_D201_2;Educação Física;TEORICA;Anual;Ano Todo;SEG;11:15;12:00;45;Daniel Minuzzi de Souza;EMI Informática 201;Sala C16;NAO
+T15_D202_1;Física;TEORICA;Anual;Ano Todo;QUA;10:30;11:15;45;Cíntia Barbosa Passos;EMI Informática 202;Sala C17;NAO
+T15_D202_2;Física;TEORICA;Anual;Ano Todo;SEX;11:15;12:00;45;Cíntia Barbosa Passos;EMI Informática 202;Sala C17;NAO
+T15_D203_1;Química;TEORICA;Anual;Ano Todo;TER;11:15;12:00;45;Helvio Silvester Andrade de Sousa;EMI Informática 202;Sala C17;NAO
+T15_D203_2;Química;TEORICA;Anual;Ano Todo;SEX;14:45;15:30;45;Helvio Silvester Andrade de Sousa;EMI Informática 202;Sala C17;NAO
+T15_D204_1;Filosofia;TEORICA;Anual;Ano Todo;SEX;08:45;09:30;45;Adaltro Prochnov Nunes;EMI Informática 202;Sala C17;NAO
+T15_D204_2;Filosofia;TEORICA;Anual;Ano Todo;SEG;08:00;08:45;45;Adaltro Prochnov Nunes;EMI Informática 202;Sala C17;NAO
+T15_D205_1;História;TEORICA;Anual;Ano Todo;SEX;13:15;14:00;45;Sara Nunes;EMI Informática 202;Sala C17;NAO
+T15_D205_2;História;TEORICA;Anual;Ano Todo;SEX;08:00;08:45;45;Sara Nunes;EMI Informática 202;Sala C17;NAO
+T15_D206_1;Sociologia;TEORICA;Anual;Ano Todo;SEG;10:30;11:15;45;Dalton Luiz De Menezes Reis;EMI Informática 202;Sala C17;NAO
+T15_D206_2;Sociologia;TEORICA;Anual;Ano Todo;QUA;13:15;14:00;45;Dalton Luiz De Menezes Reis;EMI Informática 202;Sala C17;NAO
+T15_D207_1;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEX;10:30;11:15;45;Marcelo Cordeiro do Nascimento;EMI Informática 202;Sala C17;NAO
+T15_D207_2;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEX;15:45;16:30;45;Marcelo Cordeiro do Nascimento;EMI Informática 202;Sala C17;NAO
+T15_D207_3;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;TER;08:00;08:45;45;Marcelo Cordeiro do Nascimento;EMI Informática 202;Sala C17;NAO
+T15_D208_1;Geografia;TEORICA;Anual;Ano Todo;TER;08:45;09:30;45;André Torelli Salatino;EMI Informática 202;Sala C17;NAO
+T15_D208_2;Geografia;TEORICA;Anual;Ano Todo;TER;10:30;11:15;45;André Torelli Salatino;EMI Informática 202;Sala C17;NAO
+T15_D209_1;Programação I;TEORICA;Anual;Ano Todo;QUA;09:45;10:30;45;Hylson Vescovi Netto;EMI Informática 202;Sala C17;NAO
+T15_D209_2;Programação I;TEORICA;Anual;Ano Todo;QUI;11:15;12:00;45;Hylson Vescovi Netto;EMI Informática 202;Sala C17;NAO
+T15_D209_3;Programação I;TEORICA;Anual;Ano Todo;QUI;08:00;08:45;45;Hylson Vescovi Netto;EMI Informática 202;Sala C17;NAO
+T15_D209_4;Programação I;TEORICA;Anual;Ano Todo;QUA;14:00;14:45;45;Hylson Vescovi Netto;EMI Informática 202;Sala C17;NAO
+T15_D210_1;Artes;TEORICA;Anual;Ano Todo;SEX;14:00;14:45;45;Cláudia Zimmer de Cerqueira Cezar;EMI Informática 202;Sala C17;NAO
+T15_D210_2;Artes;TEORICA;Anual;Ano Todo;QUI;09:45;10:30;45;Cláudia Zimmer de Cerqueira Cezar;EMI Informática 202;Sala C17;NAO
+T15_D211_1;Engenharia de Software;TEORICA;Anual;Ano Todo;SEG;11:15;12:00;45;Luiz Ricardo Uriarte;EMI Informática 202;Sala C17;NAO
+T15_D211_2;Engenharia de Software;TEORICA;Anual;Ano Todo;QUA;08:00;08:45;45;Luiz Ricardo Uriarte;EMI Informática 202;Sala C17;NAO
+T15_D212_1;Biologia;TEORICA;Anual;Ano Todo;QUA;16:30;17:15;45;Péricles Rocha da Silva;EMI Informática 202;Sala C17;NAO
+T15_D212_2;Biologia;TEORICA;Anual;Ano Todo;SEG;15:45;16:30;45;Péricles Rocha da Silva;EMI Informática 202;Sala C17;NAO
+T15_D213_1;Matemática;TEORICA;Anual;Ano Todo;QUA;08:45;09:30;45;Jeovani Schmitt;EMI Informática 202;Sala C17;NAO
+T15_D213_2;Matemática;TEORICA;Anual;Ano Todo;QUA;15:45;16:30;45;Jeovani Schmitt;EMI Informática 202;Sala C17;NAO
+T15_D213_3;Matemática;TEORICA;Anual;Ano Todo;SEG;14:00;14:45;45;Jeovani Schmitt;EMI Informática 202;Sala C17;NAO
+T15_D214_1;Inglês - Básico II;TEORICA;Anual;Ano Todo;TER;09:45;10:30;45;Rita de Cássia da Silveira Cordeiro;EMI Informática 202;Sala C17;NAO
+T15_D214_2;Inglês - Básico II;TEORICA;Anual;Ano Todo;SEX;09:45;10:30;45;Rita de Cássia da Silveira Cordeiro;EMI Informática 202;Sala C17;NAO
+T15_D215_1;Bancos de Dados;TEORICA;Anual;Ano Todo;QUI;08:45;09:30;45;Fabio Busnardo;EMI Informática 202;Sala C17;NAO
+T15_D215_2;Bancos de Dados;TEORICA;Anual;Ano Todo;QUA;14:45;15:30;45;Fabio Busnardo;EMI Informática 202;Sala C17;NAO
+T15_D215_3;Bancos de Dados;TEORICA;Anual;Ano Todo;SEG;13:15;14:00;45;Fabio Busnardo;EMI Informática 202;Sala C17;NAO
+T15_D216_1;Desenvolvimento de Projeto I;LABORATORIO;Anual;Ano Todo;SEG;14:45;15:30;45;Riad Nassiffe;EMI Informática 202;Laboratório A03;NAO
+T15_D216_2;Desenvolvimento de Projeto I;LABORATORIO;Anual;Ano Todo;QUA;11:15;12:00;45;Riad Nassiffe;EMI Informática 202;Laboratório A04;NAO
+T15_D217_1;Educação Física;TEORICA;Anual;Ano Todo;QUI;10:30;11:15;45;Daniel Minuzzi de Souza;EMI Informática 202;Sala C17;NAO
+T15_D217_2;Educação Física;TEORICA;Anual;Ano Todo;SEG;09:45;10:30;45;Daniel Minuzzi de Souza;EMI Informática 202;Sala C17;NAO
+T15_D218_1;Redes de Computadores;TEORICA;Anual;Ano Todo;SEX;16:30;17:15;45;Guilherme Stanga;EMI Informática 202;Sala C17;NAO
+T15_D218_2;Redes de Computadores;TEORICA;Anual;Ano Todo;SEG;16:30;17:15;45;Guilherme Stanga;EMI Informática 202;Sala C17;NAO
+T16_D219_1;Empreendedorismo;TEORICA;Anual;Ano Todo;QUI;10:30;11:15;45;Fani Martendal;EMI Informática 301;Sala C18;NAO
+T16_D219_2;Empreendedorismo;TEORICA;Anual;Ano Todo;SEG;11:15;12:00;45;Fani Martendal;EMI Informática 301;Sala C18;NAO
+T16_D220_1;Geografia;TEORICA;Anual;Ano Todo;TER;08:45;09:30;45;Ludmila Losada da Fonseca;EMI Informática 301;Sala C18;NAO
+T16_D220_2;Geografia;TEORICA;Anual;Ano Todo;TER;09:45;10:30;45;Ludmila Losada da Fonseca;EMI Informática 301;Sala C18;NAO
+T16_D221_1;História;TEORICA;Anual;Ano Todo;TER;11:15;12:00;45;Anderson Nereu Galcowski;EMI Informática 301;Sala C18;NAO
+T16_D221_2;História;TEORICA;Anual;Ano Todo;QUI;11:15;12:00;45;Anderson Nereu Galcowski;EMI Informática 301;Sala C18;NAO
+T16_D222_1;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;QUI;09:45;10:30;45;Juliene Marques;EMI Informática 301;Sala C18;NAO
+T16_D222_2;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEX;11:15;12:00;45;Juliene Marques;EMI Informática 301;Sala C18;NAO
+T16_D222_3;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEX;08:00;08:45;45;Juliene Marques;EMI Informática 301;Sala C18;NAO
+T16_D223_1;Desenvolvimento de Projeto II;LABORATORIO;Anual;Ano Todo;QUA;11:15;12:00;45;Joana Fontanela;EMI Informática 301;Laboratório A03;NAO
+T16_D223_2;Desenvolvimento de Projeto II;LABORATORIO;Anual;Ano Todo;QUA;08:45;09:30;45;Joana Fontanela;EMI Informática 301;Laboratório A04;NAO
+T16_D224_1;Biologia;TEORICA;Anual;Ano Todo;SEG;14:00;14:45;45;Péricles Rocha da Silva;EMI Informática 301;Sala C18;NAO
+T16_D224_2;Biologia;TEORICA;Anual;Ano Todo;SEG;09:45;10:30;45;Péricles Rocha da Silva;EMI Informática 301;Sala C18;NAO
+T16_D225_1;Optativa Obrigatória;TEORICA;Anual;Ano Todo;SEX;08:45;09:30;45;Hylson Vescovi Netto;EMI Informática 301;Sala C18;NAO
+T16_D225_2;Optativa Obrigatória;TEORICA;Anual;Ano Todo;SEG;14:45;15:30;45;Hylson Vescovi Netto;EMI Informática 301;Sala C18;NAO
+T16_D226_1;Programação II;LABORATORIO;Anual;Ano Todo;QUA;08:00;08:45;45;Riad Nassiffe;EMI Informática 301;Laboratório D06;NAO
+T16_D226_2;Programação II;LABORATORIO;Anual;Ano Todo;TER;10:30;11:15;45;Riad Nassiffe;EMI Informática 301;Laboratório D07;NAO
+T16_D226_3;Programação II;LABORATORIO;Anual;Ano Todo;TER;08:00;08:45;45;Riad Nassiffe;EMI Informática 301;Laboratório A03;NAO
+T16_D226_4;Programação II;LABORATORIO;Anual;Ano Todo;QUA;10:30;11:15;45;Riad Nassiffe;EMI Informática 301;Laboratório D07;NAO
+T16_D227_1;Matemática;TEORICA;Anual;Ano Todo;QUA;09:45;10:30;45;Jeovani Schmitt;EMI Informática 301;Sala C18;NAO
+T16_D227_2;Matemática;TEORICA;Anual;Ano Todo;SEG;15:45;16:30;45;Jeovani Schmitt;EMI Informática 301;Sala C18;NAO
+T16_D227_3;Matemática;TEORICA;Anual;Ano Todo;SEG;13:15;14:00;45;Jeovani Schmitt;EMI Informática 301;Sala C18;NAO
+T16_D228_1;Física;TEORICA;Anual;Ano Todo;QUI;08:45;09:30;45;Cíntia Barbosa Passos;EMI Informática 301;Sala C18;NAO
+T16_D228_2;Física;TEORICA;Anual;Ano Todo;QUI;08:00;08:45;45;Cíntia Barbosa Passos;EMI Informática 301;Sala C18;NAO
+T16_D229_1;Sociologia;TEORICA;Anual;Ano Todo;SEG;08:45;09:30;45;Viviani Teixeira;EMI Informática 301;Sala C18;NAO
+T16_D229_2;Sociologia;TEORICA;Anual;Ano Todo;SEG;10:30;11:15;45;Viviani Teixeira;EMI Informática 301;Sala C18;NAO
+T16_D230_1;Química;TEORICA;Anual;Ano Todo;SEG;16:30;17:15;45;Carlos Eduardo Bencke;EMI Informática 301;Sala C18;NAO
+T16_D230_2;Química;TEORICA;Anual;Ano Todo;SEX;10:30;11:15;45;Carlos Eduardo Bencke;EMI Informática 301;Sala C18;NAO
+T16_D231_1;Educação Física;TEORICA;Anual;Ano Todo;SEX;09:45;10:30;45;Daniel Minuzzi de Souza;EMI Informática 301;Sala C18;NAO
+T16_D231_2;Educação Física;TEORICA;Anual;Ano Todo;SEG;08:00;08:45;45;Daniel Minuzzi de Souza;EMI Informática 301;Sala C18;NAO
+T17_D232_1;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;SEG;13:15;14:00;45;Juliene Marques;EMI Informática 302;Sala C19;NAO
+T17_D232_2;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;QUA;09:45;10:30;45;Juliene Marques;EMI Informática 302;Sala C19;NAO
+T17_D232_3;Língua Portuguesa e Literatura;TEORICA;Anual;Ano Todo;QUA;10:30;11:15;45;Juliene Marques;EMI Informática 302;Sala C19;NAO
+T17_D233_1;Optativa Obrigatória;TEORICA;Anual;Ano Todo;SEX;09:45;10:30;45;Hylson Vescovi Netto;EMI Informática 302;Sala C19;NAO
+T17_D233_2;Optativa Obrigatória;TEORICA;Anual;Ano Todo;QUI;09:45;10:30;45;Hylson Vescovi Netto;EMI Informática 302;Sala C19;NAO
+T17_D234_1;História;TEORICA;Anual;Ano Todo;SEG;09:45;10:30;45;Anderson Nereu Galcowski;EMI Informática 302;Sala C19;NAO
+T17_D234_2;História;TEORICA;Anual;Ano Todo;QUI;10:30;11:15;45;Anderson Nereu Galcowski;EMI Informática 302;Sala C19;NAO
+T17_D235_1;Empreendedorismo;TEORICA;Anual;Ano Todo;TER;11:15;12:00;45;Fani Martendal;EMI Informática 302;Sala C19;NAO
+T17_D235_2;Empreendedorismo;TEORICA;Anual;Ano Todo;QUA;11:15;12:00;45;Fani Martendal;EMI Informática 302;Sala C19;NAO
+T17_D236_1;Desenvolvimento de Projeto II;LABORATORIO;Anual;Ano Todo;QUI;08:45;09:30;45;Joana Fontanela;EMI Informática 302;Laboratório A04;NAO
+T17_D236_2;Desenvolvimento de Projeto II;LABORATORIO;Anual;Ano Todo;SEG;08:45;09:30;45;Joana Fontanela;EMI Informática 302;Laboratório A03;NAO
+T17_D237_1;Química;TEORICA;Anual;Ano Todo;TER;08:00;08:45;45;Carlos Eduardo Bencke;EMI Informática 302;Sala C19;NAO
+T17_D237_2;Química;TEORICA;Anual;Ano Todo;TER;09:45;10:30;45;Carlos Eduardo Bencke;EMI Informática 302;Sala C19;NAO
+T17_D238_1;Sociologia;TEORICA;Anual;Ano Todo;SEX;08:45;09:30;45;Viviani Teixeira;EMI Informática 302;Sala C19;NAO
+T17_D238_2;Sociologia;TEORICA;Anual;Ano Todo;SEG;11:15;12:00;45;Viviani Teixeira;EMI Informática 302;Sala C19;NAO
+T17_D239_1;Geografia;TEORICA;Anual;Ano Todo;SEX;11:15;12:00;45;Ludmila Losada da Fonseca;EMI Informática 302;Sala C19;NAO
+T17_D239_2;Geografia;TEORICA;Anual;Ano Todo;SEX;08:00;08:45;45;Ludmila Losada da Fonseca;EMI Informática 302;Sala C19;NAO
+T17_D240_1;Matemática;TEORICA;Anual;Ano Todo;SEX;10:30;11:15;45;Jeovani Schmitt;EMI Informática 302;Sala C19;NAO
+T17_D240_2;Matemática;TEORICA;Anual;Ano Todo;TER;08:45;09:30;45;Jeovani Schmitt;EMI Informática 302;Sala C19;NAO
+T17_D240_3;Matemática;TEORICA;Anual;Ano Todo;TER;10:30;11:15;45;Jeovani Schmitt;EMI Informática 302;Sala C19;NAO
+T17_D241_1;Programação II;LABORATORIO;Anual;Ano Todo;QUI;08:00;08:45;45;Riad Nassiffe;EMI Informática 302;Laboratório D05;NAO
+T17_D241_2;Programação II;LABORATORIO;Anual;Ano Todo;QUI;11:15;12:00;45;Riad Nassiffe;EMI Informática 302;Laboratório A04;NAO
+T17_D241_3;Programação II;LABORATORIO;Anual;Ano Todo;SEG;08:00;08:45;45;Riad Nassiffe;EMI Informática 302;Laboratório A03;NAO
+T17_D241_4;Programação II;LABORATORIO;Anual;Ano Todo;SEG;15:45;16:30;45;Riad Nassiffe;EMI Informática 302;Laboratório D07;NAO
+T17_D242_1;Física;TEORICA;Anual;Ano Todo;QUA;08:00;08:45;45;Cíntia Barbosa Passos;EMI Informática 302;Sala C19;NAO
+T17_D242_2;Física;TEORICA;Anual;Ano Todo;QUA;08:45;09:30;45;Cíntia Barbosa Passos;EMI Informática 302;Sala C19;NAO
+T17_D243_1;Educação Física;TEORICA;Anual;Ano Todo;SEG;14:00;14:45;45;Daniel Minuzzi de Souza;EMI Informática 302;Sala C19;NAO
+T17_D243_2;Educação Física;TEORICA;Anual;Ano Todo;SEG;16:30;17:15;45;Daniel Minuzzi de Souza;EMI Informática 302;Sala C19;NAO
+T17_D244_1;Biologia;TEORICA;Anual;Ano Todo;SEG;10:30;11:15;45;Péricles Rocha da Silva;EMI Informática 302;Sala C19;NAO
+T17_D244_2;Biologia;TEORICA;Anual;Ano Todo;SEG;14:45;15:30;45;Péricles Rocha da Silva;EMI Informática 302;Sala C19;NAO
+T18_D245_1;Ateliê de Desenho Optativa Treinamento Esportivo: Vôlei;LABORATORIO;Anual;Ano Todo;QUI;14:00;14:45;45;Catiane Souza;EMI Informática Optativas;Ginásio;NAO
+T18_D245_2;Ateliê de Desenho Optativa Treinamento Esportivo: Vôlei;LABORATORIO;Anual;Ano Todo;QUI;14:45;15:30;45;Catiane Souza;EMI Informática Optativas;Ginásio;NAO
+T18_D246_1;Optativa - Tópicos de Programaçã o;TEORICA;Anual;Ano Todo;QUI;13:15;14:00;45;Riad Nassiffe;EMI Informática Optativas;Sala C07;NAO
+T18_D246_2;Optativa - Tópicos de Programaçã o;TEORICA;Anual;Ano Todo;QUI;15:45;16:30;45;Riad Nassiffe;EMI Informática Optativas;Sala C07;NAO
+D247_1;Desenho Técnico e Metrologia;TEORICA;Anual;Ano Todo;SEX;14:00;14:45;45;Cícero José de Oliveira Lima;EMI Mecatrônica 101;Sala D04;NAO
+D247_2;Desenho Técnico e Metrologia;TEORICA;Anual;Ano Todo;SEX;16:30;17:15;45;Cícero José de Oliveira Lima;EMI Mecatrônica 101;Sala D04;NAO
+D247_3;Desenho Técnico e Metrologia;TEORICA;Anual;Ano Todo;TER;11:15;12:00;45;Cícero José de Oliveira Lima;EMI Mecatrônica 101;Sala D04;NAO
+D248_1;Projeto Integrador I;TEORICA;Anual;Ano Todo;SEG;16:30;17:15;45;Fábio Pra da Silva de Souza;EMI Mecatrônica 101;Sala D04;NAO
+D248_2;Projeto Integrador I;TEORICA;Anual;Ano Todo;SEX;15:45;16:30;45;Fábio Pra da Silva de Souza;EMI Mecatrônica 101;Sala D04;NAO
+D249_1;Fundamentos de Computação;TEORICA;Semestral (1º Sem);1º Sem;QUA;18:30;19:20;50;Ricardo de La Rocha Ladeira;BCC 2026;Sala C09;NAO
+D249_2;Fundamentos de Computação;TEORICA;Semestral (1º Sem);1º Sem;QUA;20:20;21:10;50;Ricardo de La Rocha Ladeira;BCC 2026;Sala C09;NAO
+D249_3;Fundamentos de Computação;TEORICA;Semestral (1º Sem);1º Sem;QUA;13:00;13:50;50;Ricardo de La Rocha Ladeira;BCC 2026;Sala C09;NAO
+D249_4;Fundamentos de Computação;TEORICA;Semestral (1º Sem);1º Sem;QUA;13:50;14:40;50;Ricardo de La Rocha Ladeira;BCC 2026;Sala C09;NAO
+D250_1;Algoritmos;LABORATORIO;Semestral (1º Sem);1º Sem;QUA;14:40;15:30;50;Paulo Cesar Rodacki Gomes;BCC 2026;Laboratório D05;NAO
+D250_2;Algoritmos;LABORATORIO;Semestral (1º Sem);1º Sem;QUA;15:40;16:30;50;Paulo Cesar Rodacki Gomes;BCC 2026;Laboratório D05;NAO
+D250_3;Algoritmos;LABORATORIO;Semestral (1º Sem);1º Sem;QUI;15:40;16:30;50;Paulo Cesar Rodacki Gomes;BCC 2026;Laboratório A04;NAO
+D250_4;Algoritmos;LABORATORIO;Semestral (1º Sem);1º Sem;QUA;21:10;22:00;50;Paulo Cesar Rodacki Gomes;BCC 2026;Laboratório D07;NAO
+D251_1;Ética e legislação;TEORICA;Semestral (1º Sem);1º Sem;QUI;16:30;17:20;50;Luiz Ricardo Uriarte;BCC 2026;Sala C09;NAO
+D251_2;Ética e legislação;TEORICA;Semestral (1º Sem);1º Sem;QUI;18:30;19:20;50;Luiz Ricardo Uriarte;BCC 2026;Sala C09;NAO
+D252_1;Metodologia Científica;TEORICA;Semestral (1º Sem);1º Sem;QUA;16:30;17:20;50;Luiz Ricardo Uriarte;BCC 2026;Sala C09;NAO
+D252_2;Metodologia Científica;TEORICA;Semestral (1º Sem);1º Sem;QUA;19:20;20:10;50;Luiz Ricardo Uriarte;BCC 2026;Sala C09;NAO
+D253_1;Ciência, Sociedade e Tecnologia;TEORICA;Semestral (1º Sem);1º Sem;QUI;13:50;14:40;50;Viviani Teixeira;BCC 2026;Sala C09;NAO
+D253_2;Ciência, Sociedade e Tecnologia;TEORICA;Semestral (1º Sem);1º Sem;QUI;13:00;13:50;50;Viviani Teixeira;BCC 2026;Sala C09;NAO
+D254_1;Pré-calculo;TEORICA;Semestral (1º Sem);1º Sem;QUI;20:20;21:10;50;Luiz Gonzaga Cechetto Júnior;BCC 2026;Sala C09;NAO
+D254_2;Pré-calculo;TEORICA;Semestral (1º Sem);1º Sem;QUI;19:20;20:10;50;Luiz Gonzaga Cechetto Júnior;BCC 2026;Sala C09;NAO
+D254_3;Pré-calculo;TEORICA;Semestral (1º Sem);1º Sem;QUI;14:40;15:30;50;Luiz Gonzaga Cechetto Júnior;BCC 2026;Sala C09;NAO
+D254_4;Pré-calculo;TEORICA;Semestral (1º Sem);1º Sem;QUI;21:10;22:00;50;Luiz Gonzaga Cechetto Júnior;BCC 2026;Sala C09;NAO
+D255_1;Programação Orientada a Objeto I;LABORATORIO;Semestral (2º Sem);2º Sem;QUA;13:00;13:50;50;Adriano Pizzini;BCC 2026;Laboratório A03;NAO
+D255_2;Programação Orientada a Objeto I;LABORATORIO;Semestral (2º Sem);2º Sem;QUA;18:30;19:20;50;Adriano Pizzini;BCC 2026;Laboratório D07;NAO
+D255_3;Programação Orientada a Objeto I;LABORATORIO;Semestral (2º Sem);2º Sem;QUA;21:10;22:00;50;Adriano Pizzini;BCC 2026;Laboratório A04;NAO
+D255_4;Programação Orientada a Objeto I;LABORATORIO;Semestral (2º Sem);2º Sem;QUA;19:20;20:10;50;Adriano Pizzini;BCC 2026;Laboratório A04;NAO
+D256_1;Desenvolvimento Web;TEORICA;Semestral (2º Sem);2º Sem;TER;16:30;17:20;50;Fabio Busnardo;BCC 2026;Sala C09;NAO
+D256_2;Desenvolvimento Web;TEORICA;Semestral (2º Sem);2º Sem;QUA;15:40;16:30;50;Fabio Busnardo;BCC 2026;Sala C09;NAO
+D256_3;Desenvolvimento Web;TEORICA;Semestral (2º Sem);2º Sem;TER;19:20;20:10;50;Fabio Busnardo;BCC 2026;Sala C09;NAO
+D256_4;Desenvolvimento Web;TEORICA;Semestral (2º Sem);2º Sem;TER;15:40;16:30;50;Fabio Busnardo;BCC 2026;Sala C09;NAO
+D257_1;Geometria anlítica;TEORICA;Semestral (2º Sem);2º Sem;QUI;13:50;14:40;50;Fabricio Alves Oliveira;BCC 2026;Sala C09;NAO
+D257_2;Geometria anlítica;TEORICA;Semestral (2º Sem);2º Sem;QUI;14:40;15:30;50;Fabricio Alves Oliveira;BCC 2026;Sala C09;NAO
+D257_3;Geometria anlítica;TEORICA;Semestral (2º Sem);2º Sem;QUI;18:30;19:20;50;Fabricio Alves Oliveira;BCC 2026;Sala C09;NAO
+D257_4;Geometria anlítica;TEORICA;Semestral (2º Sem);2º Sem;QUI;13:00;13:50;50;Fabricio Alves Oliveira;BCC 2026;Sala C09;NAO
+D258_1;Extensão e pesquisa na computação;TEORICA;Semestral (2º Sem);2º Sem;QUI;21:10;22:00;50;Luiz Ricardo Uriarte;BCC 2026;Sala C09;NAO
+D258_2;Extensão e pesquisa na computação;TEORICA;Semestral (2º Sem);2º Sem;QUI;16:30;17:20;50;Luiz Ricardo Uriarte;BCC 2026;Sala C09;NAO
+D258_3;Extensão e pesquisa na computação;TEORICA;Semestral (2º Sem);2º Sem;SEG;13:00;13:50;50;Luiz Ricardo Uriarte;BCC 2026;Sala C09;NAO
+D258_4;Extensão e pesquisa na computação;TEORICA;Semestral (2º Sem);2º Sem;QUI;20:20;21:10;50;Luiz Ricardo Uriarte;BCC 2026;Sala C09;NAO
+D259_1;Inglês básico I;TEORICA;Semestral (2º Sem);2º Sem;TER;13:00;13:50;50;Gicele Vergine Vieira;BCC 2026;Sala C09;NAO
+D259_2;Inglês básico I;TEORICA;Semestral (2º Sem);2º Sem;QUA;14:40;15:30;50;Gicele Vergine Vieira;BCC 2026;Sala C09;NAO
+D259_3;Inglês básico I;TEORICA;Semestral (2º Sem);2º Sem;QUA;16:30;17:20;50;Gicele Vergine Vieira;BCC 2026;Sala C09;NAO
+D259_4;Inglês básico I;TEORICA;Semestral (2º Sem);2º Sem;QUA;20:20;21:10;50;Gicele Vergine Vieira;BCC 2026;Sala C09;NAO
+D260_1;Fundamentos Matemáticos da Computação;LABORATORIO;Semestral (2º Sem);2º Sem;TER;13:50;14:40;50;Eder Augusto Penharbel;BCC 2026;Laboratório A04;NAO
+D260_2;Fundamentos Matemáticos da Computação;LABORATORIO;Semestral (2º Sem);2º Sem;TER;18:30;19:20;50;Eder Augusto Penharbel;BCC 2026;Laboratório A03;NAO
+D260_3;Fundamentos Matemáticos da Computação;LABORATORIO;Semestral (2º Sem);2º Sem;QUA;13:50;14:40;50;Eder Augusto Penharbel;BCC 2026;Laboratório A04;NAO
+D260_4;Fundamentos Matemáticos da Computação;LABORATORIO;Semestral (2º Sem);2º Sem;TER;14:40;15:30;50;Eder Augusto Penharbel;BCC 2026;Laboratório A04;NAO
+D261_1;Circuitos digitais;LABORATORIO;Semestral (2º Sem);2º Sem;QUI;15:40;16:30;50;Vitor Moraes;BCC 2026;Laboratório D06;NAO
+D261_2;Circuitos digitais;LABORATORIO;Semestral (2º Sem);2º Sem;TER;20:20;21:10;50;Vitor Moraes;BCC 2026;Laboratório D06;NAO
+D261_3;Circuitos digitais;LABORATORIO;Semestral (2º Sem);2º Sem;QUI;19:20;20:10;50;Vitor Moraes;BCC 2026;Laboratório A04;NAO
+D261_4;Circuitos digitais;LABORATORIO;Semestral (2º Sem);2º Sem;TER;21:10;22:00;50;Vitor Moraes;BCC 2026;Laboratório A04;NAO

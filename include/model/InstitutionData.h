@@ -18,6 +18,35 @@
 namespace scheduler::model {
 
 /**
+ * @enum SlotConflictType
+ * @brief Classificação dos tipos de choques ou violações de restrições detectadas em um horário.
+ */
+enum class SlotConflictType {
+    TURMA_INATIVA,
+    INTERVALO_RECREIO,
+    FORA_JORNADA,
+    SLOT_INCOMPATIVEL,
+    INDISPONIBILIDADE_PROFESSOR,
+    INCOMPATIBILIDADE_SALA,
+    LIMITE_DIARIO_DISCIPLINA,
+    CHOQUE_TURMA,
+    CHOQUE_PROFESSOR,
+    CHOQUE_SALA,
+    DURACAO_INCOMPATIVEL
+};
+
+/**
+ * @struct SlotConflictInfo
+ * @brief Descrição estruturada de um choque ou violação de restrição para exibição na grade e diálogos.
+ */
+struct SlotConflictInfo {
+    SlotConflictType type;
+    std::string short_label;     ///< Rótulo resumido para exibição na célula (ex: "Prof. ocupado (2ºB)").
+    std::string detail;          ///< Descrição completa para tooltip e diálogos de confirmação.
+    std::string related_aula_id; ///< Identificador da aula conflitante, quando houver.
+};
+
+/**
  * @class InstitutionData
  * @brief Armazena e gerencia todas as entidades e configurações do sistema de agendamento escolar.
  *
@@ -253,6 +282,32 @@ public:
     Lesson* findAula(const std::string& id);
 
     // ==========================================
+    // Modelos padrão de slots por turno
+    // ==========================================
+
+    /**
+     * @brief Obtém o mapa completo de modelos padrão de slots por turno.
+     * @return Referência constante para o mapa ShiftType -> lista de TimeInterval.
+     */
+    const std::map<ShiftType, std::vector<TimeInterval>>& slotTemplates() const noexcept {
+        return slot_templates_;
+    }
+
+    /**
+     * @brief Obtém os slots padrão configurados para um turno específico.
+     * @param shift Turno consultado.
+     * @return Vetor de TimeInterval correspondente (ou padrão do sistema se não customizado).
+     */
+    std::vector<TimeInterval> slotTemplateForShift(ShiftType shift) const;
+
+    /**
+     * @brief Define os slots padrão de um turno para reutilização no cadastro de turmas.
+     * @param shift Turno configurado.
+     * @param slots Lista de slots ordenados.
+     */
+    void setSlotTemplateForShift(ShiftType shift, std::vector<TimeInterval> slots);
+
+    // ==========================================
     // Configuração da Otimização
     // ==========================================
 
@@ -305,6 +360,38 @@ public:
      * @return Mapa associando o identificador da aula (aula_id) a um vetor com os conflitos detectados.
      */
     std::map<std::string, std::vector<std::string>> verificarConflitosGrade() const;
+
+    /**
+     * @brief Realiza a auditoria detalhada e estruturada de conflitos na grade horária atual.
+     * @return Mapa associando o identificador da aula (aula_id) a um vetor de SlotConflictInfo.
+     */
+    std::map<std::string, std::vector<SlotConflictInfo>> verificarConflitosGradeDetalhado() const;
+
+    /**
+     * @brief Avalia se a alocação ou movimentação de uma aula para determinado dia e horário gera choques.
+     * @param aula_id ID da aula candidata (presente em grade() ou aulas()).
+     * @param dia Dia da semana pretendido.
+     * @param intervalo Intervalo de tempo pretendido.
+     * @param ignore_aula_ids IDs de aulas na grade a desconsiderar (ex: a própria aula ou par de troca).
+     * @param salas_override Salas alternativas a considerar no lugar das atuais (se não vazio).
+     * @return Lista estruturada de choques e violações detectadas (vazia se o horário estiver livre).
+     */
+    std::vector<SlotConflictInfo> avaliarAulaNoHorario(
+        const std::string& aula_id,
+        DayOfWeek dia,
+        const TimeInterval& intervalo,
+        const std::vector<std::string>& ignore_aula_ids = {},
+        const std::vector<std::string>& salas_override = {}) const;
+
+    /**
+     * @brief Avalia a viabilidade de permutar os horários entre duas aulas já alocadas na grade.
+     * @param aula_a_id ID da primeira aula.
+     * @param aula_b_id ID da segunda aula.
+     * @return Lista estruturada de choques resultantes da troca nos dois sentidos (vazia se livre).
+     */
+    std::vector<SlotConflictInfo> avaliarTrocaAulas(
+        const std::string& aula_a_id,
+        const std::string& aula_b_id) const;
 
     /**
      * @brief Remove todos os dados cadastrados (professores, salas, turmas, disciplinas, aulas e grade).
@@ -361,6 +448,7 @@ private:
     std::vector<Lesson> aulas_;
     OptimizationConfig config_;
     Timetable grade_;
+    std::map<ShiftType, std::vector<TimeInterval>> slot_templates_;
 };
 
 } // namespace scheduler::model

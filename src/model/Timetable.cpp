@@ -31,7 +31,7 @@ std::vector<AllocatedLesson> Timetable::aulasPorTurma(const std::string& turma_i
         }
     }
     std::sort(res.begin(), res.end(), [](const AllocatedLesson& a, const AllocatedLesson& b) {
-        return a.intervalo.start_slot < b.intervalo.start_slot;
+        return a.intervalo.start_min < b.intervalo.start_min;
     });
     return res;
 }
@@ -59,7 +59,7 @@ std::vector<AllocatedLesson> Timetable::aulasPorProfessor(const std::string& pro
         }
     }
     std::sort(res.begin(), res.end(), [](const AllocatedLesson& a, const AllocatedLesson& b) {
-        return a.intervalo.start_slot < b.intervalo.start_slot;
+        return a.intervalo.start_min < b.intervalo.start_min;
     });
     return res;
 }
@@ -87,7 +87,7 @@ std::vector<AllocatedLesson> Timetable::aulasPorSala(const std::string& sala_id,
         }
     }
     std::sort(res.begin(), res.end(), [](const AllocatedLesson& a, const AllocatedLesson& b) {
-        return a.intervalo.start_slot < b.intervalo.start_slot;
+        return a.intervalo.start_min < b.intervalo.start_min;
     });
     return res;
 }
@@ -99,6 +99,15 @@ std::vector<AllocatedLesson> Timetable::aulasPorSala(const std::string& sala_id,
  */
 AllocatedLesson* Timetable::findAula(const std::string& aula_id) {
     for (auto& aula : alocacoes_) {
+        if (aula.aula_id == aula_id) {
+            return &aula;
+        }
+    }
+    return nullptr;
+}
+
+const AllocatedLesson* Timetable::findAula(const std::string& aula_id) const {
+    for (const auto& aula : alocacoes_) {
         if (aula.aula_id == aula_id) {
             return &aula;
         }

@@ -50,7 +50,11 @@ void TimetableGridWidget::mousePressEvent(QMouseEvent* event) {
 
             if (!clicked_id.isEmpty()) {
                 emit lessonSelected(clicked_id);
+            } else {
+                emit emptyCellClicked();
             }
+        } else {
+            emit emptyCellClicked();
         }
     }
     QTableWidget::mousePressEvent(event);

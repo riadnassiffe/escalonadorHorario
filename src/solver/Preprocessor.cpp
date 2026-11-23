@@ -1,20 +1,16 @@
 /**
  * @file Preprocessor.cpp
- * @brief Implementação dos algoritmos de validação prévia e geração de candidatos viáveis para as aulas.
+ * @brief Implementação dos algoritmos de validação prévia e geração de candidatos viáveis sobre slots configuráveis.
  */
 
 #include "solver/Preprocessor.h"
 #include <algorithm>
-#include <sstream>
+#include <map>
 #include <set>
+#include <sstream>
 
 namespace scheduler::solver {
 
-/**
- * @brief Executa validação de regras obrigatórias e consistência de jornadas antes da otimização.
- * @param data Dados completos da instituição.
- * @return ValidationResult com erros e alertas identificados.
- */
 ValidationResult Preprocessor::validarDados(const model::InstitutionData& data) {
     ValidationResult res;
 
@@ -31,19 +27,24 @@ ValidationResult Preprocessor::validarDados(const model::InstitutionData& data) 
         res.addError("Nenhuma disciplina cadastrada no sistema.");
     }
 
-    // Validar turmas
+    // Validar turmas e seus slots letivos
     for (const auto& turma : data.turmas()) {
-        const auto& jp = turma.jornadaPadrao();
-        if (!jp.isValid()) {
-            res.addError("Turma " + turma.id() + " (" + turma.nome() +
-                         ") possui jornada ou intervalos inválidos. Condição: T_ini < b1 < e1 <= b2 < e2 < T_fim.");
+        if (turma.diasLetivos().empty()) {
+            res.addError("Turma " + turma.id() + " (" + turma.nome() + ") não possui dias letivos configurados.");
         }
 
-        // Verificar exceções por dia
+        for (auto dia : turma.diasLetivos()) {
+            auto j = turma.jornadaParaDia(dia);
+            if (!j.isValid()) {
+                res.addError("Turma " + turma.id() + " (" + turma.nome() + ") possui slots inválidos ou sobrepostos em " +
+                             model::dayToLongString(dia) + ". Cada slot deve ter início < fim e não sobrepor os demais.");
+            }
+        }
+
         for (const auto& [dia, j_exc] : turma.excecoesPorDia()) {
-            if (!j_exc.isValid()) {
-                res.addError("Turma " + turma.id() + " possui exceção inválida para o dia " +
-                             model::dayToString(dia) + ".");
+            if (turma.funcionaNoDia(dia) && !j_exc.isValid()) {
+                res.addError("Turma " + turma.id() + " possui exceção de slots inválida para " +
+                             model::dayToLongString(dia) + ".");
             }
         }
 
@@ -103,42 +104,55 @@ ValidationResult Preprocessor::validarDados(const model::InstitutionData& data) 
             }
         }
 
-        if (disc.duracaoMinutos() <= 0 || disc.duracaoMinutos() % model::SLOT_MINUTES != 0) {
+        if (disc.duracaoMinutos() <= 0) {
             res.addError("Disciplina " + disc.id() + " possui duração inválida (" +
-                         std::to_string(disc.duracaoMinutos()) + " min). Deve ser múltiplo de 5 min.");
+                         std::to_string(disc.duracaoMinutos()) + " min). Deve ser maior que zero.");
         }
         if (disc.aulasSemanais() <= 0) {
             res.addError("Disciplina " + disc.id() + " possui número de aulas semanais <= 0.");
         }
     }
 
-    // Validar carga horária vs capacidade da turma por semestre letivo
+    // Validar capacidade por quantidade de slots de cada duração e por semestre letivo
     for (const auto& turma : data.turmas()) {
-        int minutos_s1 = 0;
-        int minutos_s2 = 0;
-        bool tem_s1 = false;
-        bool tem_s2 = false;
+        std::map<int, int> slots_por_dur;
+        int total_slots = 0;
+        int minutos_disponiveis = 0;
 
-        for (const auto& disc : data.disciplinas()) {
-            if (std::find(disc.turmas().begin(), disc.turmas().end(), turma.id()) != disc.turmas().end()) {
-                int disc_min = disc.duracaoMinutos() * disc.aulasSemanais();
-                if (disc.atendeSemestre(model::SemestreLetivo::SEMESTRE_1)) {
-                    minutos_s1 += disc_min;
-                    tem_s1 = true;
-                }
-                if (disc.atendeSemestre(model::SemestreLetivo::SEMESTRE_2)) {
-                    minutos_s2 += disc_min;
-                    tem_s2 = true;
+        for (auto dia : turma.diasLetivos()) {
+            auto jornada = turma.jornadaParaDia(dia);
+            for (const auto& s : jornada.slots_letivos) {
+                int dur = s.durationMinutes();
+                if (dur > 0) {
+                    slots_por_dur[dur]++;
+                    total_slots++;
+                    minutos_disponiveis += dur;
                 }
             }
         }
 
-        int minutos_disponiveis = 0;
-        for (auto dia : turma.diasLetivos()) {
-            auto jornada = turma.jornadaParaDia(dia);
-            auto blocos = jornada.blocosLetivos();
-            for (const auto& b : blocos) {
-                minutos_disponiveis += b.durationMinutes();
+        std::map<int, int> req_s1;
+        std::map<int, int> req_s2;
+        int aulas_s1 = 0, aulas_s2 = 0;
+        int minutos_s1 = 0, minutos_s2 = 0;
+        bool tem_s1 = false, tem_s2 = false;
+
+        for (const auto& disc : data.disciplinas()) {
+            if (std::find(disc.turmas().begin(), disc.turmas().end(), turma.id()) != disc.turmas().end()) {
+                int dur = disc.duracaoMinutos();
+                int cnt = disc.aulasSemanais();
+                if (disc.atendeSemestre(model::SemestreLetivo::SEMESTRE_1)) {
+                    req_s1[dur] += cnt;
+                    aulas_s1 += cnt;
+                    minutos_s1 += dur * cnt;
+                    tem_s1 = true;
+                }
+                if (disc.atendeSemestre(model::SemestreLetivo::SEMESTRE_2)) {
+                    req_s2[dur] += cnt;
+                    aulas_s2 += cnt;
+                    minutos_s2 += dur * cnt;
+                    tem_s2 = true;
+                }
             }
         }
 
@@ -146,41 +160,74 @@ ValidationResult Preprocessor::validarDados(const model::InstitutionData& data) 
         bool validar_s1 = (escopo != model::EscopoSemestreOtimizacao::SEMESTRE_2);
         bool validar_s2 = (escopo != model::EscopoSemestreOtimizacao::SEMESTRE_1);
 
-        // Se a turma só possui disciplinas anuais idênticas em ambos os semestres
-        if (tem_s1 && tem_s2 && minutos_s1 == minutos_s2) {
-            if (minutos_s1 > minutos_disponiveis) {
-                res.addError("Turma " + turma.id() + " necessita de " + std::to_string(minutos_s1) +
-                             " min de aula semanais, mas só possui " + std::to_string(minutos_disponiveis) +
-                             " min disponíveis em sua jornada letiva.");
-            } else if (data.config().preenchimento_integral_jornada && minutos_s1 != minutos_disponiveis) {
-                res.addWarning("Preenchimento integral ativado, mas Turma " + turma.id() + " tem " +
-                               std::to_string(minutos_s1) + " min de aulas para " +
-                               std::to_string(minutos_disponiveis) + " min de blocos letivos.");
-            }
-        } else {
-            // Turma com disciplinas semestrais diferenciadas
-            if (validar_s1 && tem_s1) {
-                if (minutos_s1 > minutos_disponiveis) {
-                    res.addError("Turma " + turma.id() + " necessita de " + std::to_string(minutos_s1) +
-                                 " min de aula semanais no 1º Semestre, mas só possui " + std::to_string(minutos_disponiveis) +
-                                 " min disponíveis em sua jornada letiva.");
-                } else if (data.config().preenchimento_integral_jornada && minutos_s1 != minutos_disponiveis) {
-                    res.addWarning("Preenchimento integral ativado, mas Turma " + turma.id() + " tem " +
-                                   std::to_string(minutos_s1) + " min de aulas no 1º Semestre para " +
-                                   std::to_string(minutos_disponiveis) + " min de blocos letivos.");
+        auto checar_semestre = [&](const std::map<int, int>& req_map, int total_req_aulas, int total_req_min, const std::string& sem_label) {
+            for (const auto& [dur, qtd_req] : req_map) {
+                int qtd_disp = slots_por_dur.count(dur) ? slots_por_dur[dur] : 0;
+                if (qtd_req > qtd_disp) {
+                    res.addError("Turma " + turma.id() + " necessita de " + std::to_string(qtd_req) +
+                                 " aula(s) de " + std::to_string(dur) + " min" + sem_label +
+                                 ", mas possui apenas " + std::to_string(qtd_disp) +
+                                 " slot(s) de " + std::to_string(dur) + " min cadastrados na semana.");
                 }
+            }
+            if (total_req_min > minutos_disponiveis) {
+                res.addError("Turma " + turma.id() + " necessita de " + std::to_string(total_req_min) +
+                             " min de aula semanais" + sem_label + ", mas só possui " +
+                             std::to_string(minutos_disponiveis) + " min nos slots cadastrados.");
+            } else if (data.config().preenchimento_integral_jornada && total_req_aulas != total_slots) {
+                res.addWarning("Preenchimento integral ativado, mas Turma " + turma.id() + " tem " +
+                               std::to_string(total_req_aulas) + " aula(s)" + sem_label + " para " +
+                               std::to_string(total_slots) + " slot(s) letivos cadastrados.");
             }
 
-            if (validar_s2 && tem_s2) {
-                if (minutos_s2 > minutos_disponiveis) {
-                    res.addError("Turma " + turma.id() + " necessita de " + std::to_string(minutos_s2) +
-                                 " min de aula semanais no 2º Semestre, mas só possui " + std::to_string(minutos_disponiveis) +
-                                 " min disponíveis em sua jornada letiva.");
-                } else if (data.config().preenchimento_integral_jornada && minutos_s2 != minutos_disponiveis) {
-                    res.addWarning("Preenchimento integral ativado, mas Turma " + turma.id() + " tem " +
-                                   std::to_string(minutos_s2) + " min de aulas no 2º Semestre para " +
-                                   std::to_string(minutos_disponiveis) + " min de blocos letivos.");
+            // Validar compatibilidade com R9 (1º slot do dia precisa ter duração compatível com alguma aula da turma)
+            if (total_req_aulas > 0) {
+                std::map<int, int> slots_por_dur_dias_validos_r9;
+                for (auto dia : turma.diasLetivos()) {
+                    auto jornada = turma.jornadaParaDia(dia);
+                    if (jornada.slots_letivos.empty()) continue;
+                    int first_dur = jornada.slots_letivos.front().durationMinutes();
+                    bool first_slot_ok = (req_map.find(first_dur) != req_map.end());
+                    if (first_slot_ok) {
+                        for (const auto& s : jornada.slots_letivos) {
+                            slots_por_dur_dias_validos_r9[s.durationMinutes()]++;
+                        }
+                    } else {
+                        bool has_later_compatible = false;
+                        for (size_t k = 1; k < jornada.slots_letivos.size(); ++k) {
+                            if (req_map.find(jornada.slots_letivos[k].durationMinutes()) != req_map.end()) {
+                                has_later_compatible = true;
+                                break;
+                            }
+                        }
+                        if (has_later_compatible) {
+                            res.addWarning("Turma " + turma.id() + " em " + model::dayToLongString(dia) +
+                                           " possui 1º slot de " + std::to_string(first_dur) +
+                                           " min sem nenhuma disciplina dessa duração" + sem_label +
+                                           " (a restrição R9 de início no 1º slot bloqueará alocações neste dia).");
+                        }
+                    }
                 }
+                for (const auto& [dur, qtd_req] : req_map) {
+                    int qtd_disp_r9 = slots_por_dur_dias_validos_r9.count(dur) ? slots_por_dur_dias_validos_r9[dur] : 0;
+                    if (qtd_req <= (slots_por_dur.count(dur) ? slots_por_dur[dur] : 0) && qtd_req > qtd_disp_r9) {
+                        res.addError("Turma " + turma.id() + " necessita de " + std::to_string(qtd_req) +
+                                     " aula(s) de " + std::to_string(dur) + " min" + sem_label +
+                                     ", mas apenas " + std::to_string(qtd_disp_r9) +
+                                     " slot(s) estão em dias cujo 1º slot da jornada pode ser ocupado (Restrição R9).");
+                    }
+                }
+            }
+        };
+
+        if (tem_s1 && tem_s2 && req_s1 == req_s2) {
+            checar_semestre(req_s1, aulas_s1, minutos_s1, "");
+        } else {
+            if (validar_s1 && tem_s1) {
+                checar_semestre(req_s1, aulas_s1, minutos_s1, " no 1º Semestre");
+            }
+            if (validar_s2 && tem_s2) {
+                checar_semestre(req_s2, aulas_s2, minutos_s2, " no 2º Semestre");
             }
         }
     }
@@ -188,64 +235,30 @@ ValidationResult Preprocessor::validarDados(const model::InstitutionData& data) 
     return res;
 }
 
-/**
- * @brief Verifica se a aula cabe inteiramente dentro de um dos blocos letivos da turma no dia informado.
- * @param turma Turma a ser verificada.
- * @param dia Dia da semana em questão.
- * @param start_slot Slot inicial da aula.
- * @param duration_slots Duração da aula em slots de 5 minutos.
- * @return true se a aula couber em um bloco sem invadir intervalos ou limites.
- */
-bool Preprocessor::turmaAcomodaAula(const model::Turma& turma, model::DayOfWeek dia,
-                                    int start_slot, int duration_slots) {
+bool Preprocessor::turmaAcomodaSlot(const model::Turma& turma, model::DayOfWeek dia,
+                                    const model::TimeInterval& slot) {
     if (!turma.funcionaNoDia(dia)) return false;
-
-    auto jornada = turma.jornadaParaDia(dia);
-    auto blocos = jornada.blocosLetivos();
-    model::TimeInterval target(start_slot, start_slot + duration_slots);
-
-    // Deve caber INTEIRAMENTE dentro de um dos blocos contínuos da turma (seção 3.5)
-    for (const auto& bloco : blocos) {
-        if (bloco.contains(target)) {
-            return true;
-        }
-    }
-    return false;
+    return turma.jornadaParaDia(dia).contemSlotExato(slot);
 }
 
-/**
- * @brief Valida se o horário de início e fim da aula está contido no intervalo do turno de trabalho.
- * @param shift Turno verificado (MANHA, TARDE, NOITE, INTEGRAL).
- * @param start_slot Slot inicial proposto.
- * @param duration_slots Duração em slots da aula.
- * @return true se os slots pertencerem ao turno.
- */
-bool Preprocessor::shiftAcomodaAula(model::ShiftType shift, int start_slot, int duration_slots) {
-    int end_slot = start_slot + duration_slots;
+bool Preprocessor::shiftAcomodaAula(model::ShiftType shift, int start_min, int end_min) {
     switch (shift) {
         case model::ShiftType::MANHA:
-            return start_slot >= model::TimeInterval::timeStringToSlot("07:00") &&
-                   end_slot <= model::TimeInterval::timeStringToSlot("13:00");
+            return start_min >= model::TimeInterval::timeStringToMinutes("07:00") &&
+                   end_min <= model::TimeInterval::timeStringToMinutes("13:00");
         case model::ShiftType::TARDE:
-            return start_slot >= model::TimeInterval::timeStringToSlot("12:00") &&
-                   end_slot <= model::TimeInterval::timeStringToSlot("19:00");
+            return start_min >= model::TimeInterval::timeStringToMinutes("12:00") &&
+                   end_min <= model::TimeInterval::timeStringToMinutes("19:00");
         case model::ShiftType::NOITE:
-            return start_slot >= model::TimeInterval::timeStringToSlot("18:00") &&
-                   end_slot <= model::TimeInterval::timeStringToSlot("23:00");
+            return start_min >= model::TimeInterval::timeStringToMinutes("18:00") &&
+                   end_min <= model::TimeInterval::timeStringToMinutes("23:00");
         case model::ShiftType::INTEGRAL:
-            return start_slot >= model::TimeInterval::timeStringToSlot("07:00") &&
-                   end_slot <= model::TimeInterval::timeStringToSlot("23:00");
+            return start_min >= model::TimeInterval::timeStringToMinutes("07:00") &&
+                   end_min <= model::TimeInterval::timeStringToMinutes("23:00");
     }
     return true;
 }
 
-/**
- * @brief Gera todas as combinações viáveis (dia, horário, salas) para alocar uma aula específica.
- * @param data Base de dados da instituição.
- * @param aula Aula a ser avaliada.
- * @param diagnostico_aula Vetor preenchido com diagnósticos caso a aula não possua candidatos viáveis.
- * @return Vetor de CandidateAllocation gerados para a aula.
- */
 std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
     const model::InstitutionData& data,
     const model::Lesson& aula,
@@ -297,28 +310,23 @@ std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
         return candidatos;
     }
 
-    int L_a = aula.duracaoSlots();
+    int dur_min = aula.duracaoMinutos();
 
-    // Determinar combinações de salas admissíveis (seção 2.5 e 3.6)
+    // Determinar combinações de salas admissíveis
     std::vector<std::vector<std::string>> salas_admissiveis;
     if (aula.isTeorica()) {
-        // Para aula teórica, verificar se a turma possui sala fixa definida ou salas permitidas
-        // Para aulas de turma única (caso mais comum):
         const auto* primeira_turma = turmas_aula.front();
         if (primeira_turma->temSalaTeoricaPredefinida()) {
             salas_admissiveis.push_back({primeira_turma->salaTeoricaId()});
         } else {
-            // Otimizador selecionará uma entre as permitidas (seção 3.6)
             for (const auto& s_id : primeira_turma->salasTeoricasPermitidas()) {
                 salas_admissiveis.push_back({s_id});
             }
         }
     } else {
-        // Laboratório ou especial
         if (!aula.salasAlternativas().empty()) {
             salas_admissiveis = aula.salasAlternativas();
         } else {
-            // Se não especificou, busca salas compatíveis com o tipo
             for (const auto& sala : data.salas()) {
                 if (sala.tipo() == aula.tipo() || !sala.isTeorica()) {
                     salas_admissiveis.push_back({sala.id()});
@@ -340,26 +348,28 @@ std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
         CandidateAllocation c;
         c.aula_id = aula.id();
         c.dia = aula.pinnedDay();
-        c.start_slot = aula.pinnedStartSlot();
-        c.duration_slots = L_a;
-        c.duration_minutes = aula.duracaoMinutos();
-        c.salas = aula.pinnedRooms().empty() ? (salas_admissiveis.empty() ? std::vector<std::string>{} : salas_admissiveis.front())
-                                            : aula.pinnedRooms();
+        c.start_min = aula.pinnedInterval().start_min;
+        c.duration_minutes = aula.pinnedInterval().durationMinutes() > 0
+                                 ? aula.pinnedInterval().durationMinutes()
+                                 : dur_min;
+        c.salas = aula.pinnedRooms().empty() ? salas_admissiveis.front() : aula.pinnedRooms();
         c.custo_preferencia = 0;
         candidatos.push_back(std::move(c));
         return candidatos;
     }
 
     bool turmas_sem_dia = false;
-    bool duracao_excede_blocos = false;
+    bool nenhum_slot_mesma_duracao = true;
     bool fora_turnos = false;
     bool prof_sem_disponibilidade = false;
     bool conflito_outra_turma = false;
-    int blocos_avaliados = 0;
+    int slots_avaliados = 0;
+
+    const int min_0730 = model::TimeInterval::timeStringToMinutes("07:30");
+    const int min_1100 = model::TimeInterval::timeStringToMinutes("11:00");
 
     // Iterar sobre todos os dias da semana
     for (auto dia : model::allDays()) {
-        // Verificar se todas as turmas funcionam no dia
         bool turmas_ok = true;
         for (const auto* t : turmas_aula) {
             if (!t->funcionaNoDia(dia)) {
@@ -370,99 +380,92 @@ std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
         }
         if (!turmas_ok) continue;
 
-        // Iterar sobre os blocos letivos da primeira turma
         auto jornada1 = turmas_aula.front()->jornadaParaDia(dia);
-        auto blocos = jornada1.blocosLetivos();
 
-        for (const auto& bloco : blocos) {
-            blocos_avaliados++;
-            int max_start = bloco.end_slot - L_a;
-            if (max_start < bloco.start_slot) {
-                duracao_excede_blocos = true;
+        for (const auto& slot : jornada1.slots_letivos) {
+            slots_avaliados++;
+            if (slot.durationMinutes() != dur_min) {
+                continue;
+            }
+            nenhum_slot_mesma_duracao = false;
+
+            // 1. Verificar se todas as demais turmas possuem exatamente o mesmo slot no dia
+            bool todas_turmas_acomodam = true;
+            for (size_t i = 1; i < turmas_aula.size(); ++i) {
+                if (!turmaAcomodaSlot(*turmas_aula[i], dia, slot)) {
+                    todas_turmas_acomodam = false;
+                    conflito_outra_turma = true;
+                    break;
+                }
+            }
+            if (!todas_turmas_acomodam) continue;
+
+            // 2. Verificar turno permitido
+            bool turno_ok = aula.turnosPermitidos().empty();
+            for (auto turno_perm : aula.turnosPermitidos()) {
+                if (shiftAcomodaAula(turno_perm, slot.start_min, slot.end_min)) {
+                    turno_ok = true;
+                    break;
+                }
+            }
+            if (!turno_ok) {
+                fora_turnos = true;
                 continue;
             }
 
-            for (int t = bloco.start_slot; t <= max_start; ++t) {
-                // 1. Verificar se cabe em todas as demais turmas no mesmo dia e slot
-                bool todas_turmas_acomodam = true;
-                for (size_t i = 1; i < turmas_aula.size(); ++i) {
-                    if (!turmaAcomodaAula(*turmas_aula[i], dia, t, L_a)) {
-                        todas_turmas_acomodam = false;
-                        conflito_outra_turma = true;
-                        break;
-                    }
+            // 3. Verificar disponibilidade de todos os professores
+            bool todos_profs_disponiveis = true;
+            for (const auto* p : profs_aula) {
+                if (!p->isDisponivelNoIntervalo(dia, slot.start_min, slot.end_min)) {
+                    todos_profs_disponiveis = false;
+                    prof_sem_disponibilidade = true;
+                    break;
                 }
-                if (!todas_turmas_acomodam) continue;
+            }
+            if (!todos_profs_disponiveis) continue;
 
-                // 2. Verificar turno permitido
-                bool turno_ok = aula.turnosPermitidos().empty();
-                for (auto turno_perm : aula.turnosPermitidos()) {
-                    if (shiftAcomodaAula(turno_perm, t, L_a)) {
-                        turno_ok = true;
-                        break;
-                    }
-                }
-                if (!turno_ok) {
-                    fora_turnos = true;
-                    continue;
-                }
+            // 4. Calcular custo de preferência de horário
+            int custo_pref = 0;
+            if (slot.start_min < min_0730) {
+                custo_pref += 1;
+            } else if (slot.start_min > min_1100) {
+                custo_pref += 1;
+            }
 
-                // 3. Verificar disponibilidade de todos os professores
-                bool todos_profs_disponiveis = true;
-                for (const auto* p : profs_aula) {
-                    if (!p->isDisponivelNoIntervalo(dia, t, t + L_a)) {
-                        todos_profs_disponiveis = false;
-                        prof_sem_disponibilidade = true;
-                        break;
-                    }
-                }
-                if (!todos_profs_disponiveis) continue;
-
-                // 4. Calcular custo de preferência de horário (seção 4.3)
-                int custo_pref = 0;
-                // Exemplo: horários extremos da manhã (muito cedo ou perto do almoço)
-                // podem ter leve penalidade de preferência horária
-                if (t < model::TimeInterval::timeStringToSlot("07:30")) {
-                    custo_pref += 1;
-                } else if (t > model::TimeInterval::timeStringToSlot("11:00")) {
-                    custo_pref += 1;
-                }
-
-                // 5. Gerar candidato para cada combinação de salas admissíveis
-                for (const auto& combo_salas : salas_admissiveis) {
-                    CandidateAllocation cand;
-                    cand.aula_id = aula.id();
-                    cand.dia = dia;
-                    cand.start_slot = t;
-                    cand.duration_slots = L_a;
-                    cand.duration_minutes = aula.duracaoMinutos();
-                    cand.salas = combo_salas;
-                    cand.custo_preferencia = custo_pref;
-                    candidatos.push_back(std::move(cand));
-                }
+            // 5. Gerar candidato para cada combinação de salas admissíveis
+            for (const auto& combo_salas : salas_admissiveis) {
+                CandidateAllocation cand;
+                cand.aula_id = aula.id();
+                cand.dia = dia;
+                cand.start_min = slot.start_min;
+                cand.duration_minutes = dur_min;
+                cand.salas = combo_salas;
+                cand.custo_preferencia = custo_pref;
+                candidatos.push_back(std::move(cand));
             }
         }
     }
 
     if (candidatos.empty()) {
         std::vector<std::string> restricoes;
+        if (nenhum_slot_mesma_duracao && slots_avaliados > 0) {
+            restricoes.push_back("Nenhum slot cadastrado na turma possui duração exata de " +
+                                 std::to_string(dur_min) + " min");
+        }
         if (prof_sem_disponibilidade) {
-            restricoes.push_back("Professor sem disponibilidade nos blocos de horários da turma");
+            restricoes.push_back("Professor sem disponibilidade nos slots compatíveis da turma");
         }
         if (fora_turnos) {
-            restricoes.push_back("Horários da turma fora dos turnos permitidos para a disciplina");
-        }
-        if (duracao_excede_blocos) {
-            restricoes.push_back("Duração da aula (" + std::to_string(aula.duracaoMinutos()) + " min) excede o tamanho dos blocos contínuos entre intervalos");
+            restricoes.push_back("Slots da turma fora dos turnos permitidos para a disciplina");
         }
         if (conflito_outra_turma) {
-            restricoes.push_back("Incompatibilidade de horário entre turmas agrupadas");
+            restricoes.push_back("Incompatibilidade de slots entre turmas agrupadas");
         }
-        if (turmas_sem_dia && blocos_avaliados == 0) {
-            restricoes.push_back("Turma não possui dias letivos configurados");
+        if (turmas_sem_dia && slots_avaliados == 0) {
+            restricoes.push_back("Turma não possui dias letivos ou slots configurados");
         }
         if (restricoes.empty()) {
-            restricoes.push_back("Nenhum horário admissível encontrado dentro da jornada da turma e disponibilidade do professor");
+            restricoes.push_back("Nenhum slot admissível encontrado para a aula");
         }
 
         std::string restricoes_str;
@@ -480,12 +483,6 @@ std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
     return candidatos;
 }
 
-/**
- * @brief Executa a geração de candidatos para todas as aulas da instituição.
- * @param data Base de dados institucional.
- * @param resultado Acumulador de erros caso alguma aula fique sem candidatos.
- * @return Mapa associando cada aula_id à lista de suas alocações viáveis.
- */
 std::map<std::string, std::vector<CandidateAllocation>> Preprocessor::gerarTodosCandidatos(
     const model::InstitutionData& data,
     ValidationResult& resultado) {

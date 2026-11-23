@@ -35,6 +35,11 @@ signals:
     void lessonSelected(const QString& aula_id);
 
     /**
+     * @brief Emitido quando o usuário clica em uma célula sem aula alocada (para limpar seleção).
+     */
+    void emptyCellClicked();
+
+    /**
      * @brief Sinal emitido quando uma aula é arrastada e solta em uma célula da grade.
      * @param aula_id ID da aula que foi movida.
      * @param target_row Linha da célula de destino.

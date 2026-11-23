@@ -131,7 +131,7 @@ bool buildMilpProblem(const model::InstitutionData& data,
 
         for (const auto& c : cands) {
             std::string var_name = "x_" + aula.id() + "_" + std::to_string(static_cast<int>(c.dia)) +
-                                   "_" + std::to_string(c.start_slot) + "_" + std::to_string(var_idx++);
+                                   "_" + std::to_string(c.start_min) + "_" + std::to_string(var_idx++);
             double obj_coeff = 0.0;
             if (c.custo_preferencia > 0) {
                 obj_coeff += static_cast<double>(data.config().lambda_preferencias * c.custo_preferencia);
@@ -224,21 +224,24 @@ bool buildMilpProblem(const model::InstitutionData& data,
         milp.addRow("alloc_" + aula.id(), std::move(terms), 1.0, 1.0);
     }
 
-    // 4. Restrições 5.2, 5.3, 5.4: Não sobreposição linearizada via cliques por slot (sum_{start <= k < end} x <= 1)
+    // 4. Restrições 5.2, 5.3, 5.4: Não sobreposição linearizada via cliques nos pontos de início (grafos de intervalo)
     auto add_no_overlap_cliques = [&](const std::map<std::pair<std::string, model::DayOfWeek>, std::vector<MilpCandItem>>& map_vars,
                                       const std::string& prefix) {
         for (const auto& [key, items] : map_vars) {
             if (items.size() <= 1) continue;
-            int min_s = 288, max_e = 0;
+            std::vector<int> event_points;
+            event_points.reserve(items.size());
             for (const auto& item : items) {
-                min_s = std::min(min_s, item.cand->start_slot);
-                max_e = std::max(max_e, item.cand->end_slot());
+                event_points.push_back(item.cand->start_min);
             }
+            std::sort(event_points.begin(), event_points.end());
+            event_points.erase(std::unique(event_points.begin(), event_points.end()), event_points.end());
+
             std::set<std::vector<int>> emitted_cliques;
-            for (int k = min_s; k < max_e; ++k) {
+            for (int t_pt : event_points) {
                 std::vector<int> active_cols;
                 for (const auto& item : items) {
-                    if (item.cand->start_slot <= k && k < item.cand->end_slot()) {
+                    if (item.cand->start_min <= t_pt && t_pt < item.cand->end_min()) {
                         active_cols.push_back(item.col);
                     }
                 }
@@ -249,7 +252,7 @@ bool buildMilpProblem(const model::InstitutionData& data,
                         std::vector<std::pair<int, double>> terms;
                         terms.reserve(active_cols.size());
                         for (int c_idx : active_cols) terms.push_back({c_idx, 1.0});
-                        milp.addRow(prefix + "_" + key.first + "_" + std::to_string(static_cast<int>(key.second)) + "_" + std::to_string(k),
+                        milp.addRow(prefix + "_" + key.first + "_" + std::to_string(static_cast<int>(key.second)) + "_" + std::to_string(t_pt),
                                     std::move(terms), -kMilpInf, 1.0);
                     }
                 }
@@ -278,14 +281,15 @@ bool buildMilpProblem(const model::InstitutionData& data,
                 if (it == map_vars.end() || it->second.empty()) continue;
 
                 auto jornada = turma.jornadaParaDia(dia);
-                int t_ini = jornada.jornada_total.start_slot;
+                if (jornada.slots_letivos.empty()) continue;
+                int t_ini = jornada.slots_letivos.front().start_min;
 
                 std::vector<int> start_cols;
                 std::map<std::string, std::vector<int>> later_cols_by_aula;
                 for (const auto& item : it->second) {
-                    if (item.cand->start_slot == t_ini) {
+                    if (item.cand->start_min == t_ini) {
                         start_cols.push_back(item.col);
-                    } else if (item.cand->start_slot > t_ini) {
+                    } else if (item.cand->start_min > t_ini) {
                         later_cols_by_aula[item.cand->aula_id].push_back(item.col);
                     }
                 }
@@ -345,21 +349,18 @@ bool buildMilpProblem(const model::InstitutionData& data,
             for (const auto& turma : data.turmas()) {
                 for (auto dia : turma.diasLetivos()) {
                     auto jornada = turma.jornadaParaDia(dia);
-                    auto blocos = jornada.blocosLetivos();
                     auto it = map_vars.find({turma.id(), dia});
                     if (it == map_vars.end()) continue;
                     const auto& items = it->second;
 
-                    for (const auto& bloco : blocos) {
-                        for (int k = bloco.start_slot; k < bloco.end_slot; ++k) {
-                            std::vector<std::pair<int, double>> terms;
-                            for (const auto& item : items) {
-                                if (item.cand->start_slot <= k && k < item.cand->end_slot()) {
-                                    terms.push_back({item.col, 1.0});
-                                }
+                    for (const auto& slot : jornada.slots_letivos) {
+                        std::vector<std::pair<int, double>> terms;
+                        for (const auto& item : items) {
+                            if (item.cand->start_min < slot.end_min && slot.start_min < item.cand->end_min()) {
+                                terms.push_back({item.col, 1.0});
                             }
-                            milp.addRow("full_" + std::to_string(row_id++), std::move(terms), 1.0, 1.0);
                         }
+                        milp.addRow("full_" + std::to_string(row_id++), std::move(terms), 1.0, 1.0);
                     }
                 }
             }
@@ -375,6 +376,7 @@ bool buildMilpProblem(const model::InstitutionData& data,
     // 5.7 Distribuição semanal de disciplinas
     if (data.config().distribuir_disciplinas_na_semana) {
         for (const auto& disc : data.disciplinas()) {
+            if (milp.vars_por_aula.find(disc.id() + "_1") == milp.vars_por_aula.end()) continue;
             int max_por_dia = disc.maxAulasPorDiaTurma() > 0 ? disc.maxAulasPorDiaTurma() : data.config().max_aulas_disciplina_dia_turma;
             if (max_por_dia > 0) {
                 for (const auto& t_id : disc.turmas()) {
@@ -383,8 +385,9 @@ bool buildMilpProblem(const model::InstitutionData& data,
                         std::vector<std::pair<int, double>> terms;
                         for (int i = 1; i <= disc.aulasSemanais(); ++i) {
                             std::string aula_id = disc.id() + "_" + std::to_string(i);
-                            const auto& items = milp.vars_por_aula[aula_id];
-                            for (const auto& item : items) {
+                            auto it_v = milp.vars_por_aula.find(aula_id);
+                            if (it_v == milp.vars_por_aula.end()) continue;
+                            for (const auto& item : it_v->second) {
                                 if (item.cand->dia == dia) {
                                     terms.push_back({item.col, 1.0});
                                 }
@@ -403,11 +406,21 @@ bool buildMilpProblem(const model::InstitutionData& data,
     // 5.8 Disciplinas com aulas consecutivas em bloco
     for (const auto& disc : data.disciplinas()) {
         if (!disc.exigirAulasConsecutivas()) continue;
+        if (milp.vars_por_aula.find(disc.id() + "_1") == milp.vars_por_aula.end()) continue;
         int n_aulas = disc.aulasSemanais();
-        if (n_aulas != 2 && n_aulas != 4 && n_aulas != 8) continue;
-
-        int block_size = (n_aulas == 2) ? 2 : 4;
-        int num_days = (n_aulas == 8) ? 2 : 1;
+        int max_por_dia = disc.maxAulasPorDiaTurma() > 0 ? disc.maxAulasPorDiaTurma() : data.config().max_aulas_disciplina_dia_turma;
+        int teto_bloco = (data.config().distribuir_disciplinas_na_semana && max_por_dia > 0)
+                             ? std::min(4, max_por_dia)
+                             : 4;
+        int block_size = 0;
+        for (int b = teto_bloco; b >= 2; --b) {
+            if (n_aulas % b == 0 && (n_aulas / b) <= static_cast<int>(model::allDays().size())) {
+                block_size = b;
+                break;
+            }
+        }
+        if (block_size < 2) continue;
+        int num_days = n_aulas / block_size;
 
         std::vector<std::pair<int, double>> sum_dias_terms;
         for (auto dia : model::allDays()) {
@@ -486,7 +499,7 @@ bool buildMilpProblem(const model::InstitutionData& data,
             for (auto shift : model::allWorkShifts()) {
                 std::vector<MilpCandItem> items_shift;
                 for (const auto& item : items_dia) {
-                    if (model::slotToShift(item.cand->start_slot) == shift) {
+                    if (model::timeToShift(item.cand->start_min) == shift) {
                         items_shift.push_back(item);
                     }
                 }
@@ -513,78 +526,90 @@ bool buildMilpProblem(const model::InstitutionData& data,
                     milp.shift_records.push_back(ShiftAuxRecord{std::move(shift_cols), y_shift});
                 }
 
-                // Termo J (encadeamento linear O(|I| + |K|) de u_k e v_k)
+                // Termo J (encadeamento linear O(M) sobre segmentos elementares em minutos)
                 if (prof.pesoJanela() <= 0 || items_shift.size() <= 1 || data.config().lambda_janelas <= 0) continue;
 
-                int min_s = 288, max_e = 0;
-                int min_end = 288, max_start = 0;
+                std::vector<int> pts;
+                pts.reserve(items_shift.size() * 2);
+                int min_end = model::MINUTES_PER_DAY;
+                int max_start = 0;
                 for (const auto& item : items_shift) {
-                    min_s = std::min(min_s, item.cand->start_slot);
-                    max_e = std::max(max_e, item.cand->end_slot());
-                    min_end = std::min(min_end, item.cand->end_slot());
-                    max_start = std::max(max_start, item.cand->start_slot);
+                    pts.push_back(item.cand->start_min);
+                    pts.push_back(item.cand->end_min());
+                    min_end = std::min(min_end, item.cand->end_min());
+                    max_start = std::max(max_start, item.cand->start_min);
                 }
-
                 if (min_end >= max_start) continue;
 
-                int span = max_e - min_s;
-                std::vector<int> u_cols(span, -1);
-                std::vector<int> v_cols(span, -1);
-                for (int k = min_s; k < max_e; ++k) {
-                    u_cols[k - min_s] = milp.addBinVar("u_" + std::to_string(gap_var_idx) + "_" + std::to_string(k), 0.0);
-                    v_cols[k - min_s] = milp.addBinVar("v_" + std::to_string(gap_var_idx) + "_" + std::to_string(k), 0.0);
-                    if (k > min_s) {
-                        // u_{k-1} <= u_k
+                std::sort(pts.begin(), pts.end());
+                pts.erase(std::unique(pts.begin(), pts.end()), pts.end());
+                if (pts.size() < 2) continue;
+
+                int M = static_cast<int>(pts.size()) - 1;
+                std::vector<int> u_cols(M, -1);
+                std::vector<int> v_cols(M, -1);
+                for (int m = 0; m < M; ++m) {
+                    u_cols[m] = milp.addBinVar("u_" + std::to_string(gap_var_idx) + "_" + std::to_string(m), 0.0);
+                    v_cols[m] = milp.addBinVar("v_" + std::to_string(gap_var_idx) + "_" + std::to_string(m), 0.0);
+                    if (m > 0) {
                         milp.addRow("u_chain_" + std::to_string(row_id++),
-                                    {{u_cols[k - 1 - min_s], 1.0}, {u_cols[k - min_s], -1.0}}, -kMilpInf, 0.0);
+                                    {{u_cols[m - 1], 1.0}, {u_cols[m], -1.0}}, -kMilpInf, 0.0);
                     }
                 }
-                for (int k = min_s; k + 1 < max_e; ++k) {
-                    // v_{k+1} <= v_k
+                for (int m = 0; m + 1 < M; ++m) {
                     milp.addRow("v_chain_" + std::to_string(row_id++),
-                                {{v_cols[k + 1 - min_s], 1.0}, {v_cols[k - min_s], -1.0}}, -kMilpInf, 0.0);
+                                {{v_cols[m + 1], 1.0}, {v_cols[m], -1.0}}, -kMilpInf, 0.0);
                 }
                 gap_var_idx++;
 
                 for (const auto& item : items_shift) {
-                    int e_slot = item.cand->end_slot();
-                    if (e_slot >= min_s && e_slot < max_e) {
+                    int e_min = item.cand->end_min();
+                    auto it_e = std::lower_bound(pts.begin(), pts.end(), e_min);
+                    int idx_e = static_cast<int>(it_e - pts.begin());
+                    if (idx_e < M) {
                         milp.addRow("u_lb_" + std::to_string(row_id++),
-                                    {{item.col, 1.0}, {u_cols[e_slot - min_s], -1.0}}, -kMilpInf, 0.0);
+                                    {{item.col, 1.0}, {u_cols[idx_e], -1.0}}, -kMilpInf, 0.0);
                     }
-                    int s_slot = item.cand->start_slot;
-                    if (s_slot > min_s && s_slot - 1 < max_e) {
+                    int s_min = item.cand->start_min;
+                    auto it_s = std::lower_bound(pts.begin(), pts.end(), s_min);
+                    int idx_s = static_cast<int>(it_s - pts.begin());
+                    if (idx_s >= 1) {
                         milp.addRow("v_lb_" + std::to_string(row_id++),
-                                    {{item.col, 1.0}, {v_cols[s_slot - 1 - min_s], -1.0}}, -kMilpInf, 0.0);
+                                    {{item.col, 1.0}, {v_cols[idx_s - 1], -1.0}}, -kMilpInf, 0.0);
                     }
                 }
 
-                for (int k = min_s; k < max_e; ++k) {
+                for (int m = 0; m < M; ++m) {
+                    int seg_s = pts[m];
+                    int seg_e = pts[m + 1];
+                    int dur = seg_e - seg_s;
+                    if (dur <= 0) continue;
+
                     std::vector<int> cands_before;
                     std::vector<int> cands_after;
                     std::vector<int> cands_cover;
 
                     for (const auto& item : items_shift) {
-                        if (item.cand->start_slot <= k && k < item.cand->end_slot()) {
+                        if (item.cand->start_min <= seg_s && seg_e <= item.cand->end_min()) {
                             cands_cover.push_back(item.col);
                         }
-                        if (item.cand->end_slot() <= k) {
+                        if (item.cand->end_min() <= seg_s) {
                             cands_before.push_back(item.col);
                         }
-                        if (item.cand->start_slot > k) {
+                        if (item.cand->start_min >= seg_e) {
                             cands_after.push_back(item.col);
                         }
                     }
 
-                    int u = u_cols[k - min_s];
-                    int v = v_cols[k - min_s];
+                    int u = u_cols[m];
+                    int v = v_cols[m];
                     int g = -1;
 
                     if (!cands_before.empty() && !cands_after.empty()) {
-                        double g_obj = static_cast<double>(data.config().lambda_janelas * prof.pesoJanela());
-                        g = milp.addBinVar("g_" + std::to_string(gap_var_idx) + "_" + std::to_string(k), g_obj);
+                        int peso_min = prof.pesoJanela() * dur;
+                        double g_obj = static_cast<double>(data.config().lambda_janelas * peso_min);
+                        g = milp.addBinVar("g_" + std::to_string(gap_var_idx) + "_" + std::to_string(m), g_obj);
 
-                        // g >= u + v - 1 - w_k  <=>  g - u - v + w_k >= -1
                         std::vector<std::pair<int, double>> g_terms;
                         g_terms.push_back({g, 1.0});
                         g_terms.push_back({u, -1.0});
@@ -594,7 +619,7 @@ bool buildMilpProblem(const model::InstitutionData& data,
                         }
                         milp.addRow("gap_p_" + std::to_string(row_id++), std::move(g_terms), -1.0, kMilpInf);
 
-                        milp.j_terms.push_back({g, prof.pesoJanela()});
+                        milp.j_terms.push_back({g, peso_min});
                     }
                     milp.gap_records.push_back(GapAuxRecord{
                         std::move(cands_before), std::move(cands_after), std::move(cands_cover), u, v, g});
@@ -603,7 +628,7 @@ bool buildMilpProblem(const model::InstitutionData& data,
         }
     }
 
-    // 6.4 Termo JG: Minimizar lacunas internas das turmas
+    // 6.4 Termo JG: Minimizar lacunas internas nos slots letivos das turmas (em minutos)
     if (!data.config().preenchimento_integral_jornada && data.config().lambda_lacunas_turma > 0) {
         int q_idx = 0;
         for (const auto& turma : data.turmas()) {
@@ -612,88 +637,86 @@ bool buildMilpProblem(const model::InstitutionData& data,
                 if (items.size() <= 1) continue;
 
                 auto jornada = turma.jornadaParaDia(dia);
-                auto blocos = jornada.blocosLetivos();
+                int K = static_cast<int>(jornada.slots_letivos.size());
+                if (K <= 2) continue;
 
-                for (const auto& bloco : blocos) {
-                    int b_start = bloco.start_slot;
-                    int b_end = bloco.end_slot;
-                    if (b_end <= b_start) continue;
+                std::vector<int> u_cols(K, -1);
+                std::vector<int> v_cols(K, -1);
+                for (int k = 0; k < K; ++k) {
+                    u_cols[k] = milp.addBinVar("uq_" + std::to_string(q_idx) + "_" + std::to_string(k), 0.0);
+                    v_cols[k] = milp.addBinVar("vq_" + std::to_string(q_idx) + "_" + std::to_string(k), 0.0);
+                    if (k > 0) {
+                        milp.addRow("uq_chain_" + std::to_string(row_id++),
+                                    {{u_cols[k - 1], 1.0}, {u_cols[k], -1.0}}, -kMilpInf, 0.0);
+                    }
+                }
+                for (int k = 0; k + 1 < K; ++k) {
+                    milp.addRow("vq_chain_" + std::to_string(row_id++),
+                                {{v_cols[k + 1], 1.0}, {v_cols[k], -1.0}}, -kMilpInf, 0.0);
+                }
+                q_idx++;
 
-                    int span = b_end - b_start;
-                    std::vector<int> u_cols(span, -1);
-                    std::vector<int> v_cols(span, -1);
-                    for (int k = b_start; k < b_end; ++k) {
-                        u_cols[k - b_start] = milp.addBinVar("uq_" + std::to_string(q_idx) + "_" + std::to_string(k), 0.0);
-                        v_cols[k - b_start] = milp.addBinVar("vq_" + std::to_string(q_idx) + "_" + std::to_string(k), 0.0);
-                        if (k > b_start) {
-                            milp.addRow("uq_chain_" + std::to_string(row_id++),
-                                        {{u_cols[k - 1 - b_start], 1.0}, {u_cols[k - b_start], -1.0}}, -kMilpInf, 0.0);
+                for (const auto& item : items) {
+                    int e_min = item.cand->end_min();
+                    for (int k = 0; k < K; ++k) {
+                        if (e_min <= jornada.slots_letivos[k].start_min) {
+                            milp.addRow("uq_lb_" + std::to_string(row_id++),
+                                        {{item.col, 1.0}, {u_cols[k], -1.0}}, -kMilpInf, 0.0);
+                            break;
                         }
                     }
-                    for (int k = b_start; k + 1 < b_end; ++k) {
-                        milp.addRow("vq_chain_" + std::to_string(row_id++),
-                                    {{v_cols[k + 1 - b_start], 1.0}, {v_cols[k - b_start], -1.0}}, -kMilpInf, 0.0);
+                    int s_min = item.cand->start_min;
+                    for (int k = K - 1; k >= 0; --k) {
+                        if (s_min >= jornada.slots_letivos[k].end_min) {
+                            milp.addRow("vq_lb_" + std::to_string(row_id++),
+                                        {{item.col, 1.0}, {v_cols[k], -1.0}}, -kMilpInf, 0.0);
+                            break;
+                        }
                     }
-                    q_idx++;
+                }
+
+                for (int k = 0; k < K; ++k) {
+                    const auto& slot = jornada.slots_letivos[k];
+                    int dur = slot.durationMinutes();
+                    if (dur <= 0) continue;
+
+                    std::vector<int> cands_before;
+                    std::vector<int> cands_after;
+                    std::vector<int> cands_cover;
 
                     for (const auto& item : items) {
-                        int e_slot = item.cand->end_slot();
-                        if (e_slot >= b_start && e_slot < b_end) {
-                            milp.addRow("uq_lb_" + std::to_string(row_id++),
-                                        {{item.col, 1.0}, {u_cols[e_slot - b_start], -1.0}}, -kMilpInf, 0.0);
-                        } else if (e_slot <= b_start) {
-                            milp.addRow("uq_lb0_" + std::to_string(row_id++),
-                                        {{item.col, 1.0}, {u_cols[0], -1.0}}, -kMilpInf, 0.0);
+                        if (item.cand->start_min < slot.end_min && slot.start_min < item.cand->end_min()) {
+                            cands_cover.push_back(item.col);
                         }
-                        int s_slot = item.cand->start_slot;
-                        if (s_slot > b_start && s_slot - 1 < b_end) {
-                            milp.addRow("vq_lb_" + std::to_string(row_id++),
-                                        {{item.col, 1.0}, {v_cols[s_slot - 1 - b_start], -1.0}}, -kMilpInf, 0.0);
-                        } else if (s_slot >= b_end) {
-                            milp.addRow("vq_lbn_" + std::to_string(row_id++),
-                                        {{item.col, 1.0}, {v_cols[span - 1], -1.0}}, -kMilpInf, 0.0);
+                        if (item.cand->end_min() <= slot.start_min) {
+                            cands_before.push_back(item.col);
+                        }
+                        if (item.cand->start_min >= slot.end_min) {
+                            cands_after.push_back(item.col);
                         }
                     }
 
-                    for (int k = b_start; k < b_end; ++k) {
-                        std::vector<int> cands_before;
-                        std::vector<int> cands_after;
-                        std::vector<int> cands_cover;
+                    int u = u_cols[k];
+                    int v = v_cols[k];
+                    int q = -1;
 
-                        for (const auto& item : items) {
-                            if (item.cand->start_slot <= k && k < item.cand->end_slot()) {
-                                cands_cover.push_back(item.col);
-                            }
-                            if (item.cand->end_slot() <= k) {
-                                cands_before.push_back(item.col);
-                            }
-                            if (item.cand->start_slot > k) {
-                                cands_after.push_back(item.col);
-                            }
+                    if (!cands_before.empty() && !cands_after.empty()) {
+                        double q_obj = static_cast<double>(data.config().lambda_lacunas_turma * dur);
+                        q = milp.addBinVar("q_" + std::to_string(q_idx) + "_" + std::to_string(k), q_obj);
+
+                        std::vector<std::pair<int, double>> q_terms;
+                        q_terms.push_back({q, 1.0});
+                        q_terms.push_back({u, -1.0});
+                        q_terms.push_back({v, -1.0});
+                        for (int cov : cands_cover) {
+                            q_terms.push_back({cov, 1.0});
                         }
+                        milp.addRow("gap_t_" + std::to_string(row_id++), std::move(q_terms), -1.0, kMilpInf);
 
-                        int u = u_cols[k - b_start];
-                        int v = v_cols[k - b_start];
-                        int q = -1;
-
-                        if (!cands_before.empty() && !cands_after.empty()) {
-                            double q_obj = static_cast<double>(data.config().lambda_lacunas_turma * 5);
-                            q = milp.addBinVar("q_" + std::to_string(q_idx) + "_" + std::to_string(k), q_obj);
-
-                            std::vector<std::pair<int, double>> q_terms;
-                            q_terms.push_back({q, 1.0});
-                            q_terms.push_back({u, -1.0});
-                            q_terms.push_back({v, -1.0});
-                            for (int cov : cands_cover) {
-                                q_terms.push_back({cov, 1.0});
-                            }
-                            milp.addRow("gap_t_" + std::to_string(row_id++), std::move(q_terms), -1.0, kMilpInf);
-
-                            milp.jg_cols.push_back(q);
-                        }
-                        milp.gap_records.push_back(GapAuxRecord{
-                            std::move(cands_before), std::move(cands_after), std::move(cands_cover), u, v, q});
+                        milp.jg_terms.push_back({q, dur});
                     }
+                    milp.gap_records.push_back(GapAuxRecord{
+                        std::move(cands_before), std::move(cands_after), std::move(cands_cover), u, v, q});
                 }
             }
         }
@@ -727,7 +750,8 @@ bool buildMilpProblem(const model::InstitutionData& data,
             const auto& items = milp.vars_por_aula[aula.id()];
             const MilpCandItem* matching_item = nullptr;
             for (const auto& item : items) {
-                if (item.cand->dia == aloc->dia && item.cand->start_slot == aloc->intervalo.start_slot) {
+                if (item.cand->dia == aloc->dia && item.cand->start_min == aloc->intervalo.start_min &&
+                    item.cand->end_min() == aloc->intervalo.end_min) {
                     if (item.cand->salas == aloc->salas || matching_item == nullptr) {
                         matching_item = &item;
                     }
@@ -882,28 +906,44 @@ void extractMilpSolution(const model::InstitutionData& data,
             auto it = milp.y_prof_dia.find({prof.id(), dia});
             if (it != milp.y_prof_dia.end() && it->second < static_cast<int>(sol_vals.size()) && sol_vals[it->second] > 0.5) {
                 total_D++;
-                total_W += prof.penalidadeDia(dia);
+                if (data.config().modelo_preferencia_dias == model::ModeloPreferenciaDias::POR_DIA_TRABALHADO) {
+                    total_W += prof.penalidadeDia(dia);
+                }
+            }
+        }
+    }
+    if (data.config().modelo_preferencia_dias == model::ModeloPreferenciaDias::POR_MINUTO_AULA) {
+        for (const auto& item : milp.todas_vars) {
+            if (item.col < static_cast<int>(sol_vals.size()) && sol_vals[item.col] > 0.5) {
+                const auto* aula = data.findAula(item.cand->aula_id);
+                if (!aula) continue;
+                for (const auto& p_id : aula->professores()) {
+                    const auto* prof = data.findProfessor(p_id);
+                    if (prof) {
+                        total_W += prof->penalidadeDia(item.cand->dia) * item.cand->duration_minutes;
+                    }
+                }
             }
         }
     }
     stats.penalidade_dias_D = total_D;
     stats.penalidade_preferencia_dias_W = total_W;
 
-    int total_J_slots = 0;
-    for (const auto& [g_col, peso] : milp.j_terms) {
+    int total_J_min = 0;
+    for (const auto& [g_col, peso_min] : milp.j_terms) {
         if (g_col < static_cast<int>(sol_vals.size()) && sol_vals[g_col] > 0.5) {
-            total_J_slots += peso;
+            total_J_min += peso_min;
         }
     }
-    stats.penalidade_janelas_J = total_J_slots * 5;
+    stats.penalidade_janelas_J = total_J_min;
 
-    int total_JG_slots = 0;
-    for (int q_col : milp.jg_cols) {
+    int total_JG_min = 0;
+    for (const auto& [q_col, slot_dur] : milp.jg_terms) {
         if (q_col < static_cast<int>(sol_vals.size()) && sol_vals[q_col] > 0.5) {
-            total_JG_slots++;
+            total_JG_min += slot_dur;
         }
     }
-    stats.penalidade_lacunas_turma_JG = total_JG_slots * 5;
+    stats.penalidade_lacunas_turma_JG = total_JG_min;
 
     int total_P = 0;
     for (const auto& [x_col, custo] : milp.p_terms) {

@@ -2,7 +2,7 @@
 
 /**
  * @file TimeSlot.h
- * @brief Tipos, constantes e funções utilitárias para representação temporal e intervalos em slots de 5 minutos.
+ * @brief Tipos, constantes e funções utilitárias para representação temporal em minutos [0, 1440).
  */
 
 #include <string>
@@ -11,14 +11,8 @@
 
 namespace scheduler::model {
 
-/** @brief Duração em minutos de cada slot de tempo atômico. */
-constexpr int SLOT_MINUTES = 5;
-
-/** @brief Quantidade de slots de tempo por hora (12 slots). */
-constexpr int SLOTS_PER_HOUR = 60 / SLOT_MINUTES; // 12
-
-/** @brief Quantidade de slots de tempo por dia completo de 24 horas (288 slots). */
-constexpr int SLOTS_PER_DAY = 24 * SLOTS_PER_HOUR; // 288
+/** @brief Quantidade total de minutos em um dia completo de 24 horas (1440 minutos). */
+constexpr int MINUTES_PER_DAY = 24 * 60; // 1440
 
 /**
  * @enum DayOfWeek
@@ -91,21 +85,21 @@ ShiftType stringToShift(const std::string& str);
 const std::vector<ShiftType>& allWorkShifts();
 
 /**
- * @brief Determina o turno correspondente a um slot específico do dia.
- * @param slot Índice do slot (0 a 287).
- * @return ShiftType associado ao slot.
+ * @brief Determina o turno correspondente a um instante em minutos desde a meia-noite.
+ * @param minutes Minutos desde 00:00 (0 a 1439).
+ * @return ShiftType associado ao horário.
  */
-ShiftType slotToShift(int slot);
+ShiftType timeToShift(int minutes);
 
 /**
  * @struct TimeInterval
- * @brief Representa um intervalo contínuo de tempo semiaberto [start_slot, end_slot).
+ * @brief Representa um intervalo contínuo de tempo semiaberto [start_min, end_min) em minutos desde 00:00.
  *
- * Utiliza slots discretos de 5 minutos, onde o slot 0 representa 00:00 e o slot 287 representa 23:55-24:00.
+ * Exemplo: 07:30 às 08:20 corresponde a [450, 500) com durationMinutes() == 50.
  */
 struct TimeInterval {
-    int start_slot{0}; ///< Índice do slot inicial do intervalo (inclusivo).
-    int end_slot{0};   ///< Índice do slot final do intervalo (exclusivo).
+    int start_min{0}; ///< Minuto inicial do intervalo (inclusivo, 0..1440).
+    int end_min{0};   ///< Minuto final do intervalo (exclusivo, 0..1440).
 
     /**
      * @brief Construtor padrão, inicializa intervalo vazio [0, 0).
@@ -113,44 +107,38 @@ struct TimeInterval {
     TimeInterval() = default;
 
     /**
-     * @brief Construtor a partir dos índices de slots inicial e final.
-     * @param start Slot inicial (inclusivo).
-     * @param end Slot final (exclusivo).
+     * @brief Construtor a partir dos minutos inicial e final desde a meia-noite.
+     * @param start Minuto inicial (inclusivo).
+     * @param end Minuto final (exclusivo).
      * @throws std::invalid_argument se start > end.
      */
-    TimeInterval(int start, int end) : start_slot(start), end_slot(end) {
+    TimeInterval(int start, int end) : start_min(start), end_min(end) {
         if (start > end) {
-            throw std::invalid_argument("TimeInterval: start_slot cannot be greater than end_slot");
+            throw std::invalid_argument("TimeInterval: start_min cannot be greater than end_min");
         }
     }
 
     /**
      * @brief Construtor a partir de horários no formato "HH:MM".
      * @param start_str Horário inicial (ex: "07:30").
-     * @param end_str Horário final (ex: "08:15").
+     * @param end_str Horário final (ex: "08:20").
      * @throws std::invalid_argument se o formato for inválido ou se start > end.
      */
     TimeInterval(const std::string& start_str, const std::string& end_str);
 
     /**
-     * @brief Calcula a duração do intervalo em quantidade de slots de 5 minutos.
-     * @return Número de slots de duração.
-     */
-    int durationSlots() const noexcept { return end_slot - start_slot; }
-
-    /**
      * @brief Calcula a duração do intervalo em minutos.
      * @return Duração total em minutos.
      */
-    int durationMinutes() const noexcept { return durationSlots() * SLOT_MINUTES; }
+    int durationMinutes() const noexcept { return end_min - start_min; }
 
     /**
-     * @brief Verifica se um determinado slot está contido no intervalo.
-     * @param slot Índice do slot testado.
-     * @return true se o slot pertencer a [start_slot, end_slot), false caso contrário.
+     * @brief Verifica se um determinado minuto está contido no intervalo.
+     * @param minute Minuto testado (desde 00:00).
+     * @return true se o minuto pertencer a [start_min, end_min), false caso contrário.
      */
-    bool contains(int slot) const noexcept {
-        return slot >= start_slot && slot < end_slot;
+    bool contains(int minute) const noexcept {
+        return minute >= start_min && minute < end_min;
     }
 
     /**
@@ -159,7 +147,7 @@ struct TimeInterval {
      * @return true se other estiver inteiramente dentro deste intervalo, false caso contrário.
      */
     bool contains(const TimeInterval& other) const noexcept {
-        return other.start_slot >= start_slot && other.end_slot <= end_slot;
+        return other.start_min >= start_min && other.end_min <= end_min;
     }
 
     /**
@@ -168,7 +156,19 @@ struct TimeInterval {
      * @return true se houver interseção temporal, false caso contrário.
      */
     bool overlaps(const TimeInterval& other) const noexcept {
-        return start_slot < other.end_slot && other.start_slot < end_slot;
+        return start_min < other.end_min && other.start_min < end_min;
+    }
+
+    bool operator==(const TimeInterval& o) const noexcept {
+        return start_min == o.start_min && end_min == o.end_min;
+    }
+
+    bool operator!=(const TimeInterval& o) const noexcept {
+        return !(*this == o);
+    }
+
+    bool operator<(const TimeInterval& o) const noexcept {
+        return start_min != o.start_min ? start_min < o.start_min : end_min < o.end_min;
     }
 
     /**
@@ -190,19 +190,19 @@ struct TimeInterval {
     std::string toString() const;
 
     /**
-     * @brief Converte uma string "HH:MM" no índice de slot correspondente (0 a 287).
+     * @brief Converte uma string "HH:MM" no total de minutos desde 00:00 (0 a 1440).
      * @param time_str String no formato "HH:MM".
-     * @return Índice inteiro do slot de 5 minutos.
+     * @return Minutos inteiros desde 00:00.
      * @throws std::invalid_argument se o formato ou valores de hora/minuto forem inválidos.
      */
-    static int timeStringToSlot(const std::string& time_str);
+    static int timeStringToMinutes(const std::string& time_str);
 
     /**
-     * @brief Converte um índice de slot em string formatada "HH:MM".
-     * @param slot Índice do slot (0 a 287).
+     * @brief Converte um valor em minutos desde 00:00 em string formatada "HH:MM".
+     * @param minutes Minutos desde 00:00 (0 a 1440).
      * @return String formatada "HH:MM".
      */
-    static std::string slotToTimeString(int slot);
+    static std::string minutesToTimeString(int minutes);
 };
 
 } // namespace scheduler::model

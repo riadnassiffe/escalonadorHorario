@@ -51,7 +51,7 @@ namespace detail {
 void auditarConflitosEntreAulas(const model::InstitutionData& data, model::Timetable& timetable) {
     const auto& alocs = timetable.alocacoes();
     auto time_overlaps = [](const model::TimeInterval& t1, const model::TimeInterval& t2) {
-        return std::max(t1.start_slot, t2.start_slot) < std::min(t1.end_slot, t2.end_slot);
+        return std::max(t1.start_min, t2.start_min) < std::min(t1.end_min, t2.end_min);
     };
     auto semestres_conflitam = [](const model::AllocatedLesson& a1, const model::AllocatedLesson& a2) {
         if (a1.regime == model::RegimeDisciplina::ANUAL || a2.regime == model::RegimeDisciplina::ANUAL) return true;

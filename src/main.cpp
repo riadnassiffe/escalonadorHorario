@@ -52,6 +52,7 @@ int main(int argc, char* argv[]) {
                   << "  --max-memory <MB>            Define teto de consumo de memória RAM em MB (ex: 2048)\n"
                   << "  --unlimited-memory           Executa sem limite imposto de memória\n"
                   << "  --time-limit <SEG>           Define tempo limite de resolução em segundos\n"
+                  << "  --save <ARQUIVO.json>        Salva o projeto JSON atualizado com a grade gerada\n"
                   << "  --warmstart-chain            Testa encadeamento guloso -> CP-SAT\n"
                   << "  --render-screenshots         Gera capturas de tela dos diálogos da interface\n"
                   << "  --help, -h                   Exibe esta mensagem de ajuda\n";
@@ -72,9 +73,13 @@ int main(int argc, char* argv[]) {
 
         scheduler::model::InstitutionData data;
         std::string filename;
+        std::string save_filename;
         for (int i = 2; i < argc; ++i) {
             std::string arg = argv[i];
-            if (arg == "--max-memory" || arg == "--time-limit") {
+            if (arg == "--max-memory" || arg == "--time-limit" || arg == "--save") {
+                if (arg == "--save" && i + 1 < argc) {
+                    save_filename = argv[i + 1];
+                }
                 ++i;
                 continue;
             }
@@ -121,8 +126,14 @@ int main(int argc, char* argv[]) {
                 data.config().sem_limite_memoria = true;
             } else if (arg == "--time-limit" && i + 1 < argc) {
                 data.config().tempo_limite_segundos = std::stod(argv[++i]);
+                data.config().sem_limite_tempo = false;
             } else if (arg.rfind("--time-limit=", 0) == 0) {
                 data.config().tempo_limite_segundos = std::stod(arg.substr(13));
+                data.config().sem_limite_tempo = false;
+            } else if (arg == "--save" && i + 1 < argc) {
+                save_filename = argv[++i];
+            } else if (arg.rfind("--save=", 0) == 0) {
+                save_filename = arg.substr(7);
             }
         }
 
@@ -184,6 +195,13 @@ int main(int argc, char* argv[]) {
         }
         if (scheduler::ui::ScheduleReportExporter::exportarCsv("grade_horarios.csv", data, err)) {
             std::cout << "[OK] Dados exportados com sucesso: grade_horarios.csv" << std::endl;
+        }
+        if (!save_filename.empty()) {
+            if (scheduler::serialization::JsonSerialization::salvarArquivo(save_filename, data, err)) {
+                std::cout << "[OK] Projeto JSON salvo com sucesso: " << save_filename << std::endl;
+            } else {
+                std::cerr << "[ERRO] Falha ao salvar JSON: " << err << std::endl;
+            }
         }
 
         return (stats.status == "OPTIMAL" || stats.status == "FEASIBLE") ? 0 : 1;

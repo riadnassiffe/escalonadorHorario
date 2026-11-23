@@ -313,13 +313,12 @@ void AddLessonToScheduleDialog::updateSummaryCard() {
 
     lbl_disciplina_info_->setText(
         QString("<b>Turma(s):</b> %1 | <b>Professor(es):</b> %2<br>"
-                "<b>Tipo:</b> %3 | <b>Duração:</b> %4 min (%5 slots) | <b>Regime:</b> %6<br>"
-                "<b>Status semanal:</b> %7 de %8 aulas alocadas na grade")
+                "<b>Tipo:</b> %3 | <b>Duração:</b> %4 min | <b>Regime:</b> %5<br>"
+                "<b>Status semanal:</b> %6 de %7 aulas alocadas na grade")
             .arg(t_names.join(", "))
             .arg(p_names.isEmpty() ? "Nenhum" : p_names.join(", "))
             .arg(QString::fromStdString(disc->tipo()))
             .arg(disc->duracaoMinutos())
-            .arg(disc->duracaoSlots())
             .arg(regime_str)
             .arg(alocadas)
             .arg(disc->aulasSemanais())
@@ -396,12 +395,11 @@ void AddLessonToScheduleDialog::populateHorarios() {
     std::string disc_id = combo_disciplina_->currentData().toString().toStdString();
     const auto* disc = data_.findDisciplina(disc_id);
 
-    int dur_slots = disc ? disc->duracaoSlots() : 10;
-    if (dur_slots <= 0) dur_slots = 10;
+    int dur_min = disc ? disc->duracaoMinutos() : 50;
+    if (dur_min <= 0) dur_min = 50;
 
     auto dia = static_cast<model::DayOfWeek>(combo_dia_->currentData().toInt());
 
-    // Obter turma principal da disciplina
     const model::Turma* turma = nullptr;
     if (disc && !disc->turmas().empty()) {
         turma = data_.findTurma(disc->turmas().front());
@@ -411,30 +409,29 @@ void AddLessonToScheduleDialog::populateHorarios() {
 
     if (turma && turma->funcionaNoDia(dia)) {
         auto j = turma->jornadaParaDia(dia);
-        for (const auto& b : j.blocosLetivos()) {
-            for (int s = b.start_slot; s + dur_slots <= b.end_slot; s += dur_slots) {
-                slots_set.emplace(s, s + dur_slots);
+        for (const auto& s : j.slots_letivos) {
+            if (s.durationMinutes() == dur_min) {
+                slots_set.emplace(s.start_min, s.end_min);
             }
         }
     }
 
-    // Se a turma não tiver horários ou não couber, sugerir os intervalos gerais da instituição
-    if (slots_set.empty()) {
-        // Horários convencionais matutinos, vespertinos e noturnos
-        std::vector<std::pair<std::string, std::string>> defaults = {
-            {"07:30", "08:20"}, {"08:20", "09:10"}, {"09:30", "10:20"}, {"10:20", "11:10"}, {"11:10", "12:00"},
-            {"13:00", "13:50"}, {"13:50", "14:40"}, {"15:00", "15:50"}, {"15:50", "16:40"}, {"16:40", "17:30"},
-            {"19:00", "19:50"}, {"19:50", "20:40"}, {"20:50", "21:40"}, {"21:40", "22:30"}
-        };
-        for (const auto& p : defaults) {
-            model::TimeInterval inter(p.first, p.second);
-            slots_set.emplace(inter.start_slot, inter.start_slot + dur_slots);
+    if (slots_set.empty() && turma && turma->funcionaNoDia(dia)) {
+        // Se nenhum slot tem exatamente dur_min, exibir os slots da turma para transparência
+        auto j = turma->jornadaParaDia(dia);
+        for (const auto& s : j.slots_letivos) {
+            slots_set.emplace(s.start_min, s.end_min);
         }
     }
 
-    // Assegurar que default_interval seja incluído se fornecido
-    if (default_interval_.durationSlots() > 0) {
-        slots_set.emplace(default_interval_.start_slot, default_interval_.start_slot + dur_slots);
+    if (slots_set.empty()) {
+        for (const auto& s : model::JornadaTurma::defaultSlotsForShift(model::ShiftType::MANHA)) {
+            slots_set.emplace(s.start_min, s.start_min + dur_min);
+        }
+    }
+
+    if (default_interval_.durationMinutes() > 0) {
+        slots_set.emplace(default_interval_.start_min, default_interval_.start_min + dur_min);
     }
 
     int pre_sel_idx = -1;
@@ -446,9 +443,9 @@ void AddLessonToScheduleDialog::populateHorarios() {
             .arg(QString::fromStdString(inter.toString()))
             .arg(inter.durationMinutes());
 
-        combo_horario_->addItem(item_text, QPoint(inter.start_slot, inter.end_slot));
+        combo_horario_->addItem(item_text, QPoint(inter.start_min, inter.end_min));
 
-        if (default_interval_.durationSlots() > 0 && inter.start_slot == default_interval_.start_slot) {
+        if (default_interval_.durationMinutes() > 0 && inter.start_min == default_interval_.start_min) {
             pre_sel_idx = idx_count;
         }
         idx_count++;
@@ -552,7 +549,7 @@ std::vector<std::string> AddLessonToScheduleDialog::verificarConflitos() const {
     int sem_alocado = combo_semestre_->currentData().toInt();
 
     auto time_overlaps = [](const model::TimeInterval& t1, const model::TimeInterval& t2) {
-        return std::max(t1.start_slot, t2.start_slot) < std::min(t1.end_slot, t2.end_slot);
+        return std::max(t1.start_min, t2.start_min) < std::min(t1.end_min, t2.end_min);
     };
 
     auto semestres_conflitam = [sem_alocado](const model::AllocatedLesson& a) {
@@ -570,13 +567,16 @@ std::vector<std::string> AddLessonToScheduleDialog::verificarConflitos() const {
                 conflitos.push_back("A turma " + t->nome() + " não funciona na " + model::dayToLongString(dia) + ".");
             }
             auto j = t->jornadaParaDia(dia);
+            auto j_total = j.jornadaTotal();
             for (const auto& inter : j.intervalosAtivos()) {
                 if (time_overlaps(inter, intervalo)) {
                     conflitos.push_back("O horário sobrepõe o intervalo de recreio (" + inter.toString() + ") da turma " + t->nome() + ".");
                 }
             }
-            if (intervalo.start_slot < j.jornada_total.start_slot || intervalo.end_slot > j.jornada_total.end_slot) {
-                conflitos.push_back("O horário ultrapassa a jornada diária da turma " + t->nome() + " (" + j.jornada_total.toString() + ").");
+            if (j.slots_letivos.empty() || intervalo.start_min < j_total.start_min || intervalo.end_min > j_total.end_min) {
+                conflitos.push_back("O horário ultrapassa a jornada diária da turma " + t->nome() + " (" + j_total.toString() + ").");
+            } else if (!j.contemSlotExato(intervalo)) {
+                conflitos.push_back("O horário " + intervalo.toString() + " não corresponde a um slot cadastrado na turma " + t->nome() + ".");
             }
         }
 
@@ -612,7 +612,7 @@ std::vector<std::string> AddLessonToScheduleDialog::verificarConflitos() const {
     for (const auto& p_id : disc->professores()) {
         const auto* p = data_.findProfessor(p_id);
         if (p) {
-            if (!p->isDisponivelNoIntervalo(dia, intervalo.start_slot, intervalo.end_slot)) {
+            if (!p->isDisponivelNoIntervalo(dia, intervalo.start_min, intervalo.end_min)) {
                 conflitos.push_back("Indisponibilidade docente: O Prof. " + p->nome() + " possui indisponibilidade cadastrada neste horário.");
             }
         }

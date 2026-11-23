@@ -142,13 +142,13 @@ public:
     }
 
     /**
-     * @brief Verifica se um intervalo de tempo [start_slot, end_slot) está totalmente contido nas disponibilidades do dia.
+     * @brief Verifica se um intervalo de tempo [start_min, end_min) está totalmente contido nas disponibilidades do dia.
      * @param d Dia da semana testado.
-     * @param start_slot Slot inicial da aula.
-     * @param end_slot Slot final da aula.
+     * @param start_min Minuto inicial da aula desde 00:00.
+     * @param end_min Minuto final da aula desde 00:00.
      * @return true se o professor estiver plenamente disponível nesse intervalo, false caso contrário.
      */
-    bool isDisponivelNoIntervalo(DayOfWeek d, int start_slot, int end_slot) const;
+    bool isDisponivelNoIntervalo(DayOfWeek d, int start_min, int end_min) const;
 
     /**
      * @brief Obtém o limite máximo de carga horária diária do professor em minutos.

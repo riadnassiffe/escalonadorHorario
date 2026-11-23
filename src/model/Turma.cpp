@@ -8,227 +8,227 @@
 
 namespace scheduler::model {
 
-/**
- * @brief Função estática auxiliar para criar TimeInterval de forma segura tratando exceções.
- * @param ini String de horário inicial (ex: "08:00").
- * @param fim String de horário final (ex: "09:40").
- * @return TimeInterval válido ou [0, 0) caso haja falha no parsing.
- */
 static TimeInterval makeSafeInterval(const std::string& ini, const std::string& fim) {
     try {
-        int s = TimeInterval::timeStringToSlot(ini);
-        int e = TimeInterval::timeStringToSlot(fim);
-        TimeInterval ti;
-        ti.start_slot = s;
-        ti.end_slot = e;
-        return ti;
+        int s = TimeInterval::timeStringToMinutes(ini);
+        int e = TimeInterval::timeStringToMinutes(fim);
+        return TimeInterval(s, e);
     } catch (...) {
         return TimeInterval();
     }
 }
 
-/**
- * @brief Construtor de conveniência de JornadaTurma com dois intervalos de recreio ativos.
- * @param ini Início da jornada.
- * @param fim Fim da jornada.
- * @param int1_ini Início do primeiro intervalo.
- * @param int1_fim Fim do primeiro intervalo.
- * @param int2_ini Início do segundo intervalo.
- * @param int2_fim Fim do segundo intervalo.
- */
-JornadaTurma::JornadaTurma(const std::string& ini, const std::string& fim,
-                           const std::string& int1_ini, const std::string& int1_fim,
-                           const std::string& int2_ini, const std::string& int2_fim)
-    : jornada_total(makeSafeInterval(ini, fim)),
-      intervalo_1(makeSafeInterval(int1_ini, int1_fim)),
-      int1_ativo(true),
-      intervalo_2(makeSafeInterval(int2_ini, int2_fim)),
-      int2_ativo(true),
-      intervalo_3(makeSafeInterval("11:00", "11:15")),
-      int3_ativo(false) {
-}
-
-/**
- * @brief Construtor completo de JornadaTurma com controle individual de até 3 intervalos.
- * @param ini Início da jornada.
- * @param fim Fim da jornada.
- * @param int1_ini Início do 1º intervalo.
- * @param int1_fim Fim do 1º intervalo.
- * @param a1 Flag de ativação do 1º intervalo.
- * @param int2_ini Início do 2º intervalo.
- * @param int2_fim Fim do 2º intervalo.
- * @param a2 Flag de ativação do 2º intervalo.
- * @param int3_ini Início do 3º intervalo.
- * @param int3_fim Fim do 3º intervalo.
- * @param a3 Flag de ativação do 3º intervalo.
- */
-JornadaTurma::JornadaTurma(const std::string& ini, const std::string& fim,
-                           const std::string& int1_ini, const std::string& int1_fim, bool a1,
-                           const std::string& int2_ini, const std::string& int2_fim, bool a2,
-                           const std::string& int3_ini, const std::string& int3_fim, bool a3)
-    : jornada_total(makeSafeInterval(ini, fim)),
-      intervalo_1(makeSafeInterval(int1_ini, int1_fim)),
-      int1_ativo(a1),
-      intervalo_2(makeSafeInterval(int2_ini, int2_fim)),
-      int2_ativo(a2),
-      intervalo_3(makeSafeInterval(int3_ini, int3_fim)),
-      int3_ativo(a3) {
-}
-
-/**
- * @brief Retorna os intervalos de recreio que estão ativos ordenados cronologicamente.
- * @return Vetor contendo os TimeIntervals ativos.
- */
-std::vector<TimeInterval> JornadaTurma::intervalosAtivos() const {
-    std::vector<TimeInterval> ativos;
-    if (int1_ativo && intervalo_1.start_slot < intervalo_1.end_slot) {
-        ativos.push_back(intervalo_1);
-    }
-    if (int2_ativo && intervalo_2.start_slot < intervalo_2.end_slot) {
-        ativos.push_back(intervalo_2);
-    }
-    if (int3_ativo && intervalo_3.start_slot < intervalo_3.end_slot) {
-        ativos.push_back(intervalo_3);
-    }
-    std::sort(ativos.begin(), ativos.end(), [](const TimeInterval& a, const TimeInterval& b) {
-        return a.start_slot < b.start_slot;
-    });
-    return ativos;
-}
-
-/**
- * @brief Valida se a jornada e seus intervalos respeitam ordem cronológica e limites.
- * @return true se a jornada for válida, false se houver sobreposição ou extrapolação.
- */
-bool JornadaTurma::isValid() const noexcept {
-    if (jornada_total.start_slot >= jornada_total.end_slot) return false;
-
-    std::vector<const TimeInterval*> ativos;
-    if (int1_ativo) ativos.push_back(&intervalo_1);
-    if (int2_ativo) ativos.push_back(&intervalo_2);
-    if (int3_ativo) ativos.push_back(&intervalo_3);
-
-    if (ativos.empty()) return true;
-
-    int prev_end = jornada_total.start_slot;
-    for (size_t i = 0; i < ativos.size(); ++i) {
-        const auto& inter = *ativos[i];
-        if (inter.start_slot >= inter.end_slot) return false;
-        if (i == 0) {
-            if (inter.start_slot <= prev_end) return false;
-        } else {
-            if (inter.start_slot < prev_end) return false;
-        }
-        prev_end = inter.end_slot;
-    }
-    if (prev_end >= jornada_total.end_slot) return false;
-
-    return true;
-}
-
-/**
- * @brief Divide a jornada total nos blocos contínuos disponíveis para aulas (excluindo os intervalos).
- * @return Vetor com os blocos de horário letivo da jornada.
- */
-std::vector<TimeInterval> JornadaTurma::blocosLetivos() const {
+static std::vector<TimeInterval> computeBlocksFromLegacy(
+    const TimeInterval& total,
+    const std::vector<TimeInterval>& intervalos) {
     std::vector<TimeInterval> blocos;
-    if (!isValid()) return blocos;
+    if (total.start_min >= total.end_min) return blocos;
 
-    auto ativos = intervalosAtivos();
-    if (ativos.empty()) {
-        if (jornada_total.start_slot < jornada_total.end_slot) {
-            blocos.emplace_back(jornada_total.start_slot, jornada_total.end_slot);
-        }
-        return blocos;
-    }
+    auto ativos = intervalos;
+    std::sort(ativos.begin(), ativos.end());
 
-    int current = jornada_total.start_slot;
+    int current = total.start_min;
     for (const auto& inter : ativos) {
-        if (inter.start_slot > current) {
-            blocos.emplace_back(current, inter.start_slot);
+        if (inter.start_min > current && inter.start_min < total.end_min) {
+            blocos.emplace_back(current, std::min(inter.start_min, total.end_min));
         }
-        current = std::max(current, inter.end_slot);
+        current = std::max(current, inter.end_min);
     }
-    if (jornada_total.end_slot > current) {
-        blocos.emplace_back(current, jornada_total.end_slot);
+    if (total.end_min > current) {
+        blocos.emplace_back(current, total.end_min);
     }
     return blocos;
 }
 
-/**
- * @brief Verifica se um slot de tempo coincide com qualquer intervalo de recreio ativo.
- * @param slot Índice do slot (0 a 287).
- * @return true se o slot estiver dentro de um recreio ativo, false caso contrário.
- */
-bool JornadaTurma::isSlotEmIntervalo(int slot) const noexcept {
-    if (int1_ativo && intervalo_1.contains(slot)) return true;
-    if (int2_ativo && intervalo_2.contains(slot)) return true;
-    if (int3_ativo && intervalo_3.contains(slot)) return true;
-    return false;
+JornadaTurma::JornadaTurma(std::vector<TimeInterval> slots_list)
+    : slots_letivos(std::move(slots_list)) {
+    ordenarSlots();
 }
 
-/**
- * @brief Verifica igualdade estrutural entre duas instâncias de JornadaTurma.
- * @param o Outra JornadaTurma para comparação.
- * @return true se todos os horários e flags de ativação forem idênticos, false caso contrário.
- */
-bool JornadaTurma::operator==(const JornadaTurma& o) const noexcept {
-    if (jornada_total.start_slot != o.jornada_total.start_slot ||
-        jornada_total.end_slot != o.jornada_total.end_slot) {
-        return false;
-    }
-    if (int1_ativo != o.int1_ativo) return false;
-    if (int1_ativo && (intervalo_1.start_slot != o.intervalo_1.start_slot ||
-                       intervalo_1.end_slot != o.intervalo_1.end_slot)) {
-        return false;
-    }
-    if (int2_ativo != o.int2_ativo) return false;
-    if (int2_ativo && (intervalo_2.start_slot != o.intervalo_2.start_slot ||
-                       intervalo_2.end_slot != o.intervalo_2.end_slot)) {
-        return false;
-    }
-    if (int3_ativo != o.int3_ativo) return false;
-    if (int3_ativo && (intervalo_3.start_slot != o.intervalo_3.start_slot ||
-                       intervalo_3.end_slot != o.intervalo_3.end_slot)) {
-        return false;
+JornadaTurma::JornadaTurma(const std::string& ini, const std::string& fim,
+                           const std::string& int1_ini, const std::string& int1_fim,
+                           const std::string& int2_ini, const std::string& int2_fim)
+    : JornadaTurma(ini, fim, int1_ini, int1_fim, true, int2_ini, int2_fim, true, "11:00", "11:15", false) {
+}
+
+JornadaTurma::JornadaTurma(const std::string& ini, const std::string& fim,
+                           const std::string& int1_ini, const std::string& int1_fim, bool a1,
+                           const std::string& int2_ini, const std::string& int2_fim, bool a2,
+                           const std::string& int3_ini, const std::string& int3_fim, bool a3) {
+    TimeInterval total = makeSafeInterval(ini, fim);
+    std::vector<TimeInterval> ints;
+    if (a1) ints.push_back(makeSafeInterval(int1_ini, int1_fim));
+    if (a2) ints.push_back(makeSafeInterval(int2_ini, int2_fim));
+    if (a3) ints.push_back(makeSafeInterval(int3_ini, int3_fim));
+    auto blocos = computeBlocksFromLegacy(total, ints);
+    slots_letivos = gerarSlotsDeBlocos(blocos, 50);
+    ordenarSlots();
+}
+
+void JornadaTurma::ordenarSlots() {
+    std::sort(slots_letivos.begin(), slots_letivos.end());
+}
+
+bool JornadaTurma::isValid() const noexcept {
+    if (slots_letivos.empty()) return false;
+    for (size_t i = 0; i < slots_letivos.size(); ++i) {
+        if (slots_letivos[i].start_min < 0 || slots_letivos[i].end_min > MINUTES_PER_DAY) return false;
+        if (slots_letivos[i].start_min >= slots_letivos[i].end_min) return false;
+        if (i > 0 && slots_letivos[i - 1].end_min > slots_letivos[i].start_min) return false;
     }
     return true;
 }
 
-/**
- * @brief Construtor da classe Turma com inicialização de jornada padrão matutina.
- * @param id Identificador único da turma.
- * @param nome Nome ou identificação da turma.
- * @param turno Turno de estudos da turma.
- */
-Turma::Turma(std::string id, std::string nome, ShiftType turno)
-    : id_(std::move(id)), nome_(std::move(nome)), turno_(turno) {
-    // Configuração padrão: 08:00 as 12:30 (240 min letivos + 2 intervalos de 15 min)
-    // Bloco 1: 08:00 - 09:40 (100 min -> 2x50m)
-    // Intervalo 1: 09:40 - 09:55
-    // Bloco 2: 09:55 - 11:25 (90 min -> 2x45m)
-    // Intervalo 2: 11:25 - 11:40
-    // Bloco 3: 11:40 - 12:30 (50 min -> 1x50m)
-    jornada_padrao_ = JornadaTurma("08:00", "12:30",
-                                   "09:40", "09:55", true,
-                                   "11:25", "11:40", true,
-                                   "12:00", "12:15", false);
+TimeInterval JornadaTurma::jornadaTotal() const noexcept {
+    if (slots_letivos.empty()) return TimeInterval();
+    return TimeInterval(slots_letivos.front().start_min, slots_letivos.back().end_min);
 }
 
-/**
- * @brief Verifica se a turma tem atividades letivas no dia especificado.
- * @param d Dia da semana avaliado.
- * @return true se d estiver na lista de dias letivos, false caso contrário.
- */
+std::vector<TimeInterval> JornadaTurma::intervalosAtivos() const {
+    std::vector<TimeInterval> ativos;
+    if (slots_letivos.size() < 2) return ativos;
+    for (size_t i = 0; i + 1 < slots_letivos.size(); ++i) {
+        if (slots_letivos[i].end_min < slots_letivos[i + 1].start_min) {
+            ativos.emplace_back(slots_letivos[i].end_min, slots_letivos[i + 1].start_min);
+        }
+    }
+    return ativos;
+}
+
+int JornadaTurma::minutosLetivos() const noexcept {
+    int total = 0;
+    for (const auto& s : slots_letivos) {
+        total += s.durationMinutes();
+    }
+    return total;
+}
+
+bool JornadaTurma::contemSlotExato(const TimeInterval& target) const noexcept {
+    for (const auto& s : slots_letivos) {
+        if (s == target) return true;
+    }
+    return false;
+}
+
+bool JornadaTurma::isMinutoEmIntervalo(int minute) const noexcept {
+    for (size_t i = 0; i + 1 < slots_letivos.size(); ++i) {
+        if (minute >= slots_letivos[i].end_min && minute < slots_letivos[i + 1].start_min) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::vector<TimeInterval> JornadaTurma::defaultSlotsForShift(ShiftType shift) {
+    switch (shift) {
+        case ShiftType::MANHA:
+            // 07:30 - 11:45: 3x50m + 2x45m com intervalo 09:50 - 10:05
+            return {
+                TimeInterval("07:30", "08:20"), // 50m
+                TimeInterval("08:20", "09:10"), // 50m
+                TimeInterval("09:10", "09:55"), // 45m
+                // Recreio: 09:55 - 10:10 (15m)
+                TimeInterval("10:10", "11:00"), // 50m
+                TimeInterval("11:00", "11:45")  // 45m
+            };
+        case ShiftType::TARDE:
+            // 13:15 - 17:30: 3x50m + 2x45m com intervalo 15:35 - 15:50
+            return {
+                TimeInterval("13:15", "14:05"), // 50m
+                TimeInterval("14:05", "14:55"), // 50m
+                TimeInterval("14:55", "15:40"), // 45m
+                // Recreio: 15:40 - 15:55 (15m)
+                TimeInterval("15:55", "16:45"), // 50m
+                TimeInterval("16:45", "17:30")  // 45m
+            };
+        case ShiftType::NOITE:
+            // 18:30 - 22:15: 4x50m (ou 2x50 + 2x45) com intervalo 20:10 - 20:25
+            return {
+                TimeInterval("18:30", "19:20"), // 50m
+                TimeInterval("19:20", "20:10"), // 50m
+                // Recreio: 20:10 - 20:25 (15m)
+                TimeInterval("20:25", "21:15"), // 50m
+                TimeInterval("21:15", "22:05")  // 50m
+            };
+        case ShiftType::INTEGRAL:
+            return {
+                TimeInterval("07:30", "08:20"),
+                TimeInterval("08:20", "09:10"),
+                TimeInterval("09:10", "09:55"),
+                // Recreio manhã: 09:55 - 10:10
+                TimeInterval("10:10", "11:00"),
+                TimeInterval("11:00", "11:45"),
+                // Almoço: 11:45 - 13:15
+                TimeInterval("13:15", "14:05"),
+                TimeInterval("14:05", "14:55"),
+                TimeInterval("14:55", "15:40"),
+                // Recreio tarde: 15:40 - 15:55
+                TimeInterval("15:55", "16:45"),
+                TimeInterval("16:45", "17:30")
+            };
+    }
+    return defaultSlotsForShift(ShiftType::MANHA);
+}
+
+std::vector<TimeInterval> JornadaTurma::gerarSlotsDeBlocos(const std::vector<TimeInterval>& blocos,
+                                                           int duracao_preferencial) {
+    std::vector<TimeInterval> result;
+    int primary = (duracao_preferencial == 45) ? 45 : 50;
+    int secondary = (primary == 50) ? 45 : 50;
+
+    for (const auto& b : blocos) {
+        int L = b.durationMinutes();
+        if (L <= 0) continue;
+
+        // Tenta decompor L = a * primary + b * secondary de forma exata
+        int best_a = -1;
+        int best_b = -1;
+        for (int a = L / primary; a >= 0; --a) {
+            int rem = L - a * primary;
+            if (rem % secondary == 0) {
+                best_a = a;
+                best_b = rem / secondary;
+                break;
+            }
+        }
+
+        if (best_a >= 0) {
+            int cur = b.start_min;
+            for (int i = 0; i < best_a; ++i) {
+                result.emplace_back(cur, cur + primary);
+                cur += primary;
+            }
+            for (int i = 0; i < best_b; ++i) {
+                result.emplace_back(cur, cur + secondary);
+                cur += secondary;
+            }
+        } else if (L > primary) {
+            // Preenche com a duração preferencial enquanto couber; resto vira slot residual se >= 30
+            int cur = b.start_min;
+            while (cur + primary <= b.end_min) {
+                result.emplace_back(cur, cur + primary);
+                cur += primary;
+            }
+            if (b.end_min - cur > 0) {
+                result.emplace_back(cur, b.end_min);
+            }
+        } else {
+            result.push_back(b);
+        }
+    }
+    std::sort(result.begin(), result.end());
+    return result;
+}
+
+Turma::Turma(std::string id, std::string nome, ShiftType turno)
+    : id_(std::move(id)), nome_(std::move(nome)), turno_(turno) {
+    jornada_padrao_ = JornadaTurma(JornadaTurma::defaultSlotsForShift(turno));
+}
+
 bool Turma::funcionaNoDia(DayOfWeek d) const noexcept {
     return std::find(dias_letivos_.begin(), dias_letivos_.end(), d) != dias_letivos_.end();
 }
 
-/**
- * @brief Retorna a jornada correspondente para o dia (exceção se houver ou jornada padrão).
- * @param d Dia da semana consultado.
- * @return JornadaTurma ativa para o dia informado.
- */
 JornadaTurma Turma::jornadaParaDia(DayOfWeek d) const {
     auto it = excecoes_por_dia_.find(d);
     if (it != excecoes_por_dia_.end()) {

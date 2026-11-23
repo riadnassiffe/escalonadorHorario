@@ -68,8 +68,8 @@ struct MilpProblem {
     std::map<std::pair<std::string, model::DayOfWeek>, int> y_prof_dia;
     std::map<std::pair<std::string, model::DayOfWeek>, std::vector<MilpCandItem>> vars_prof_dia;
 
-    std::vector<std::pair<int, int>> j_terms;   // (g_col, pesoJanela)
-    std::vector<int> jg_cols;                   // q_col
+    std::vector<std::pair<int, int>> j_terms;   // (g_col, pesoJanela * seg_min)
+    std::vector<std::pair<int, int>> jg_terms;  // (q_col, slot_min)
     std::vector<std::pair<int, int>> p_terms;   // (x_col, custo_preferencia)
 
     std::vector<GapAuxRecord> gap_records;

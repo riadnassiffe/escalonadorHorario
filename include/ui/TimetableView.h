@@ -110,6 +110,11 @@ public slots:
      */
     void onLessonSelected(const QString& aula_id);
 
+    /**
+     * @brief Limpa a seleção atual de aula e restaura a exibição padrão da grade.
+     */
+    void onEmptyCellClicked();
+
 private slots:
     /**
      * @brief Responde à mudança de perspectiva (Turma, Professor ou Sala).
@@ -153,6 +158,11 @@ private slots:
      */
     void onToggleGridOrientation();
 
+    /**
+     * @brief Exibe um menu resumido com os choques ativos da grade para navegação rápida.
+     */
+    void onShowConflictsMenu();
+
 private:
     /**
      * @brief Inicializa e monta a barra de ferramentas superior, banner informativo e a grade.
@@ -185,12 +195,24 @@ private:
                                                             model::DayOfWeek dia,
                                                             const model::TimeInterval& intervalo) const;
 
+    /**
+     * @brief Formata rótulos resumidos e deduplicados de choques para exibição compacta na grade.
+     */
+    QString formatShortConflictTags(const std::vector<model::SlotConflictInfo>& infos, int max_tags = 2) const;
+
+    /**
+     * @brief Atualiza a pílula de resumo de choques no subpainel da grade.
+     */
+    void updateConflictSummaryPill(const std::map<std::string, std::vector<model::SlotConflictInfo>>& conflitos_map);
+
     model::InstitutionData& data_;
     QComboBox* combo_view_type_{nullptr};
     QLabel* lbl_entity_{nullptr};
     QComboBox* combo_target_{nullptr};
     QComboBox* combo_semestre_filtro_{nullptr};
     QLabel* lbl_info_banner_{nullptr};
+    QPushButton* btn_clear_selection_{nullptr};
+    QPushButton* btn_conflict_summary_{nullptr};
     QLineEdit* search_lesson_{nullptr};
     QLabel* lbl_search_count_{nullptr};
     TimetableGridWidget* table_{nullptr};

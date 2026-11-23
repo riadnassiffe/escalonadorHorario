@@ -240,6 +240,7 @@ private:
     QLabel* lbl_kpi_janelas_{nullptr};
     QLabel* lbl_kpi_dias_{nullptr};
     QLabel* lbl_kpi_pref_dias_{nullptr};
+    QLabel* lbl_kpi_choques_{nullptr};
 
     // Tabelas de Cadastro
     QTableWidget* table_professores_{nullptr};

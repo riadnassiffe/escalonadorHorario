@@ -21,19 +21,19 @@ void Professor::initDefaults() {
 }
 
 /**
- * @brief Verifica se o professor está disponível ao longo de todo o intervalo [start_slot, end_slot).
+ * @brief Verifica se o professor está disponível ao longo de todo o intervalo [start_min, end_min).
  * @param d Dia da semana verificado.
- * @param start_slot Slot inicial do intervalo.
- * @param end_slot Slot final do intervalo.
- * @return true se houver algum intervalo de disponibilidade que contenha totalmente [start_slot, end_slot).
+ * @param start_min Minuto inicial do intervalo.
+ * @param end_min Minuto final do intervalo.
+ * @return true se houver algum intervalo de disponibilidade que contenha totalmente [start_min, end_min).
  */
-bool Professor::isDisponivelNoIntervalo(DayOfWeek d, int start_slot, int end_slot) const {
+bool Professor::isDisponivelNoIntervalo(DayOfWeek d, int start_min, int end_min) const {
     auto it = disponibilidade_.find(d);
     if (it == disponibilidade_.end() || it->second.empty()) {
         return false; // Sem disponibilidade cadastrada para o dia
     }
 
-    TimeInterval target(start_slot, end_slot);
+    TimeInterval target(start_min, end_min);
     for (const auto& interval : it->second) {
         if (interval.contains(target)) {
             return true;

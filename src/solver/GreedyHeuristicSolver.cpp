@@ -126,11 +126,12 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
         }
 
         for (const auto& c : cands) {
-            int s = c.start_slot;
-            int e = c.end_slot();
+            int s = c.start_min;
+            int e = c.end_min();
             double penalty = 0.0;
 
-            if (prior_aloc && c.dia == prior_aloc->dia && c.start_slot == prior_aloc->intervalo.start_slot) {
+            if (prior_aloc && c.dia == prior_aloc->dia && c.start_min == prior_aloc->intervalo.start_min &&
+                c.end_min() == prior_aloc->intervalo.end_min) {
                 if (c.salas == prior_aloc->salas) {
                     penalty -= 10000.0; // Bônus máximo para manter a alocação da tela
                 } else {
@@ -174,25 +175,27 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
                 }
             }
 
-            // Início prioritário da primeira aula no início da jornada da turma (T_ini)
+            // Início prioritário da primeira aula no primeiro slot da jornada da turma
             for (const auto& t_id : aula->turmas()) {
                 const auto* t = data.findTurma(t_id);
                 if (t) {
                     auto j = t->jornadaParaDia(c.dia);
-                    int t_ini = j.jornada_total.start_slot;
-                    const auto& existing = turma_ocup[{t_id, c.dia}];
-                    bool existing_in_sem = false;
-                    for (const auto& r : existing) {
-                        if (semestres_conflitam(r.semester, aula_sem)) {
-                            existing_in_sem = true;
-                            break;
+                    if (!j.slots_letivos.empty()) {
+                        int t_ini = j.slots_letivos.front().start_min;
+                        const auto& existing = turma_ocup[{t_id, c.dia}];
+                        bool existing_in_sem = false;
+                        for (const auto& r : existing) {
+                            if (semestres_conflitam(r.semester, aula_sem)) {
+                                existing_in_sem = true;
+                                break;
+                            }
                         }
-                    }
-                    if (!existing_in_sem) {
-                        if (c.start_slot == t_ini) {
-                            penalty -= 1000.0; // Forte incentivo para a primeira aula iniciar no início da jornada
-                        } else {
-                            penalty += 800.0; // Desestimula iniciar o dia fora do horário inicial
+                        if (!existing_in_sem) {
+                            if (c.start_min == t_ini) {
+                                penalty -= 1000.0; // Forte incentivo para a primeira aula iniciar no início da jornada
+                            } else {
+                                penalty += 800.0; // Desestimula iniciar o dia fora do horário inicial
+                            }
                         }
                     }
                 }
@@ -208,7 +211,7 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
 
             for (const auto& p_id : aula->professores()) {
                 const auto* p = data.findProfessor(p_id);
-                auto c_shift = model::slotToShift(c.start_slot);
+                auto c_shift = model::timeToShift(c.start_min);
                 if (p) {
                     penalty += (10 - p->pesoDia(c.dia)) * data.config().lambda_preferencia_dias;
                     if (!p->pretendeTurno(c.dia, c_shift)) {
@@ -219,7 +222,7 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
                 if (!existing.empty() && p && p->pesoJanela() > 0) {
                     std::vector<SlotRange> existing_shift;
                     for (const auto& r : existing) {
-                        if (semestres_conflitam(r.semester, aula_sem) && model::slotToShift(r.start) == c_shift) {
+                        if (semestres_conflitam(r.semester, aula_sem) && model::timeToShift(r.start) == c_shift) {
                             existing_shift.push_back(r);
                         }
                     }
@@ -231,9 +234,9 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
                         }
                         int occupied_len = (e - s);
                         for (const auto& r : existing_shift) occupied_len += (r.end - r.start);
-                        int gap_slots = (max_e - min_s) - occupied_len;
-                        if (gap_slots > 0) {
-                            penalty += gap_slots * data.config().lambda_janelas * (p->pesoJanela() / 5.0);
+                        int gap_min = (max_e - min_s) - occupied_len;
+                        if (gap_min > 0) {
+                            penalty += gap_min * data.config().lambda_janelas * p->pesoJanela();
                         }
                     }
                 }
@@ -259,8 +262,8 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
         }
 
         if (best_cand) {
-            int s = best_cand->start_slot;
-            int e = best_cand->end_slot();
+            int s = best_cand->start_min;
+            int e = best_cand->end_min();
 
             std::string prof_label;
             for (size_t pi = 0; pi < aula->professores().size(); ++pi) {
@@ -356,10 +359,12 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
                     bool pin_conflito = false;
                     for (const auto& a_outra : data.grade().alocacoes()) {
                         if (a_outra.aula_id != aula->id() && a_outra.dia == aula->pinnedDay()) {
-                            int s1 = aula->pinnedStartSlot();
-                            int e1 = s1 + aula->duracaoSlots();
-                            int s2 = a_outra.intervalo.start_slot;
-                            int e2 = a_outra.intervalo.end_slot;
+                            int s1 = aula->pinnedInterval().start_min;
+                            int e1 = aula->pinnedInterval().durationMinutes() > 0
+                                         ? aula->pinnedInterval().end_min
+                                         : (s1 + aula->duracaoMinutos());
+                            int s2 = a_outra.intervalo.start_min;
+                            int e2 = a_outra.intervalo.end_min;
                             if (std::max(s1, s2) < std::min(e1, e2)) {
                                 for (const auto& p1 : aula->professores()) {
                                     if (std::find(a_outra.professores.begin(), a_outra.professores.end(), p1) != a_outra.professores.end()) {
@@ -392,8 +397,8 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
                 std::set<std::string> choques_sala;
 
                 for (const auto& c : cands) {
-                    int s = c.start_slot;
-                    int e = c.end_slot();
+                    int s = c.start_min;
+                    int e = c.end_min();
 
                     for (const auto& p_id : aula->professores()) {
                         for (const auto& occ : prof_ocup[{p_id, c.dia}]) {

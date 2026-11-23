@@ -193,12 +193,6 @@ public:
     void setDuracaoMinutos(int duracao) noexcept { duracao_minutos_ = duracao; }
 
     /**
-     * @brief Calcula a duração em quantidade de slots discretos de 5 minutos.
-     * @return Número de slots correspondente à duração.
-     */
-    int duracaoSlots() const noexcept { return duracao_minutos_ / SLOT_MINUTES; }
-
-    /**
      * @brief Obtém a quantidade de aulas que devem ser ministradas por semana.
      * @return Quantidade de aulas semanais.
      */
@@ -482,12 +476,6 @@ public:
     void setDuracaoMinutos(int duracao) noexcept { duracao_minutos_ = duracao; }
 
     /**
-     * @brief Calcula a duração em quantidade de slots discretos de 5 minutos.
-     * @return Duração em slots.
-     */
-    int duracaoSlots() const noexcept { return duracao_minutos_ / SLOT_MINUTES; }
-
-    /**
      * @brief Obtém o regime letivo da aula (ANUAL ou SEMESTRAL).
      * @return RegimeDisciplina correspondente.
      */
@@ -625,16 +613,30 @@ public:
     void setPinnedDay(DayOfWeek day) noexcept { pinned_day_ = day; }
 
     /**
-     * @brief Obtém o slot inicial em que a aula está fixada.
-     * @return Índice inteiro do slot de início (0 a 287).
+     * @brief Obtém o intervalo de horário em que a aula está fixada.
+     * @return TimeInterval fixado [start_min, end_min).
      */
-    int pinnedStartSlot() const noexcept { return pinned_start_slot_; }
+    const TimeInterval& pinnedInterval() const noexcept { return pinned_interval_; }
 
     /**
-     * @brief Define o slot inicial da fixação da aula.
-     * @param slot Índice do slot inicial.
+     * @brief Define o intervalo de horário da fixação da aula.
+     * @param interval Intervalo [start_min, end_min) fixado.
      */
-    void setPinnedStartSlot(int slot) noexcept { pinned_start_slot_ = slot; }
+    void setPinnedInterval(const TimeInterval& interval) noexcept { pinned_interval_ = interval; }
+
+    /**
+     * @brief Obtém o minuto inicial em que a aula está fixada.
+     * @return Minuto de início desde 00:00 (0 a 1439).
+     */
+    int pinnedStartMin() const noexcept { return pinned_interval_.start_min; }
+
+    /**
+     * @brief Define o minuto inicial da fixação (ajustando o fim pela duração da aula).
+     * @param start_min Minuto inicial desde 00:00.
+     */
+    void setPinnedStartMin(int start_min) noexcept {
+        pinned_interval_ = TimeInterval(start_min, start_min + duracao_minutos_);
+    }
 
     /**
      * @brief Obtém a lista de IDs de salas fixadas para esta aula.
@@ -672,7 +674,7 @@ private:
 
     bool is_pinned_{false};
     DayOfWeek pinned_day_{DayOfWeek::SEG};
-    int pinned_start_slot_{0};
+    TimeInterval pinned_interval_;
     std::vector<std::string> pinned_rooms_;
 };
 

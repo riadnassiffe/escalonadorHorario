@@ -96,20 +96,23 @@ std::string ScheduleReportExporter::gerarTabelaHtmlTurma(const model::Institutio
     ss << "</tr></thead>\n";
     ss << "    <tbody>\n";
 
-    // Obter horários ordenados de aulas
+    // Obter horários ordenados de aulas e slots da turma
     std::set<std::pair<int, int>> horarios_set;
     for (auto d : model::allDays()) {
         auto aulas = data.grade().aulasPorTurma(turma.id(), d);
         for (const auto& a : aulas) {
-            horarios_set.insert({a.intervalo.start_slot, a.intervalo.end_slot});
+            horarios_set.insert({a.intervalo.start_min, a.intervalo.end_min});
         }
     }
 
-    // Incluir intervalos de descanso de todos os dias letivos
+    // Incluir slots letivos e intervalos de descanso de todos os dias letivos
     for (auto d : turma.diasLetivos()) {
         auto j_dia = turma.jornadaParaDia(d);
+        for (const auto& s : j_dia.slots_letivos) {
+            horarios_set.insert({s.start_min, s.end_min});
+        }
         for (const auto& inter : j_dia.intervalosAtivos()) {
-            horarios_set.insert({inter.start_slot, inter.end_slot});
+            horarios_set.insert({inter.start_min, inter.end_min});
         }
     }
 
@@ -121,24 +124,25 @@ std::string ScheduleReportExporter::gerarTabelaHtmlTurma(const model::Institutio
 
         for (auto d : model::allDays()) {
             auto j_dia = turma.jornadaParaDia(d);
+            auto j_total = j_dia.jornadaTotal();
             bool is_recess = false;
             for (const auto& inter : j_dia.intervalosAtivos()) {
-                if (s == inter.start_slot && e == inter.end_slot) {
+                if (s == inter.start_min && e == inter.end_min) {
                     is_recess = true;
                     break;
                 }
             }
 
             if (is_recess) {
-                int dur = (e - s) * model::SLOT_MINUTES;
+                int dur = e - s;
                 ss << "      <td class='recess-cell'>INTERVALO (" << dur << " min)</td>\n";
-            } else if (!turma.funcionaNoDia(d) || s < j_dia.jornada_total.start_slot || e > j_dia.jornada_total.end_slot) {
+            } else if (!turma.funcionaNoDia(d) || j_dia.slots_letivos.empty() || s < j_total.start_min || e > j_total.end_min) {
                 ss << "      <td class='off-cell' style='background:#f1f5f9; color:#94a3b8; text-align:center;'>—</td>\n";
             } else {
                 auto aulas = data.grade().aulasPorTurma(turma.id(), d);
                 std::string cell_content = "-";
                 for (const auto& a : aulas) {
-                    if (a.intervalo.start_slot == s) {
+                    if (a.intervalo.start_min == s && a.intervalo.end_min == e) {
                         std::string prof_names;
                         for (size_t i = 0; i < a.professores.size(); ++i) {
                             if (i > 0) prof_names += ", ";
@@ -204,7 +208,7 @@ std::string ScheduleReportExporter::gerarTabelaHtmlProfessor(const model::Instit
     for (auto d : model::allDays()) {
         auto aulas = data.grade().aulasPorProfessor(prof.id(), d);
         for (const auto& a : aulas) {
-            horarios_set.insert({a.intervalo.start_slot, a.intervalo.end_slot});
+            horarios_set.insert({a.intervalo.start_min, a.intervalo.end_min});
         }
     }
 
@@ -216,7 +220,7 @@ std::string ScheduleReportExporter::gerarTabelaHtmlProfessor(const model::Instit
             auto aulas = data.grade().aulasPorProfessor(prof.id(), d);
             std::string cell_content = "-";
             for (const auto& a : aulas) {
-                if (a.intervalo.start_slot == s) {
+                if (a.intervalo.start_min == s && a.intervalo.end_min == e) {
                     std::string turma_names;
                     for (size_t i = 0; i < a.turmas.size(); ++i) {
                         if (i > 0) turma_names += ", ";
@@ -276,7 +280,7 @@ std::string ScheduleReportExporter::gerarTabelaHtmlSala(const model::Institution
     for (auto d : model::allDays()) {
         auto aulas = data.grade().aulasPorSala(sala.id(), d);
         for (const auto& a : aulas) {
-            horarios_set.insert({a.intervalo.start_slot, a.intervalo.end_slot});
+            horarios_set.insert({a.intervalo.start_min, a.intervalo.end_min});
         }
     }
 
@@ -288,7 +292,7 @@ std::string ScheduleReportExporter::gerarTabelaHtmlSala(const model::Institution
             auto aulas = data.grade().aulasPorSala(sala.id(), d);
             std::string cell_content = "-";
             for (const auto& a : aulas) {
-                if (a.intervalo.start_slot == s) {
+                if (a.intervalo.start_min == s && a.intervalo.end_min == e) {
                     std::string turma_names;
                     for (size_t i = 0; i < a.turmas.size(); ++i) {
                         if (i > 0) turma_names += ", ";

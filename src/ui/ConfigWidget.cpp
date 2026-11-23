@@ -69,7 +69,7 @@ void ConfigWidget::setupUi() {
     };
 
     lay_pesos->addLayout(make_slider_row("Reduzir janelas entre aulas dos professores (λ1):",
-                                         "Penaliza tempo ocioso entre a primeira e a última aula de cada professor.",
+                                         "Penaliza minutos ociosos entre a primeira e a última aula de cada professor no turno.",
                                          slider_janelas_, lbl_val_janelas_, 8));
 
     lay_pesos->addLayout(make_slider_row("Concentrar aulas em menos dias presenciais (λ2):",
@@ -106,8 +106,8 @@ void ConfigWidget::setupUi() {
                                 static_cast<int>(model::ModeloPreferenciaDias::POR_MINUTO_AULA));
     form_regras->addRow("Modelo de Preferência Diária:", combo_modelo_dias_);
 
-    chk_preenchimento_integral_ = new QCheckBox("Preenchimento integral da jornada da turma (Seção 3.10)", grp_regras);
-    chk_preenchimento_integral_->setToolTip("Exige que todos os minutos letivos sejam ocupados por aulas, sem períodos vagos.");
+    chk_preenchimento_integral_ = new QCheckBox("Preenchimento integral dos slots letivos da turma (R10)", grp_regras);
+    chk_preenchimento_integral_->setToolTip("Exige que todos os slots letivos cadastrados para a turma sejam ocupados por aulas.");
     form_regras->addRow("", chk_preenchimento_integral_);
 
     chk_distribuir_semana_ = new QCheckBox("Distribuir matérias na semana (evitar aulas em excesso no mesmo dia)", grp_regras);

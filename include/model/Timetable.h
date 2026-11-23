@@ -26,7 +26,7 @@ struct AllocatedLesson {
     std::string disciplina_nome;   ///< Nome descritivo da disciplina.
     std::string tipo{"TEORICA"};    ///< Tipo da aula ("TEORICA", "LABORATORIO").
     DayOfWeek dia{DayOfWeek::SEG}; ///< Dia da semana em que a aula ocorre.
-    TimeInterval intervalo;        ///< Intervalo de horário [start_slot, end_slot) da aula.
+    TimeInterval intervalo;        ///< Intervalo de horário [start_min, end_min) da aula em minutos.
     std::vector<std::string> professores; ///< IDs dos professores ministrantes.
     std::vector<std::string> turmas;      ///< IDs das turmas participantes.
     std::vector<std::string> salas;       ///< IDs das salas ocupadas pela aula.
@@ -216,6 +216,13 @@ public:
      * @return Ponteiro mutável para a AllocatedLesson correspondente, ou nullptr se não encontrada.
      */
     AllocatedLesson* findAula(const std::string& aula_id);
+
+    /**
+     * @brief Localiza o ponteiro constante de uma aula alocada na grade a partir do seu ID.
+     * @param aula_id Identificador único da aula (ex: "T01_MAT_1").
+     * @return Ponteiro constante para a AllocatedLesson correspondente, ou nullptr se não encontrada.
+     */
+    const AllocatedLesson* findAula(const std::string& aula_id) const;
 
 private:
     std::vector<AllocatedLesson> alocacoes_;

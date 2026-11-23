@@ -152,6 +152,57 @@ model::Room JsonSerialization::roomFromJson(const nlohmann::json& j) {
  * @param turma Instância de Turma.
  * @return nlohmann::json com as configurações de jornada e sala teórica da turma.
  */
+static nlohmann::json jornadaToJson(const model::JornadaTurma& j) {
+    nlohmann::json slots_arr = nlohmann::json::array();
+    for (const auto& s : j.slots_letivos) {
+        slots_arr.push_back({
+            {"inicio", s.startString()},
+            {"fim", s.endString()}
+        });
+    }
+    return nlohmann::json{{"slots", slots_arr}};
+}
+
+static model::JornadaTurma jornadaFromJson(const nlohmann::json& jj) {
+    if (jj.contains("slots") && jj["slots"].is_array()) {
+        std::vector<model::TimeInterval> slots;
+        for (const auto& item : jj["slots"]) {
+            if (item.contains("inicio") && item.contains("fim")) {
+                slots.emplace_back(item["inicio"].get<std::string>(), item["fim"].get<std::string>());
+            }
+        }
+        return model::JornadaTurma(std::move(slots));
+    }
+
+    // Fallback para formato legado (inicio, fim, intervalos)
+    std::string ini = jj.value("inicio", "08:00");
+    std::string fim = jj.value("fim", "11:30");
+    std::string int1_i = "08:40", int1_f = "08:55";
+    std::string int2_i = "10:25", int2_f = "10:40";
+    std::string int3_i = "11:00", int3_f = "11:15";
+    bool a1 = false, a2 = false, a3 = false;
+
+    if (jj.contains("intervalos") && jj["intervalos"].is_array()) {
+        const auto& arr = jj["intervalos"];
+        if (arr.size() >= 1) {
+            int1_i = arr[0].value("inicio", int1_i);
+            int1_f = arr[0].value("fim", int1_f);
+            a1 = arr[0].value("ativo", true);
+        }
+        if (arr.size() >= 2) {
+            int2_i = arr[1].value("inicio", int2_i);
+            int2_f = arr[1].value("fim", int2_f);
+            a2 = arr[1].value("ativo", true);
+        }
+        if (arr.size() >= 3) {
+            int3_i = arr[2].value("inicio", int3_i);
+            int3_f = arr[2].value("fim", int3_f);
+            a3 = arr[2].value("ativo", true);
+        }
+    }
+    return model::JornadaTurma(ini, fim, int1_i, int1_f, a1, int2_i, int2_f, a2, int3_i, int3_f, a3);
+}
+
 nlohmann::json JsonSerialization::turmaToJson(const model::Turma& turma) {
     nlohmann::json j;
     j["id"] = turma.id();
@@ -164,65 +215,11 @@ nlohmann::json JsonSerialization::turmaToJson(const model::Turma& turma) {
     }
     j["dias_letivos"] = dias_arr;
 
-    const auto& jp = turma.jornadaPadrao();
-    nlohmann::json int_arr = nlohmann::json::array();
-    if (jp.int1_ativo || !jp.intervalo_1.startString().empty()) {
-        int_arr.push_back({
-            {"inicio", jp.intervalo_1.startString()},
-            {"fim", jp.intervalo_1.endString()},
-            {"ativo", jp.int1_ativo}
-        });
-    }
-    if (jp.int2_ativo || !jp.intervalo_2.startString().empty()) {
-        int_arr.push_back({
-            {"inicio", jp.intervalo_2.startString()},
-            {"fim", jp.intervalo_2.endString()},
-            {"ativo", jp.int2_ativo}
-        });
-    }
-    if (jp.int3_ativo || !jp.intervalo_3.startString().empty()) {
-        int_arr.push_back({
-            {"inicio", jp.intervalo_3.startString()},
-            {"fim", jp.intervalo_3.endString()},
-            {"ativo", jp.int3_ativo}
-        });
-    }
-
-    j["jornada_padrao"] = {
-        {"inicio", jp.jornada_total.startString()},
-        {"fim", jp.jornada_total.endString()},
-        {"intervalos", int_arr}
-    };
+    j["jornada_padrao"] = jornadaToJson(turma.jornadaPadrao());
 
     nlohmann::json exc_obj = nlohmann::json::object();
     for (const auto& [dia, j_exc] : turma.excecoesPorDia()) {
-        nlohmann::json exc_int_arr = nlohmann::json::array();
-        if (j_exc.int1_ativo || !j_exc.intervalo_1.startString().empty()) {
-            exc_int_arr.push_back({
-                {"inicio", j_exc.intervalo_1.startString()},
-                {"fim", j_exc.intervalo_1.endString()},
-                {"ativo", j_exc.int1_ativo}
-            });
-        }
-        if (j_exc.int2_ativo || !j_exc.intervalo_2.startString().empty()) {
-            exc_int_arr.push_back({
-                {"inicio", j_exc.intervalo_2.startString()},
-                {"fim", j_exc.intervalo_2.endString()},
-                {"ativo", j_exc.int2_ativo}
-            });
-        }
-        if (j_exc.int3_ativo || !j_exc.intervalo_3.startString().empty()) {
-            exc_int_arr.push_back({
-                {"inicio", j_exc.intervalo_3.startString()},
-                {"fim", j_exc.intervalo_3.endString()},
-                {"ativo", j_exc.int3_ativo}
-            });
-        }
-        exc_obj[model::dayToString(dia)] = {
-            {"inicio", j_exc.jornada_total.startString()},
-            {"fim", j_exc.jornada_total.endString()},
-            {"intervalos", exc_int_arr}
-        };
+        exc_obj[model::dayToString(dia)] = jornadaToJson(j_exc);
     }
     j["excecoes_por_dia"] = exc_obj;
 
@@ -238,7 +235,7 @@ nlohmann::json JsonSerialization::turmaToJson(const model::Turma& turma) {
 
 /**
  * @brief Desserializa um objeto Turma a partir de um nó JSON.
- * @param j Objeto JSON contendo jornadas, exceções, turnos e salas da turma.
+ * @param j Objeto JSON contendo slots, exceções, turnos e salas da turma.
  * @return Instância restaurada de Turma.
  */
 model::Turma JsonSerialization::turmaFromJson(const nlohmann::json& j) {
@@ -256,70 +253,15 @@ model::Turma JsonSerialization::turmaFromJson(const nlohmann::json& j) {
     }
 
     if (j.contains("jornada_padrao") && j["jornada_padrao"].is_object()) {
-        const auto& jp_json = j["jornada_padrao"];
-        std::string ini = jp_json.value("inicio", "08:00");
-        std::string fim = jp_json.value("fim", "11:30");
-        std::string int1_i = "08:40", int1_f = "08:55";
-        std::string int2_i = "10:25", int2_f = "10:40";
-        std::string int3_i = "11:00", int3_f = "11:15";
-        bool a1 = false, a2 = false, a3 = false;
-
-        if (jp_json.contains("intervalos") && jp_json["intervalos"].is_array()) {
-            const auto& arr = jp_json["intervalos"];
-            if (arr.size() >= 1) {
-                int1_i = arr[0].value("inicio", int1_i);
-                int1_f = arr[0].value("fim", int1_f);
-                a1 = arr[0].value("ativo", true);
-            }
-            if (arr.size() >= 2) {
-                int2_i = arr[1].value("inicio", int2_i);
-                int2_f = arr[1].value("fim", int2_f);
-                a2 = arr[1].value("ativo", true);
-            }
-            if (arr.size() >= 3) {
-                int3_i = arr[2].value("inicio", int3_i);
-                int3_f = arr[2].value("fim", int3_f);
-                a3 = arr[2].value("ativo", true);
-            }
-        }
-        t.setJornadaPadrao(model::JornadaTurma(ini, fim,
-                                               int1_i, int1_f, a1,
-                                               int2_i, int2_f, a2,
-                                               int3_i, int3_f, a3));
+        t.setJornadaPadrao(jornadaFromJson(j["jornada_padrao"]));
     }
 
     if (j.contains("excecoes_por_dia") && j["excecoes_por_dia"].is_object()) {
         for (auto it = j["excecoes_por_dia"].begin(); it != j["excecoes_por_dia"].end(); ++it) {
             auto dia = model::stringToDay(it.key());
-            const auto& val = it.value();
-            std::string ini = val.value("inicio", "08:00");
-            std::string fim = val.value("fim", "11:30");
-            std::string int1_i = "08:40", int1_f = "08:55";
-            std::string int2_i = "10:25", int2_f = "10:40";
-            std::string int3_i = "11:00", int3_f = "11:15";
-            bool a1 = false, a2 = false, a3 = false;
-            if (val.contains("intervalos") && val["intervalos"].is_array()) {
-                const auto& arr = val["intervalos"];
-                if (arr.size() >= 1) {
-                    int1_i = arr[0].value("inicio", int1_i);
-                    int1_f = arr[0].value("fim", int1_f);
-                    a1 = arr[0].value("ativo", true);
-                }
-                if (arr.size() >= 2) {
-                    int2_i = arr[1].value("inicio", int2_i);
-                    int2_f = arr[1].value("fim", int2_f);
-                    a2 = arr[1].value("ativo", true);
-                }
-                if (arr.size() >= 3) {
-                    int3_i = arr[2].value("inicio", int3_i);
-                    int3_f = arr[2].value("fim", int3_f);
-                    a3 = arr[2].value("ativo", true);
-                }
+            if (it.value().is_object()) {
+                t.setExcecaoDia(dia, jornadaFromJson(it.value()));
             }
-            t.setExcecaoDia(dia, model::JornadaTurma(ini, fim,
-                                                     int1_i, int1_f, a1,
-                                                     int2_i, int2_f, a2,
-                                                     int3_i, int3_f, a3));
         }
     }
 
@@ -632,6 +574,16 @@ nlohmann::json JsonSerialization::toJson(const model::InstitutionData& data) {
     }
     j["disciplinas"] = discs;
 
+    nlohmann::json tmpl_obj = nlohmann::json::object();
+    for (const auto& [shift, slots] : data.slotTemplates()) {
+        nlohmann::json arr = nlohmann::json::array();
+        for (const auto& s : slots) {
+            arr.push_back({{"inicio", s.startString()}, {"fim", s.endString()}});
+        }
+        tmpl_obj[model::shiftToString(shift)] = arr;
+    }
+    j["slot_templates"] = tmpl_obj;
+
     j["config"] = configToJson(data.config());
     j["grade"] = timetableToJson(data.grade());
 
@@ -645,6 +597,23 @@ nlohmann::json JsonSerialization::toJson(const model::InstitutionData& data) {
  */
 model::InstitutionData JsonSerialization::fromJson(const nlohmann::json& j) {
     model::InstitutionData data;
+
+    if (j.contains("slot_templates") && j["slot_templates"].is_object()) {
+        for (auto it = j["slot_templates"].begin(); it != j["slot_templates"].end(); ++it) {
+            if (it.value().is_array()) {
+                auto shift = model::stringToShift(it.key());
+                std::vector<model::TimeInterval> slots;
+                for (const auto& item : it.value()) {
+                    if (item.contains("inicio") && item.contains("fim")) {
+                        slots.emplace_back(item["inicio"].get<std::string>(), item["fim"].get<std::string>());
+                    }
+                }
+                if (!slots.empty()) {
+                    data.setSlotTemplateForShift(shift, std::move(slots));
+                }
+            }
+        }
+    }
 
     if (j.contains("professores") && j["professores"].is_array()) {
         for (const auto& item : j["professores"]) {
@@ -673,7 +642,7 @@ model::InstitutionData JsonSerialization::fromJson(const nlohmann::json& j) {
         data.setGrade(timetableFromJson(j["grade"]));
     }
 
-    data.gerarOcorrenciasAulas(true);
+    data.gerarOcorrenciasAulas(true, data.config().escopo_semestre);
     return data;
 }
 

@@ -15,15 +15,17 @@ A resolução combina formulações exatas baseadas em **Programação por Restr
 ## 2. Requisitos de Modelagem Temporal e Estruturas de Dados
 
 ### 2.1. Discretização Temporal em Slots de 5 Minutos
-* **Granularidade Base ($\Delta = 5\text{ min}$):** Obtida a partir do Máximo Divisor Comum entre as durações típicas de aula:
-  $$\Delta = \operatorname{MDC}(45, 50) = 5 \text{ minutos}$$
-* **Mapeamento Diário:** O dia letivo (00:00 às 24:00) é particionado em $N_{\text{slots}} = \frac{24 \times 60}{5} = 288$ slots discretos, indexados de $0$ a $287$.
-* **Conversão de Horários:**
-  $$\text{slot}(h, m) = \frac{h \times 60 + m}{5}$$
-* **Duração de Aulas:**
-  * Aulas de 45 minutos: ocupam exatamente $9$ slots contínuos.
-  * Aulas de 50 minutos: ocupam exatamente $10$ slots contínuos.
-  * O sistema aceita qualquer duração múltipla de 5 minutos (ex: 90 min = 18 slots, 100 min = 20 slots).
+O dia é representado em linha do tempo contínua de minutos inteiros a partir da meia-noite (`00:00` = $0$, `24:00` = $1440$, constante `MINUTES_PER_DAY = 1440` em [`TimeSlot.h`](include/model/TimeSlot.h#L15)):
+
+- Para cada turma $g \in \mathcal{G}$ e dia letivo $d \in \mathcal{D}_g$, o usuário cadastra uma sequência ordenada de **slots letivos** $\mathcal{K}_{g,d} = \{1, \ldots, |\mathcal{K}_{g,d}|\}$.
+- Cada slot $k \in \mathcal{K}_{g,d}$ corresponde ao intervalo semiaberto $[t^{ini}_{g,d,k}, t^{fim}_{g,d,k}) \subseteq [0, 1440)$ em minutos, com duração:
+$$
+\Delta_{g,d,k} = t^{fim}_{g,d,k} - t^{ini}_{g,d,k} > 0,
+\qquad
+t^{fim}_{g,d,k} \le t^{ini}_{g,d,k+1} \quad \forall k < |\mathcal{K}_{g,d}|.
+$$
+- Como os intervalos são semiabertos, um slot que termina às `08:20` ($500$) não conflita com outro que inicia às `08:20` ($500$).
+- Quando $t^{fim}_{g,d,k} < t^{ini}_{g,d,k+1}$, o intervalo $[t^{fim}_{g,d,k}, t^{ini}_{g,d,k+1})$ constitui automaticamente um **intervalo de recreio/almoço** da turma $g$ no dia $d$.
 
 ### 2.2. Regimes Curriculares e Semestres Acadêmicos
 * **Regimes Suportados:**
