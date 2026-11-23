@@ -1,0 +1,78 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-escalonador}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-escalonador}
+      POSTGRES_DB: ${POSTGRES_DB:-escalonador}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-escalonador}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ./web/backend
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-escalonador}:${POSTGRES_PASSWORD:-escalonador}@postgres:5432/${POSTGRES_DB:-escalonador}
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-secret-change-me-in-production-32bytes}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: web/backend/Dockerfile.worker
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-escalonador}:${POSTGRES_PASSWORD:-escalonador}@postgres:5432/${POSTGRES_DB:-escalonador}
+      REDIS_URL: redis://redis:6379/0
+      SOLVER_CLI_BIN: /usr/local/bin/escalonador_solver_cli
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./web/frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+  flower:
+    image: mher/flower:2.0
+    profiles: ["monitoring"]
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+
+volumes:
+  pg_data:

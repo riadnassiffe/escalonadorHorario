@@ -1,0 +1,34 @@
+FROM ubuntu:24.04 AS cpp_builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential cmake ninja-build python3-pip git ca-certificates pkg-config \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip3 install --no-cache-dir --break-system-packages conan
+
+WORKDIR /src
+COPY CMakeLists.txt conanfile.txt ./
+COPY include ./include
+COPY src/model ./src/model
+COPY src/solver ./src/solver
+COPY src/serialization ./src/serialization
+COPY src/cli_main.cpp ./src/cli_main.cpp
+
+RUN conan profile detect --force \
+    && conan install . --build=missing -s compiler.cppstd=20 \
+    && cmake -B build -S . -G Ninja -DCMAKE_TOOLCHAIN_FILE=build/Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_DESKTOP_GUI=OFF \
+    && cmake --build build --target escalonador_solver_cli -j$(nproc)
+
+FROM python:3.12-slim
+
+WORKDIR /app
+RUN pip install --no-cache-dir uv
+
+COPY --from=cpp_builder /src/build/escalonador_solver_cli /usr/local/bin/escalonador_solver_cli
+ENV SOLVER_CLI_BIN=/usr/local/bin/escalonador_solver_cli
+
+COPY web/backend/pyproject.toml ./
+RUN uv sync --no-dev --python 3.12
+
+COPY web/backend/app ./app
+
+CMD ["uv", "run", "celery", "-A", "app.workers.celery_app", "worker", "--loglevel=info", "--concurrency=2", "-Q", "optimization,default"]

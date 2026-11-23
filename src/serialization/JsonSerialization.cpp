@@ -476,6 +476,7 @@ nlohmann::json JsonSerialization::timetableToJson(const model::Timetable& tt) {
         {"total_aulas_alocadas", s.total_aulas_alocadas},
         {"total_aulas_esperadas", s.total_aulas_esperadas}
     };
+    j["mensagens_diagnostico"] = tt.mensagensDiagnostico();
     return j;
 }
 
@@ -538,6 +539,9 @@ model::Timetable JsonSerialization::timetableFromJson(const nlohmann::json& j) {
         s.total_aulas_alocadas = s_json.value("total_aulas_alocadas", 0);
         s.total_aulas_esperadas = s_json.value("total_aulas_esperadas", 0);
         tt.setEstatisticas(s);
+    }
+    if (j.contains("mensagens_diagnostico") && j["mensagens_diagnostico"].is_array()) {
+        tt.setMensagensDiagnostico(j["mensagens_diagnostico"].get<std::vector<std::string>>());
     }
     return tt;
 }
