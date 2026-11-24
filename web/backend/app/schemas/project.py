@@ -52,9 +52,14 @@ class ProjectResponse(BaseModel):
     description: str
     academic_year: str
     active_timetable_version_id: uuid.UUID | None
+    allow_professor_preferences_edit: bool = True
     created_at: datetime
     updated_at: datetime
     counts: dict[str, int] = Field(default_factory=dict)
+
+
+class ProfessorPreferencesAccessRequest(BaseModel):
+    allow_edit: bool
 
 
 class SlotTemplatesUpdate(BaseModel):

@@ -59,6 +59,7 @@ class Project(Base):
     description: Mapped[str] = mapped_column(Text, default="", nullable=False)
     academic_year: Mapped[str] = mapped_column(String(32), default="2026", nullable=False)
     active_timetable_version_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    allow_professor_preferences_edit: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False

@@ -1681,7 +1681,6 @@ void TimetableView::alocarAulaManual(int row, int col) {
                 model::Lesson nova_aula(aid, disc->id(), disc->nome(), disc->tipo(),
                                         disc->duracaoMinutos(), disc->professores(), disc->turmas(),
                                         disc->regime(), disc->semestre());
-                nova_aula.setTurnosPermitidos(disc->turnosPermitidos());
                 nova_aula.setSalasAlternativas(disc->salasAlternativas());
                 if (pinned) {
                     nova_aula.setPinned(true);

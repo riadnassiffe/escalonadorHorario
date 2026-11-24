@@ -49,7 +49,7 @@ LessonEditorDialog::LessonEditorDialog(const std::vector<model::Professor>& prof
 }
 
 /**
- * @brief Constrói os campos do formulário, controles de regime, turnos e seleção de salas.
+ * @brief Constrói os campos do formulário, controles de regime e seleção de salas.
  */
 void LessonEditorDialog::setupUi() {
     setWindowIcon(ModernTheme::icon("disciplina"));
@@ -108,54 +108,6 @@ void LessonEditorDialog::setupUi() {
                               QString::fromStdString(t.id()));
     }
     form_layout->addRow("Turma:", combo_turma_);
-
-    // Turnos permitidos
-    auto* turnos_layout = new QHBoxLayout();
-    auto* chk_manha = new QCheckBox("Manhã", this);
-    chk_manha->setChecked(true);
-    auto* chk_tarde = new QCheckBox("Tarde", this);
-    auto* chk_noite = new QCheckBox("Noite", this);
-    turnos_layout->addWidget(chk_manha);
-    turnos_layout->addWidget(chk_tarde);
-    turnos_layout->addWidget(chk_noite);
-    turnos_layout->addStretch();
-    check_turnos_ = {chk_manha, chk_tarde, chk_noite};
-    form_layout->addRow("Turnos Permitidos:", turnos_layout);
-
-    auto updateTurnosForTurma = [this](int idx) {
-        if (idx < 0 || idx >= static_cast<int>(turmas_.size())) return;
-        const auto& t = turmas_[idx];
-        bool tem_manha = false;
-        bool tem_tarde = false;
-        bool tem_noite = false;
-
-        for (auto d : t.diasLetivos()) {
-            auto j = t.jornadaParaDia(d);
-            auto jt = j.jornadaTotal();
-            int start_min = jt.start_min;
-            int end_min = jt.end_min;
-            if (start_min < 12 * 60 + 30) tem_manha = true;
-            if (end_min > 12 * 60 + 30 && start_min < 18 * 60) tem_tarde = true;
-            if (end_min > 18 * 60) tem_noite = true;
-        }
-        if (t.turno() == model::ShiftType::INTEGRAL) {
-            tem_manha = true;
-            tem_tarde = true;
-        } else if (t.turno() == model::ShiftType::TARDE) {
-            tem_tarde = true;
-        } else if (t.turno() == model::ShiftType::NOITE) {
-            tem_noite = true;
-        }
-
-        check_turnos_[0]->setChecked(tem_manha);
-        check_turnos_[1]->setChecked(tem_tarde);
-        check_turnos_[2]->setChecked(tem_noite);
-    };
-
-    connect(combo_turma_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, updateTurnosForTurma);
-    if (!turmas_.empty()) {
-        updateTurnosForTurma(0);
-    }
 
     spin_max_dia_ = new QSpinBox(this);
     spin_max_dia_->setRange(1, 10);
@@ -287,16 +239,6 @@ void LessonEditorDialog::loadDisciplina(const model::Disciplina& disc) {
         if (idx_t >= 0) combo_turma_->setCurrentIndex(idx_t);
     }
 
-    // Turnos
-    check_turnos_[0]->setChecked(false);
-    check_turnos_[1]->setChecked(false);
-    check_turnos_[2]->setChecked(false);
-    for (auto st : disc.turnosPermitidos()) {
-        if (st == model::ShiftType::MANHA) check_turnos_[0]->setChecked(true);
-        if (st == model::ShiftType::TARDE) check_turnos_[1]->setChecked(true);
-        if (st == model::ShiftType::NOITE) check_turnos_[2]->setChecked(true);
-    }
-
     // Salas alternativas
     for (int i = 0; i < list_salas_alternativas_->count(); ++i) {
         auto* item = list_salas_alternativas_->item(i);
@@ -331,13 +273,6 @@ model::Disciplina LessonEditorDialog::getDisciplina() const {
 
     d.addProfessor(combo_prof_->currentData().toString().toStdString());
     d.addTurma(combo_turma_->currentData().toString().toStdString());
-
-    std::vector<model::ShiftType> turnos;
-    if (check_turnos_[0]->isChecked()) turnos.push_back(model::ShiftType::MANHA);
-    if (check_turnos_[1]->isChecked()) turnos.push_back(model::ShiftType::TARDE);
-    if (check_turnos_[2]->isChecked()) turnos.push_back(model::ShiftType::NOITE);
-    if (turnos.empty()) turnos.push_back(model::ShiftType::MANHA);
-    d.setTurnosPermitidos(turnos);
 
     d.setMaxAulasPorDiaTurma(spin_max_dia_->value());
     d.setExigirAulasConsecutivas(check_consecutivas_->isChecked());

@@ -294,13 +294,6 @@ nlohmann::json JsonSerialization::disciplinaToJson(const model::Disciplina& disc
     j["semestre"] = model::semestreToString(disc.semestre());
     j["professores"] = disc.professores();
     j["turmas"] = disc.turmas();
-
-    nlohmann::json turnos_arr = nlohmann::json::array();
-    for (auto t : disc.turnosPermitidos()) {
-        turnos_arr.push_back(model::shiftToString(t));
-    }
-    j["turnos_permitidos"] = turnos_arr;
-
     j["salas_alternativas"] = disc.salasAlternativas();
     j["exigir_aulas_consecutivas"] = disc.exigirAulasConsecutivas();
     j["max_aulas_por_dia_turma"] = disc.maxAulasPorDiaTurma();
@@ -330,13 +323,6 @@ model::Disciplina JsonSerialization::disciplinaFromJson(const nlohmann::json& j)
     }
     if (j.contains("turmas") && j["turmas"].is_array()) {
         d.setTurmas(j["turmas"].get<std::vector<std::string>>());
-    }
-    if (j.contains("turnos_permitidos") && j["turnos_permitidos"].is_array()) {
-        std::vector<model::ShiftType> turnos;
-        for (const auto& item : j["turnos_permitidos"]) {
-            turnos.push_back(model::stringToShift(item.get<std::string>()));
-        }
-        d.setTurnosPermitidos(turnos);
     }
     if (j.contains("salas_alternativas") && j["salas_alternativas"].is_array()) {
         d.setSalasAlternativas(j["salas_alternativas"].get<std::vector<std::vector<std::string>>>());

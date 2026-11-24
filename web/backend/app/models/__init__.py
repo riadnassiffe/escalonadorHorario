@@ -1,4 +1,4 @@
-from app.models.auth import Institution, User
+from app.models.auth import Institution, PasswordResetToken, User
 from app.models.project import OptimizationConfigModel, Project
 from app.models.academic import DisciplinaModel, ProfessorModel, RoomModel, TurmaModel
 from app.models.timetable import AllocatedLessonModel, OptimizationJob, TimetableVersion
@@ -6,6 +6,7 @@ from app.models.timetable import AllocatedLessonModel, OptimizationJob, Timetabl
 __all__ = [
     "Institution",
     "User",
+    "PasswordResetToken",
     "Project",
     "OptimizationConfigModel",
     "ProfessorModel",

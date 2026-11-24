@@ -25,7 +25,7 @@ namespace scheduler::ui {
  *
  * Configura nome, regime letivo (anual ou semestral), semestre de oferta, tipo de ambiente,
  * duração de aula em minutos, quantidade de aulas semanais, professor responsável,
- * turma destinatária, turnos permitidos, aulas consecutivas e salas/laboratórios alternativos.
+ * turma destinatária, aulas consecutivas e salas/laboratórios alternativos.
  */
 class LessonEditorDialog : public QDialog {
     Q_OBJECT
@@ -93,7 +93,6 @@ private:
     QComboBox* combo_turma_{nullptr};
     QListWidget* list_salas_alternativas_{nullptr};
     QWidget* widget_salas_alternativas_{nullptr};
-    std::vector<QCheckBox*> check_turnos_;
     QCheckBox* check_consecutivas_{nullptr};
     QSpinBox* spin_max_dia_{nullptr};
 };

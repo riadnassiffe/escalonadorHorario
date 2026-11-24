@@ -106,22 +106,20 @@ Todas as restrições a seguir são de cumprimento obrigatório para que uma sol
    * A aula deve caber inteiramente dentro de um único bloco contínuo da jornada da turma, respeitando início, término e intervalos de descanso.
 6. **Respeito à Disponibilidade dos Professores:**
    * Aulas só podem ser alocadas em dias e horários em que o professor esteja explicitamente disponível.
-7. **Respeito aos Turnos Permitidos:**
-   * Aulas devem ocorrer estritamente dentro dos turnos permitidos para a turma e disciplina (Manhã, Tarde, Noite).
-8. **Carga Horária Máxima Diária do Professor:**
+7. **Carga Horária Máxima Diária do Professor:**
    * A soma dos minutos de aulas alocadas para um professor $p$ no dia $d$ não pode ultrapassar o teto $M_{p,d}$ (quando configurado maior que zero).
-9. **Sala Teórica Fixa por Turma:**
+8. **Sala Teórica Fixa por Turma:**
    * Cada turma mantém rigorosamente a mesma sala teórica ao longo de toda a semana para todas as suas disciplinas teóricas.
    * Se a turma não tiver sala pré-definida, o solver escolhe exatamente uma sala entre as elegíveis via restrição de unicidade:
      $$\sum_{r \in R_g^{\text{teo}}} z_{g,r} = 1$$
-10. **Início Obrigatório da Primeira Aula no Início da Jornada:**
+9. **Início Obrigatório da Primeira Aula no Início da Jornada:**
     * A primeira aula do dia de cada turma deve iniciar obrigatoriamente no horário inicial da jornada ($T^{\text{ini}}$).
-11. **Compatibilidade Semestral:**
+10. **Compatibilidade Semestral:**
     * Disciplinas semestrais do 1º e 2º semestre podem reutilizar os mesmos professores, turmas e salas em horários coincidentes sem configurar choque.
     * Disciplinas anuais ocupam os recursos em ambos os semestres.
-12. **Aulas Consecutivas em Bloco:**
+11. **Aulas Consecutivas em Bloco:**
     * Quando exigido pela disciplina, as aulas são forçadas a ocorrer agrupadas no mesmo dia através de variáveis binárias de dia ativo ($w_d$).
-13. **Teto Diário de Aulas da Mesma Matéria por Turma:**
+12. **Teto Diário de Aulas da Mesma Matéria por Turma:**
     * Quando ativado o controle de dispersão, limita o número máximo de aulas da mesma matéria em um único dia para a turma (padrão: 2 aulas/dia).
 14. **Preenchimento Integral Opcional da Jornada:**
     * Quando ativado, exige que todos os slots letivos da jornada de cada turma tenham aula alocada, proibindo janelas ou horários vagos.
@@ -201,7 +199,7 @@ O sistema implementa algoritmos de resolução intercambiáveis:
   * Emissão de erros impeditivos (`errors`) e advertências informativas (`warnings`).
 * **Geração do Domínio de Candidatos Viáveis ($C_a$):**
   * Pré-cálculo de todas as combinações válidas de dia, slot inicial e salas para cada aula antes da entrega ao solver.
-  * Descarte antecipado de posições que violem jornadas, disponibilidades ou limites de turnos, reduzindo o espaço de busca do modelo.
+  * Descarte antecipado de posições que violem jornadas, disponibilidades ou limites da jornada, reduzindo o espaço de busca do modelo.
 
 ---
 

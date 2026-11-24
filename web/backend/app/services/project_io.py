@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from app.models.academic import DisciplinaModel, ProfessorModel, RoomModel, TurmaModel
+from app.models.auth import User
 from app.models.project import OptimizationConfigModel, Project, default_slot_templates
 from app.models.timetable import AllocatedLessonModel, TimetableVersion
 from app.services.conflict_engine import ProjectSnapshot
@@ -21,7 +22,7 @@ from app.services.time_utils import (
 
 
 def _professor_to_json(p: ProfessorModel) -> dict[str, Any]:
-    return {
+    data: dict[str, Any] = {
         "id": p.code,
         "nome": p.nome,
         "preferencia_dias": p.preferencia_dias,
@@ -31,6 +32,9 @@ def _professor_to_json(p: ProfessorModel) -> dict[str, Any]:
         "peso_janela": p.peso_janela,
         "turnos_pretendidos": p.turnos_pretendidos,
     }
+    if p.email:
+        data["email"] = p.email
+    return data
 
 
 def _room_to_json(r: RoomModel) -> dict[str, Any]:
@@ -67,7 +71,6 @@ def _disciplina_to_json(d: DisciplinaModel) -> dict[str, Any]:
         "semestre": d.semestre,
         "professores": d.professores,
         "turmas": d.turmas,
-        "turnos_permitidos": d.turnos_permitidos,
         "salas_alternativas": d.salas_alternativas,
         "exigir_aulas_consecutivas": d.exigir_aulas_consecutivas,
         "max_aulas_por_dia_turma": d.max_aulas_por_dia_turma,
@@ -266,6 +269,17 @@ async def import_project_json(
     if project is None:
         raise ValueError("Projeto não encontrado")
 
+    # Preserve existing professor account links before replacing entities
+    existing_profs = (
+        await db.execute(select(ProfessorModel).where(ProfessorModel.project_id == project_id))
+    ).scalars().all()
+    existing_links = {p.code: (p.email, p.user_id) for p in existing_profs}
+
+    inst_users = (
+        await db.execute(select(User).where(User.institution_id == project.institution_id))
+    ).scalars().all()
+    inst_users_by_email = {u.email.lower(): u.id for u in inst_users}
+
     # Clear existing academic entities
     await db.execute(delete(ProfessorModel).where(ProfessorModel.project_id == project_id))
     await db.execute(delete(RoomModel).where(RoomModel.project_id == project_id))
@@ -274,11 +288,20 @@ async def import_project_json(
 
     for p in data.get("professores", []):
         turnos = p.get("turnos_pretendidos") or {d: ["MANHA", "TARDE", "NOITE"] for d in ALL_DAYS}
+        code = p["id"]
+        prev_email, prev_user_id = existing_links.get(code, (None, None))
+        raw_email = p.get("email")
+        email = raw_email.strip().lower() if isinstance(raw_email, str) and raw_email.strip() else prev_email
+        linked_uid = inst_users_by_email.get(email) if email else prev_user_id
+        if linked_uid is None and email == prev_email:
+            linked_uid = prev_user_id
         db.add(
             ProfessorModel(
                 project_id=project_id,
-                code=p["id"],
+                code=code,
                 nome=p["nome"],
+                email=email,
+                user_id=linked_uid,
                 preferencia_dias=p.get("preferencia_dias", {d: 5 for d in ALL_DAYS}),
                 disponibilidade=p.get("disponibilidade", {}),
                 turnos_pretendidos=turnos,
@@ -332,7 +355,6 @@ async def import_project_json(
                 semestre=str(d.get("semestre", "AMBOS")),
                 professores=d.get("professores", []),
                 turmas=d.get("turmas", []),
-                turnos_permitidos=d.get("turnos_permitidos", ["MANHA"]),
                 salas_alternativas=d.get("salas_alternativas", []),
                 exigir_aulas_consecutivas=bool(d.get("exigir_aulas_consecutivas", False)),
                 max_aulas_por_dia_turma=int(d.get("max_aulas_por_dia_turma", 2)),
@@ -549,7 +571,6 @@ def build_default_example_json() -> dict[str, Any]:
             "semestre": sem,
             "professores": profs,
             "turmas": turmas_l,
-            "turnos_permitidos": ["MANHA"],
             "salas_alternativas": salas_alt or [],
             "exigir_aulas_consecutivas": False,
             "max_aulas_por_dia_turma": 2,

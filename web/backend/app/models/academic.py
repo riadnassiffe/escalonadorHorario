@@ -18,6 +18,10 @@ class ProfessorModel(Base):
     )
     code: Mapped[str] = mapped_column(String(64), nullable=False)
     nome: Mapped[str] = mapped_column(String(200), nullable=False)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     preferencia_dias: Mapped[dict] = mapped_column(
         JSONBCompat, default=lambda: {"SEG": 5, "TER": 5, "QUA": 5, "QUI": 5, "SEX": 5}, nullable=False
     )
@@ -32,6 +36,7 @@ class ProfessorModel(Base):
     peso_janela: Mapped[int] = mapped_column(Integer, default=8, nullable=False)
 
     project = relationship("Project", back_populates="professores")
+    user = relationship("User")
 
 
 class RoomModel(Base):
@@ -90,7 +95,6 @@ class DisciplinaModel(Base):
     semestre: Mapped[str] = mapped_column(String(32), default="AMBOS", nullable=False)
     professores: Mapped[list] = mapped_column(JSONBCompat, default=list, nullable=False)
     turmas: Mapped[list] = mapped_column(JSONBCompat, default=list, nullable=False)
-    turnos_permitidos: Mapped[list] = mapped_column(JSONBCompat, default=lambda: ["MANHA"], nullable=False)
     salas_alternativas: Mapped[list] = mapped_column(JSONBCompat, default=list, nullable=False)
     exigir_aulas_consecutivas: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     max_aulas_por_dia_turma: Mapped[int] = mapped_column(Integer, default=2, nullable=False)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Literal
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 DayOfWeek = Literal["SEG", "TER", "QUA", "QUI", "SEX"]
 ShiftType = Literal["MANHA", "TARDE", "NOITE", "INTEGRAL"]
@@ -18,9 +18,17 @@ class JornadaTurmaSchema(BaseModel):
     slots: list[TimeSlotSchema] = Field(default_factory=list)
 
 
+def _normalize_optional_email(v: object) -> object:
+    if isinstance(v, str):
+        stripped = v.strip().lower()
+        return stripped or None
+    return v
+
+
 class ProfessorBase(BaseModel):
     code: str | None = None
     nome: str = Field(min_length=1, max_length=200)
+    email: EmailStr | None = None
     preferencia_dias: dict[str, int] = Field(
         default_factory=lambda: {"SEG": 5, "TER": 5, "QUA": 5, "QUI": 5, "SEX": 5}
     )
@@ -31,6 +39,11 @@ class ProfessorBase(BaseModel):
     carga_maxima_diaria_minutos: int = Field(default=0, ge=0)
     max_aulas_por_dia: int = Field(default=0, ge=0)
     peso_janela: int = Field(default=8, ge=0, le=10)
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def clean_email(cls, v: object) -> object:
+        return _normalize_optional_email(v)
 
 
 class ProfessorCreate(ProfessorBase):
@@ -44,6 +57,49 @@ class ProfessorUpdate(ProfessorBase):
 class ProfessorResponse(ProfessorBase):
     id: str
     code: str
+    email: str | None = None
+    has_user_account: bool = False
+    must_change_password: bool = False
+
+
+class ProfessorCreateResponse(ProfessorResponse):
+    initial_password: str | None = None
+    account_created: bool = False
+    email_sent: bool = False
+    delivery_note: str | None = None
+
+
+class ProvisionAccessRequest(BaseModel):
+    email: EmailStr | None = None
+    reset_password: bool = True
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def clean_email(cls, v: object) -> object:
+        return _normalize_optional_email(v)
+
+
+class ProfessorCredentialResponse(BaseModel):
+    code: str
+    nome: str
+    email: str
+    initial_password: str | None = None
+    account_created: bool = False
+    password_reset: bool = False
+    email_sent: bool = False
+    delivery_note: str | None = None
+
+
+class BatchProvisionRequest(BaseModel):
+    only_missing: bool = True
+
+
+class BatchProvisionResponse(BaseModel):
+    credentials: list[ProfessorCredentialResponse]
+    total_processed: int
+    created_count: int
+    reset_count: int
+    skipped_count: int
 
 
 class RoomBase(BaseModel):
@@ -91,6 +147,20 @@ class TurmaResponse(TurmaBase):
     code: str
 
 
+class TurmaCopyRequest(BaseModel):
+    nome: str = Field(min_length=1, max_length=200)
+    code: str | None = None
+    copy_disciplinas: bool = False
+    sala_teorica_id: str | None = None
+    salas_teoricas_permitidas: list[str] | None = None
+
+
+class TurmaCopyResponse(BaseModel):
+    turma: TurmaResponse
+    copied_disciplinas_count: int = 0
+    copied_disciplinas: list[DisciplinaResponse] = Field(default_factory=list)
+
+
 class DisciplinaBase(BaseModel):
     code: str | None = None
     nome: str = Field(min_length=1, max_length=200)
@@ -101,7 +171,6 @@ class DisciplinaBase(BaseModel):
     semestre: str = "AMBOS"
     professores: list[str] = Field(default_factory=list)
     turmas: list[str] = Field(default_factory=list)
-    turnos_permitidos: list[str] = Field(default_factory=lambda: ["MANHA"])
     salas_alternativas: list[list[str]] = Field(default_factory=list)
     exigir_aulas_consecutivas: bool = False
     max_aulas_por_dia_turma: int = Field(default=2, ge=0)

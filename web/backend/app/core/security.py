@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import hashlib
+import secrets
 import uuid
 from typing import Any
 
@@ -25,6 +27,31 @@ def hash_password(password: str) -> str:
 
 def verify_password(plain_password: str, password_hash: str) -> bool:
     return password_hasher.verify(plain_password, password_hash)
+
+
+def generate_temporary_password(length: int = 10) -> str:
+    """Gera senha temporária aleatória sem caracteres ambíguos (0/O, 1/l/I)."""
+    upper = "ABCDEFGHJKLMNPQRSTUVWXYZ"
+    lower = "abcdefghijkmnopqrstuvwxyz"
+    digits = "23456789"
+    all_chars = upper + lower + digits
+    chars = (
+        [secrets.choice(upper) for _ in range(2)]
+        + [secrets.choice(lower) for _ in range(2)]
+        + [secrets.choice(digits) for _ in range(2)]
+        + [secrets.choice(all_chars) for _ in range(max(0, length - 6))]
+    )
+    secrets.SystemRandom().shuffle(chars)
+    return "".join(chars)
+
+
+def hash_reset_token(raw_token: str) -> str:
+    return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+
+
+def generate_reset_token() -> tuple[str, str]:
+    raw = secrets.token_urlsafe(32)
+    return raw, hash_reset_token(raw)
 
 
 def create_access_token(user_id: uuid.UUID, institution_id: uuid.UUID, role: str) -> str:

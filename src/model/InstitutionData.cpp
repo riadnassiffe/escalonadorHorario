@@ -371,7 +371,6 @@ void InstitutionData::gerarOcorrenciasAulas(bool preservar_fixadas, EscopoSemest
             Lesson aula(aula_id, disc.id(), disc.nome(), disc.tipo(),
                         disc.duracaoMinutos(), disc.professores(), disc.turmas(),
                         disc.regime(), disc.semestre());
-            aula.setTurnosPermitidos(disc.turnosPermitidos());
             aula.setSalasAlternativas(disc.salasAlternativas());
             int sem_ativo = 1;
             if (disc.isSemestral()) {

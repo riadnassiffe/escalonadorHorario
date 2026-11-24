@@ -246,7 +246,6 @@ Presente no topo de todas as abas de cadastro (Professores, Turmas, Salas e Disc
   * **Duração da Aula:** Dropdown com valores pré-definidos (`45 minutos`, `50 minutos`) ou valor customizado em minutos.
   * Quantidade de aulas semanais requeridas (`QSpinBox`).
   * Seleção de Professor responsável e Turmas atendidas.
-  * Checkboxes de turnos admitidos (Manhã, Tarde, Noite).
   * **Exigência de Aulas Consecutivas em Bloco:** Checkbox para forçar que as aulas ocorram juntas no mesmo dia (blocos de 2, 4 ou 8 aulas).
   * Lista de Salas e Laboratórios alternativos admitidos para a disciplina.
 

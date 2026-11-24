@@ -454,9 +454,6 @@
       "turmas": [
         "T01"
       ],
-      "turnos_permitidos": [
-        "MANHA"
-      ],
       "salas_alternativas": []
     },
     {
@@ -470,9 +467,6 @@
       ],
       "turmas": [
         "T01"
-      ],
-      "turnos_permitidos": [
-        "MANHA"
       ],
       "salas_alternativas": []
     },
@@ -488,9 +482,6 @@
       "turmas": [
         "T01"
       ],
-      "turnos_permitidos": [
-        "MANHA"
-      ],
       "salas_alternativas": []
     },
     {
@@ -504,9 +495,6 @@
       ],
       "turmas": [
         "T01"
-      ],
-      "turnos_permitidos": [
-        "MANHA"
       ],
       "salas_alternativas": [
         [
@@ -529,9 +517,6 @@
       "turmas": [
         "T01"
       ],
-      "turnos_permitidos": [
-        "MANHA"
-      ],
       "salas_alternativas": []
     },
     {
@@ -545,9 +530,6 @@
       ],
       "turmas": [
         "T01"
-      ],
-      "turnos_permitidos": [
-        "MANHA"
       ],
       "salas_alternativas": []
     },
@@ -563,9 +545,6 @@
       "turmas": [
         "T01"
       ],
-      "turnos_permitidos": [
-        "MANHA"
-      ],
       "salas_alternativas": []
     },
     {
@@ -579,9 +558,6 @@
       ],
       "turmas": [
         "T02"
-      ],
-      "turnos_permitidos": [
-        "MANHA"
       ],
       "salas_alternativas": []
     },
@@ -597,9 +573,6 @@
       "turmas": [
         "T02"
       ],
-      "turnos_permitidos": [
-        "MANHA"
-      ],
       "salas_alternativas": []
     },
     {
@@ -613,9 +586,6 @@
       ],
       "turmas": [
         "T02"
-      ],
-      "turnos_permitidos": [
-        "MANHA"
       ],
       "salas_alternativas": []
     },
@@ -631,9 +601,6 @@
       "turmas": [
         "T02"
       ],
-      "turnos_permitidos": [
-        "MANHA"
-      ],
       "salas_alternativas": []
     },
     {
@@ -647,9 +614,6 @@
       ],
       "turmas": [
         "T02"
-      ],
-      "turnos_permitidos": [
-        "MANHA"
       ],
       "salas_alternativas": []
     },
@@ -665,9 +629,6 @@
       "turmas": [
         "T02"
       ],
-      "turnos_permitidos": [
-        "MANHA"
-      ],
       "salas_alternativas": []
     },
     {
@@ -681,9 +642,6 @@
       ],
       "turmas": [
         "T03"
-      ],
-      "turnos_permitidos": [
-        "MANHA"
       ],
       "salas_alternativas": []
     },
@@ -699,9 +657,6 @@
       "turmas": [
         "T03"
       ],
-      "turnos_permitidos": [
-        "MANHA"
-      ],
       "salas_alternativas": []
     },
     {
@@ -715,9 +670,6 @@
       ],
       "turmas": [
         "T03"
-      ],
-      "turnos_permitidos": [
-        "MANHA"
       ],
       "salas_alternativas": [
         [
@@ -740,9 +692,6 @@
       "turmas": [
         "T03"
       ],
-      "turnos_permitidos": [
-        "MANHA"
-      ],
       "salas_alternativas": []
     },
     {
@@ -756,9 +705,6 @@
       ],
       "turmas": [
         "T03"
-      ],
-      "turnos_permitidos": [
-        "MANHA"
       ],
       "salas_alternativas": []
     }

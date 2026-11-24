@@ -27,7 +27,7 @@ class UserCreateRequest(BaseModel):
     full_name: str = Field(min_length=2, max_length=200)
     email: EmailStr
     password: str = Field(min_length=6, max_length=128)
-    role: Literal["ADMIN", "COORDENADOR", "VISUALIZADOR"] = "COORDENADOR"
+    role: Literal["ADMIN", "COORDENADOR", "VISUALIZADOR", "PROFESSOR"] = "COORDENADOR"
 
 
 class UserResponse(BaseModel):
@@ -37,6 +37,7 @@ class UserResponse(BaseModel):
     email: EmailStr
     full_name: str
     role: str
+    must_change_password: bool = False
     is_active: bool
     created_at: datetime
 
@@ -46,3 +47,29 @@ class TokenResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordResponse(BaseModel):
+    message: str
+    email_sent: bool = False
+    dev_reset_token: str | None = None
+    dev_reset_url: str | None = None
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=10)
+    new_password: str = Field(min_length=6, max_length=128)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1)
+    new_password: str = Field(min_length=6, max_length=128)
+
+
+class MessageResponse(BaseModel):
+    ok: bool = True
+    message: str

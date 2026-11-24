@@ -37,7 +37,6 @@ O software implementa rigorosamente todas as especificações e formulações ma
    - Não sobreposição de salas (`NoOverlap`).
    - Início obrigatório da primeira aula no início da jornada da turma ($T^{ini}$).
    - Respeito à disponibilidade de horários dos professores ($V_{p,d}$).
-   - Respeito aos turnos permitidos (Manhã, Tarde, Noite, Integral).
    - Carga máxima diária dos professores ($M_{p,d}$).
    - Preenchimento integral opcional da jornada (Seção 3.10).
 

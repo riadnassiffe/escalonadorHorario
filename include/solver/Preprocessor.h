@@ -37,7 +37,7 @@ struct ValidationResult {
  * @brief Responsável pela validação dos dados da instituição e geração do domínio de candidatos viáveis.
  *
  * Seleciona slots configurados para as turmas cuja duração coincida exatamente com a da aula,
- * respeitando disponibilidade de professores, turnos permitidos e compatibilidade de salas físicas.
+ * respeitando disponibilidade de professores e compatibilidade de salas físicas.
  */
 class Preprocessor {
 public:
@@ -61,15 +61,6 @@ public:
      */
     static bool turmaAcomodaSlot(const model::Turma& turma, model::DayOfWeek dia,
                                  const model::TimeInterval& slot);
-
-    /**
-     * @brief Verifica se um intervalo [start_min, end_min) está contido nos limites do turno especificado.
-     * @param shift Turno avaliado (MANHA, TARDE, NOITE, INTEGRAL).
-     * @param start_min Minuto inicial da aula.
-     * @param end_min Minuto final da aula.
-     * @return true se o horário estiver compreendido no turno.
-     */
-    static bool shiftAcomodaAula(model::ShiftType shift, int start_min, int end_min);
 };
 
 } // namespace scheduler::solver

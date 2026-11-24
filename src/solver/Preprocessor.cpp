@@ -241,24 +241,6 @@ bool Preprocessor::turmaAcomodaSlot(const model::Turma& turma, model::DayOfWeek 
     return turma.jornadaParaDia(dia).contemSlotExato(slot);
 }
 
-bool Preprocessor::shiftAcomodaAula(model::ShiftType shift, int start_min, int end_min) {
-    switch (shift) {
-        case model::ShiftType::MANHA:
-            return start_min >= model::TimeInterval::timeStringToMinutes("07:00") &&
-                   end_min <= model::TimeInterval::timeStringToMinutes("13:00");
-        case model::ShiftType::TARDE:
-            return start_min >= model::TimeInterval::timeStringToMinutes("12:00") &&
-                   end_min <= model::TimeInterval::timeStringToMinutes("19:00");
-        case model::ShiftType::NOITE:
-            return start_min >= model::TimeInterval::timeStringToMinutes("18:00") &&
-                   end_min <= model::TimeInterval::timeStringToMinutes("23:00");
-        case model::ShiftType::INTEGRAL:
-            return start_min >= model::TimeInterval::timeStringToMinutes("07:00") &&
-                   end_min <= model::TimeInterval::timeStringToMinutes("23:00");
-    }
-    return true;
-}
-
 std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
     const model::InstitutionData& data,
     const model::Lesson& aula,
@@ -360,7 +342,6 @@ std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
 
     bool turmas_sem_dia = false;
     bool nenhum_slot_mesma_duracao = true;
-    bool fora_turnos = false;
     bool prof_sem_disponibilidade = false;
     bool conflito_outra_turma = false;
     int slots_avaliados = 0;
@@ -400,20 +381,7 @@ std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
             }
             if (!todas_turmas_acomodam) continue;
 
-            // 2. Verificar turno permitido
-            bool turno_ok = aula.turnosPermitidos().empty();
-            for (auto turno_perm : aula.turnosPermitidos()) {
-                if (shiftAcomodaAula(turno_perm, slot.start_min, slot.end_min)) {
-                    turno_ok = true;
-                    break;
-                }
-            }
-            if (!turno_ok) {
-                fora_turnos = true;
-                continue;
-            }
-
-            // 3. Verificar disponibilidade de todos os professores
+            // 2. Verificar disponibilidade de todos os professores
             bool todos_profs_disponiveis = true;
             for (const auto* p : profs_aula) {
                 if (!p->isDisponivelNoIntervalo(dia, slot.start_min, slot.end_min)) {
@@ -424,7 +392,7 @@ std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
             }
             if (!todos_profs_disponiveis) continue;
 
-            // 4. Calcular custo de preferência de horário
+            // 3. Calcular custo de preferência de horário
             int custo_pref = 0;
             if (slot.start_min < min_0730) {
                 custo_pref += 1;
@@ -432,7 +400,7 @@ std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
                 custo_pref += 1;
             }
 
-            // 5. Gerar candidato para cada combinação de salas admissíveis
+            // 4. Gerar candidato para cada combinação de salas admissíveis
             for (const auto& combo_salas : salas_admissiveis) {
                 CandidateAllocation cand;
                 cand.aula_id = aula.id();
@@ -454,9 +422,6 @@ std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
         }
         if (prof_sem_disponibilidade) {
             restricoes.push_back("Professor sem disponibilidade nos slots compatíveis da turma");
-        }
-        if (fora_turnos) {
-            restricoes.push_back("Slots da turma fora dos turnos permitidos para a disciplina");
         }
         if (conflito_outra_turma) {
             restricoes.push_back("Incompatibilidade de slots entre turmas agrupadas");

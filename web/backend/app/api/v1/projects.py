@@ -12,7 +12,13 @@ from app.core.security import get_current_user, require_roles
 from app.models.academic import DisciplinaModel, ProfessorModel, RoomModel, TurmaModel
 from app.models.auth import User
 from app.models.project import OptimizationConfigModel, Project
-from app.schemas.project import ImportJsonRequest, ProjectCreate, ProjectResponse, ProjectUpdate
+from app.schemas.project import (
+    ImportJsonRequest,
+    ProfessorPreferencesAccessRequest,
+    ProjectCreate,
+    ProjectResponse,
+    ProjectUpdate,
+)
 from app.services.project_io import build_default_example_json, export_project_json, import_project_json
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -30,6 +36,7 @@ async def _project_response(db: AsyncSession, project: Project) -> ProjectRespon
         description=project.description,
         academic_year=project.academic_year,
         active_timetable_version_id=project.active_timetable_version_id,
+        allow_professor_preferences_edit=project.allow_professor_preferences_edit,
         created_at=project.created_at,
         updated_at=project.updated_at,
         counts={
@@ -46,13 +53,14 @@ async def list_projects(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    rows = (
-        await db.execute(
-            select(Project)
-            .where(Project.institution_id == current_user.institution_id)
-            .order_by(Project.updated_at.desc())
+    stmt = select(Project).where(Project.institution_id == current_user.institution_id)
+    if current_user.role == "PROFESSOR":
+        stmt = stmt.where(
+            Project.id.in_(
+                select(ProfessorModel.project_id).where(ProfessorModel.user_id == current_user.id)
+            )
         )
-    ).scalars().all()
+    rows = (await db.execute(stmt.order_by(Project.updated_at.desc()))).scalars().all()
     return [await _project_response(db, p) for p in rows]
 
 
@@ -103,6 +111,19 @@ async def update_project(
         project.description = req.description
     if req.academic_year is not None:
         project.academic_year = req.academic_year
+    await db.commit()
+    await db.refresh(project)
+    return await _project_response(db, project)
+
+
+@router.patch("/{project_id}/professor-preferences-access", response_model=ProjectResponse)
+async def set_professor_preferences_access(
+    req: ProfessorPreferencesAccessRequest,
+    project: Project = Depends(get_project_for_user),
+    _: User = Depends(require_roles("ADMIN")),
+    db: AsyncSession = Depends(get_db),
+):
+    project.allow_professor_preferences_edit = req.allow_edit
     await db.commit()
     await db.refresh(project)
     return await _project_response(db, project)

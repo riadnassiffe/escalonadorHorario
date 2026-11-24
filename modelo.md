@@ -102,9 +102,8 @@ $$
 t^{fim}_c - t^{ini}_c = \ell_a.
 $$
 2. **Disponibilidade docente:** Todos os professores $p \in \mathcal{P}_a$ estão disponíveis em todo o intervalo ($[t^{ini}_c, t^{fim}_c) \subseteq \mathcal{V}_{p,d_c}$) ([`Preprocessor.cpp`](src/solver/Preprocessor.cpp#L375-L384)).
-3. **Turno permitido:** $[t^{ini}_c, t^{fim}_c)$ está contido em ao menos um dos turnos autorizados para a disciplina (`MANHA`: `07:00–13:00`, `TARDE`: `12:00–19:00`, `NOITE`: `18:00–23:00`, `INTEGRAL`: `07:00–23:00`), ou a lista de turnos permitidos é vazia ([`shiftAcomodaAula`](src/solver/Preprocessor.cpp#L205-L221)).
-4. **Salas compatíveis:** A combinação $b_c \in \mathcal{B}_a$ é válida para o tipo da aula; em aulas teóricas, $b_c = \{r\}$ pertence às salas teóricas elegíveis da turma ([Daskalaki et al., 2004](#14-referências-bibliográficas); [`Preprocessor.cpp`](src/solver/Preprocessor.cpp#L276-L300)).
-5. **Fixação manual (*Pinned*):** Para $a \in \mathcal{A}^{fix}$, gera-se exclusivamente o candidato correspondente ao dia, intervalo e sala fixados pelo usuário ([`Preprocessor.cpp`](src/solver/Preprocessor.cpp#L308-L319)).
+3. **Salas compatíveis:** A combinação $b_c \in \mathcal{B}_a$ é válida para o tipo da aula; em aulas teóricas, $b_c = \{r\}$ pertence às salas teóricas elegíveis da turma ([Daskalaki et al., 2004](#14-referências-bibliográficas); [`Preprocessor.cpp`](src/solver/Preprocessor.cpp#L297-L318)).
+4. **Fixação manual (*Pinned*):** Para $a \in \mathcal{A}^{fix}$, gera-se exclusivamente o candidato correspondente ao dia, intervalo e sala fixados pelo usuário ([`Preprocessor.cpp`](src/solver/Preprocessor.cpp#L328-L339)).
 
 ---
 
@@ -403,7 +402,7 @@ $$
 | **Tempo contínuo ($[0, 1440)$) e slots configuráveis** | Slots heterogêneos por turma [[Daskalaki et al., 2004](#14-referências-bibliográficas)] | [`TimeSlot.h` (L15–L185)](include/model/TimeSlot.h#L15-L185), [`Turma.h` (L24–L115)](include/model/Turma.h#L24-L115) | [`L101–L148`](src/solver/CpSatSolver.cpp#L101-L148) | [`L114–L174`](src/solver/MilpSolver.cpp#L114-L174) |
 | **Filtro $\mathcal{C}_a$ — Slot exato e duração ($\Delta_k = \ell_a$)** | Pré-filtragem de domínio [[Daskalaki et al., 2004](#14-referências-bibliográficas)] | [`Preprocessor.cpp` (L199–L203, L347–L363)](src/solver/Preprocessor.cpp#L199-L203) | Implícito em $\mathcal{C}_a$ | Implícito em $\mathcal{C}_a$ |
 | **Filtro $\mathcal{C}_a$ — Disponibilidade docente** | Restrição rígida de horário [[Santos et al., 2012](#14-referências-bibliográficas)] | [`Preprocessor.cpp` (L375–L384)](src/solver/Preprocessor.cpp#L375-L384) | Implícito em $\mathcal{C}_a$ | Implícito em $\mathcal{C}_a$ |
-| **Filtro $\mathcal{C}_a$ — Turnos e salas** | Compatibilidade de recursos [[Daskalaki et al., 2004](#14-referências-bibliográficas)] | [`Preprocessor.cpp` (L205–L221, L276–L300)](src/solver/Preprocessor.cpp#L205-L221) | Implícito em $\mathcal{C}_a$ | Implícito em $\mathcal{C}_a$ |
+| **Filtro $\mathcal{C}_a$ — Salas compatíveis** | Compatibilidade de recursos [[Daskalaki et al., 2004](#14-referências-bibliográficas)] | [`Preprocessor.cpp` (L297–L318)](src/solver/Preprocessor.cpp#L297-L318) | Implícito em $\mathcal{C}_a$ | Implícito em $\mathcal{C}_a$ |
 | **R1. Alocação única de cada aula** | Alocação única de evento [[Daskalaki et al., 2004](#14-referências-bibliográficas)] | — | [`L187–L195`](src/solver/CpSatSolver.cpp#L187-L195) | [`L216–L225`](src/solver/MilpSolver.cpp#L216-L225) |
 | **R2. Não sobreposição de professores** | Cliques de não sobreposição [[Sousa & Wolsey, 1992](#14-referências-bibliográficas); [Santos et al., 2012](#14-referências-bibliográficas)] | — | [`L197–L226`](src/solver/CpSatSolver.cpp#L197-L226) (`AddNoOverlap`) | [`L227–L274`](src/solver/MilpSolver.cpp#L227-L274) (Cliques em $\mathcal{T}^{ini}$) |
 | **R3. Não sobreposição de turmas** | Prevenção de conflitos [[Santos et al., 2012](#14-referências-bibliográficas)] | — | [`L257–L284`](src/solver/CpSatSolver.cpp#L257-L284) (`AddNoOverlap`) | [`L227–L274`](src/solver/MilpSolver.cpp#L227-L274) (Cliques em $\mathcal{T}^{ini}$) |

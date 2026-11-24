@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1 import auth, config, entities, jobs, projects, timetable
+from app.api.v1 import auth, config, entities, jobs, professor_portal, projects, timetable
 
 api_router = APIRouter()
 
@@ -16,3 +16,4 @@ api_router.include_router(entities.router)
 api_router.include_router(config.router)
 api_router.include_router(timetable.router)
 api_router.include_router(jobs.router)
+api_router.include_router(professor_portal.router)

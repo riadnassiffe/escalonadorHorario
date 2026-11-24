@@ -16,7 +16,7 @@ namespace scheduler::solver {
  * @brief Representa uma combinação admissível pré-processada de dia, slot horário e salas para uma aula.
  *
  * Gerada na fase de pré-processamento selecionando um slot cadastrado compatível com a duração
- * da aula, respeitando todas as turmas envolvidas, disponibilidade de professores, turnos e salas físicas.
+ * da aula, respeitando todas as turmas envolvidas, disponibilidade de professores e salas físicas.
  */
 struct CandidateAllocation {
     std::string aula_id;            ///< Identificador único da ocorrência de aula (ex: "T01_MAT_1").

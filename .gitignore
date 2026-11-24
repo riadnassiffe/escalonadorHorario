@@ -1,4 +1,5 @@
 build/
+web/frontend/node_modules/
 html/
 *.mps
 __pycache__/

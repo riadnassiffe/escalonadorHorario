@@ -117,7 +117,7 @@ inline std::string semestreDisplayName(SemestreLetivo s) {
  * @brief Representa o componente curricular acadêmico oferecido na instituição.
  *
  * Contém a carga semanal de aulas, duração em minutos de cada aula, professores habilitados,
- * turmas atendidas, regime (anual/semestral), turnos permitidos e requisitos de salas/laboratórios.
+ * turmas atendidas, regime (anual/semestral) e requisitos de salas/laboratórios.
  */
 class Disciplina {
 public:
@@ -298,24 +298,6 @@ public:
     void addTurma(std::string turma_id) { turmas_.push_back(std::move(turma_id)); }
 
     /**
-     * @brief Obtém os turnos nos quais as aulas da disciplina podem ser alocadas.
-     * @return Referência constante para o vetor de ShiftType permitidos.
-     */
-    const std::vector<ShiftType>& turnosPermitidos() const noexcept { return turnos_permitidos_; }
-
-    /**
-     * @brief Define os turnos permitidos para as aulas desta disciplina.
-     * @param turnos Vetor de turnos autorizados.
-     */
-    void setTurnosPermitidos(std::vector<ShiftType> turnos) { turnos_permitidos_ = std::move(turnos); }
-
-    /**
-     * @brief Adiciona um turno à lista de turnos permitidos.
-     * @param turno Turno a ser autorizado.
-     */
-    void addTurnoPermitido(ShiftType turno) { turnos_permitidos_.push_back(turno); }
-
-    /**
      * @brief Obtém as combinações alternativas de salas admissíveis (seção 3.3).
      * @return Referência constante para o vetor de combinações de salas (ex: [["LAB01"], ["LAB02"]]).
      */
@@ -373,7 +355,6 @@ private:
     SemestreLetivo semestre_{SemestreLetivo::AMBOS};
     std::vector<std::string> professores_;
     std::vector<std::string> turmas_;
-    std::vector<ShiftType> turnos_permitidos_{ShiftType::MANHA};
     std::vector<std::vector<std::string>> salas_alternativas_;
     bool exigir_aulas_consecutivas_{false};
     int max_aulas_por_dia_turma_{2};
@@ -559,18 +540,6 @@ public:
     void setTurmas(std::vector<std::string> turmas) { turmas_ = std::move(turmas); }
 
     /**
-     * @brief Obtém os turnos permitidos para esta ocorrência de aula.
-     * @return Referência constante para os turnos admitidos.
-     */
-    const std::vector<ShiftType>& turnosPermitidos() const noexcept { return turnos_permitidos_; }
-
-    /**
-     * @brief Define os turnos permitidos para a aula.
-     * @param turnos Vetor de turnos admitidos.
-     */
-    void setTurnosPermitidos(std::vector<ShiftType> turnos) { turnos_permitidos_ = std::move(turnos); }
-
-    /**
      * @brief Obtém as opções de conjuntos de salas admissíveis para esta aula.
      * @return Referência constante para a matriz de alternativas de salas.
      */
@@ -669,7 +638,6 @@ private:
     int semestre_ativo_{1};
     std::vector<std::string> professores_;
     std::vector<std::string> turmas_;
-    std::vector<ShiftType> turnos_permitidos_{ShiftType::MANHA};
     std::vector<std::vector<std::string>> salas_alternativas_;
 
     bool is_pinned_{false};
