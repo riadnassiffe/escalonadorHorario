@@ -18,7 +18,8 @@ export interface User {
   institution_name: string;
   email: string;
   full_name: string;
-  role: "ADMIN" | "COORDENADOR" | "VISUALIZADOR";
+  role: "ADMIN" | "COORDENADOR" | "VISUALIZADOR" | "PROFESSOR";
+  must_change_password: boolean;
   is_active: boolean;
   created_at: string;
 }
@@ -30,6 +31,7 @@ export interface Project {
   description: string;
   academic_year: string;
   active_timetable_version_id: string | null;
+  allow_professor_preferences_edit: boolean;
   created_at: string;
   updated_at: string;
   counts: {
@@ -44,12 +46,77 @@ export interface Professor {
   id: string;
   code: string;
   nome: string;
+  email?: string | null;
+  has_user_account?: boolean;
+  must_change_password?: boolean;
   preferencia_dias: Record<string, number>;
   disponibilidade: Record<string, TimeSlot[]>;
   turnos_pretendidos: Record<string, string[]>;
   carga_maxima_diaria_minutos: number;
   max_aulas_por_dia: number;
   peso_janela: number;
+}
+
+export interface ProfessorCreateResponse extends Professor {
+  initial_password: string | null;
+  account_created: boolean;
+  email_sent: boolean;
+  delivery_note: string | null;
+}
+
+export interface ProfessorCredential {
+  code: string;
+  nome: string;
+  email: string;
+  initial_password: string | null;
+  account_created: boolean;
+  password_reset: boolean;
+  email_sent: boolean;
+  delivery_note: string | null;
+}
+
+export interface BatchProvisionResponse {
+  credentials: ProfessorCredential[];
+  total_processed: number;
+  created_count: number;
+  reset_count: number;
+  skipped_count: number;
+}
+
+export interface ForgotPasswordResponse {
+  message: string;
+  email_sent: boolean;
+  dev_reset_token: string | null;
+  dev_reset_url: string | null;
+}
+
+export interface ProfessorProfile {
+  professor_id: string;
+  project_id: string;
+  project_name: string;
+  academic_year: string;
+  allow_preferences_edit: boolean;
+  code: string;
+  nome: string;
+  email: string | null;
+  preferencia_dias: Record<string, number>;
+  turnos_pretendidos: Record<string, string[]>;
+  disponibilidade: Record<string, TimeSlot[]>;
+  peso_janela: number;
+  carga_maxima_diaria_minutos: number;
+  max_aulas_por_dia: number;
+}
+
+export interface ProfessorTimetableResponse {
+  project_id: string;
+  project_name: string;
+  professor_code: string;
+  professor_nome: string;
+  version_number: number | null;
+  version_label: string | null;
+  alocacoes: AllocatedLesson[];
+  turmas_map: Record<string, string>;
+  salas_map: Record<string, string>;
 }
 
 export interface Room {
@@ -73,6 +140,12 @@ export interface Turma {
   salas_teoricas_permitidas: string[];
 }
 
+export interface TurmaCopyResponse {
+  turma: Turma;
+  copied_disciplinas_count: number;
+  copied_disciplinas: Disciplina[];
+}
+
 export interface Disciplina {
   id: string;
   code: string;
@@ -84,7 +157,6 @@ export interface Disciplina {
   semestre: string;
   professores: string[];
   turmas: string[];
-  turnos_permitidos: string[];
   salas_alternativas: string[][];
   exigir_aulas_consecutivas: boolean;
   max_aulas_por_dia_turma: number;

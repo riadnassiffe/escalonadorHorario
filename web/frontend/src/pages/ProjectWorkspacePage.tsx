@@ -253,8 +253,10 @@ export function ProjectWorkspacePage() {
         {/* Active Tab Content */}
         <div>
           {activeTab === "grade" && <TimetableView projectId={projectId} snapshot={snapshot} timetable={timetable} />}
-          {activeTab === "professores" && <ProfessoresTab projectId={projectId} professores={professores} />}
-          {activeTab === "turmas" && <TurmasTab projectId={projectId} turmas={turmas} salas={salas} />}
+          {activeTab === "professores" && (
+            <ProfessoresTab projectId={projectId} project={project} professores={professores} />
+          )}
+          {activeTab === "turmas" && <TurmasTab projectId={projectId} turmas={turmas} salas={salas} disciplinas={disciplinas} />}
           {activeTab === "salas" && <SalasTab projectId={projectId} salas={salas} />}
           {activeTab === "disciplinas" && (
             <DisciplinasTab projectId={projectId} disciplinas={disciplinas} professores={professores} turmas={turmas} salas={salas} />

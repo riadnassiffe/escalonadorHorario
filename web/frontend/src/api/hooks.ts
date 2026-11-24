@@ -7,8 +7,11 @@ import type {
   OptimizationConfig,
   OptimizationJob,
   Professor,
+  ProfessorProfile,
+  ProfessorTimetableResponse,
   Project,
   Room,
+  TimeSlot,
   TimetableResponse,
   TimetableVersionSummary,
   Turma,
@@ -66,6 +69,14 @@ export function useConfig(projectId: string) {
   return useQuery({
     queryKey: ["config", projectId],
     queryFn: () => apiFetch<OptimizationConfig>(`/projects/${projectId}/config`),
+    enabled: Boolean(projectId),
+  });
+}
+
+export function useSlotTemplates(projectId: string) {
+  return useQuery({
+    queryKey: ["slot-templates", projectId],
+    queryFn: () => apiFetch<{ slot_templates: Record<string, TimeSlot[]> }>(`/projects/${projectId}/slot-templates`),
     enabled: Boolean(projectId),
   });
 }
@@ -227,4 +238,38 @@ export function useJobStream(jobId: string | null, onDone?: () => void) {
   }, [jobId, token]);
 
   return event;
+}
+
+export function useProfessorProfiles() {
+  return useQuery({
+    queryKey: ["professor-profiles"],
+    queryFn: () => apiFetch<ProfessorProfile[]>("/professor/me/profiles"),
+  });
+}
+
+export function useProfessorTimetable(professorId: string | null) {
+  return useQuery({
+    queryKey: ["professor-timetable", professorId],
+    queryFn: () => apiFetch<ProfessorTimetableResponse>(`/professor/me/profiles/${professorId}/timetable`),
+    enabled: Boolean(professorId),
+  });
+}
+
+export function useUpdateProfessorPreferences(professorId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      preferencia_dias: Record<string, number>;
+      turnos_pretendidos: Record<string, string[]>;
+      disponibilidade?: Record<string, TimeSlot[]>;
+      peso_janela?: number;
+    }) =>
+      apiFetch<ProfessorProfile>(`/professor/me/profiles/${professorId}/preferences`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["professor-profiles"] });
+    },
+  });
 }

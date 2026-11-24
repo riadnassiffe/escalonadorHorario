@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { FolderOpen, LogOut, Moon, Plus, Sun, Trash2, Upload } from "lucide-react";
+import { FolderOpen, KeyRound, Lock, LockOpen, LogOut, Moon, Plus, Sun, Trash2, Upload } from "lucide-react";
 import { apiFetch } from "../api/client";
 import { useProjects } from "../api/hooks";
 import { useAuthStore } from "../store/authStore";
@@ -36,6 +36,18 @@ export function ProjectsDashboardPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["projects"] }),
   });
 
+  const togglePrefAccessMutation = useMutation({
+    mutationFn: ({ id, allowEdit }: { id: string; allowEdit: boolean }) =>
+      apiFetch<Project>(`/projects/${id}/professor-preferences-access`, {
+        method: "PATCH",
+        body: JSON.stringify({ allow_edit: allowEdit }),
+      }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["projects"] });
+      qc.invalidateQueries({ queryKey: ["project", vars.id] });
+    },
+  });
+
   const handleImportJsonNew = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -66,6 +78,12 @@ export function ProjectsDashboardPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate("/change-password")}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium dark:border-slate-700"
+            >
+              <KeyRound className="h-3.5 w-3.5" /> Alterar Senha
+            </button>
             <button onClick={toggleDarkMode} className="rounded-lg border border-slate-300 p-2 dark:border-slate-700">
               {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
@@ -125,6 +143,53 @@ export function ProjectsDashboardPage() {
                     <span className="rounded bg-slate-100 px-2 py-0.5 dark:bg-slate-800">{p.counts.turmas} turmas</span>
                     <span className="rounded bg-slate-100 px-2 py-0.5 dark:bg-slate-800">{p.counts.salas} salas</span>
                     <span className="rounded bg-slate-100 px-2 py-0.5 dark:bg-slate-800">{p.counts.disciplinas} disc.</span>
+                  </div>
+                  <div className="mt-3">
+                    {user?.role === "ADMIN" ? (
+                      <button
+                        type="button"
+                        disabled={togglePrefAccessMutation.isPending}
+                        onClick={() =>
+                          togglePrefAccessMutation.mutate({
+                            id: p.id,
+                            allowEdit: !p.allow_professor_preferences_edit,
+                          })
+                        }
+                        className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] font-semibold transition ${
+                          p.allow_professor_preferences_edit
+                            ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                            : "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+                        }`}
+                      >
+                        {p.allow_professor_preferences_edit ? (
+                          <>
+                            <LockOpen className="h-3.5 w-3.5" /> Edição Professores: Liberada
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="h-3.5 w-3.5" /> Edição Professores: Bloqueada
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-semibold ${
+                          p.allow_professor_preferences_edit
+                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                            : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
+                        }`}
+                      >
+                        {p.allow_professor_preferences_edit ? (
+                          <>
+                            <LockOpen className="h-3.5 w-3.5" /> Edição Professores: Liberada
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="h-3.5 w-3.5" /> Edição Professores: Bloqueada
+                          </>
+                        )}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">

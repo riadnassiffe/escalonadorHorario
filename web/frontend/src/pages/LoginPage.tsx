@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { apiFetch } from "../api/client";
 import { useAuthStore } from "../store/authStore";
 import type { User } from "../types";
@@ -33,7 +33,13 @@ export function LoginPage() {
           : { institution_name: institutionName, full_name: fullName, email, password };
       const res = await apiFetch<TokenResp>(path, { method: "POST", body: JSON.stringify(body) });
       setAuth(res.access_token, res.refresh_token, res.user);
-      navigate("/");
+      if (res.user.must_change_password) {
+        navigate("/change-password");
+      } else if (res.user.role === "PROFESSOR") {
+        navigate("/professor");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha na autenticação");
     } finally {
@@ -87,7 +93,14 @@ export function LoginPage() {
             <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800" />
           </div>
           <div>
-            <label className="text-xs font-medium text-slate-500">Senha</label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-slate-500">Senha</label>
+              {mode === "login" && (
+                <Link to="/forgot-password" className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
+                  Esqueci minha senha
+                </Link>
+              )}
+            </div>
             <input required type="password" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800" />
           </div>
           {error && <div className="rounded bg-rose-100 p-2 text-xs text-rose-700 dark:bg-rose-950 dark:text-rose-300">{error}</div>}

@@ -3,7 +3,7 @@ import { useAuthStore } from "../store/authStore";
 const API_BASE = "/api/v1";
 
 async function refreshAccessToken(): Promise<string | null> {
-  const { refreshToken, setTokens, logout } = useAuthStore.getState();
+  const { refreshToken, setAuth, setTokens, logout } = useAuthStore.getState();
   if (!refreshToken) return null;
   try {
     const res = await fetch(`${API_BASE}/auth/refresh`, {
@@ -16,7 +16,11 @@ async function refreshAccessToken(): Promise<string | null> {
       return null;
     }
     const data = await res.json();
-    setTokens(data.access_token, data.refresh_token);
+    if (data.user) {
+      setAuth(data.access_token, data.refresh_token, data.user);
+    } else {
+      setTokens(data.access_token, data.refresh_token);
+    }
     return data.access_token;
   } catch {
     logout();

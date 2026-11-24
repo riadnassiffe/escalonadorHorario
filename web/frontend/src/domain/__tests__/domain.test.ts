@@ -72,7 +72,6 @@ describe("domain conflictEngine", () => {
         semestre: "AMBOS",
         professores: ["P01"],
         turmas: ["T01"],
-        turnos_permitidos: ["MANHA"],
         salas_alternativas: [],
         exigir_aulas_consecutivas: false,
         max_aulas_por_dia_turma: 2,

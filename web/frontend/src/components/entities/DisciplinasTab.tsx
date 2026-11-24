@@ -74,7 +74,6 @@ export function DisciplinasTab({ projectId, disciplinas, professores, turmas, sa
       semestre: "AMBOS",
       professores: professores[0] ? [professores[0].code] : [],
       turmas: turmas[0] ? [turmas[0].code] : [],
-      turnos_permitidos: ["MANHA"],
       salas_alternativas: [],
       exigir_aulas_consecutivas: false,
       max_aulas_por_dia_turma: 2,

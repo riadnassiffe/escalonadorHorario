@@ -72,4 +72,14 @@ export const DEFAULT_SHIFT_SLOTS: Record<string, TimeSlot[]> = {
     { inicio: "20:55", fim: "21:45" },
     { inicio: "21:45", fim: "22:35" },
   ],
+  INTEGRAL: [
+    { inicio: "07:30", fim: "08:20" },
+    { inicio: "08:20", fim: "09:10" },
+    { inicio: "09:25", fim: "10:15" },
+    { inicio: "10:15", fim: "11:05" },
+    { inicio: "13:30", fim: "14:20" },
+    { inicio: "14:20", fim: "15:10" },
+    { inicio: "15:25", fim: "16:15" },
+    { inicio: "16:15", fim: "17:05" },
+  ],
 };
