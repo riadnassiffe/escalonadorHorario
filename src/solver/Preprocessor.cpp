@@ -111,6 +111,14 @@ ValidationResult Preprocessor::validarDados(const model::InstitutionData& data) 
         if (disc.aulasSemanais() <= 0) {
             res.addError("Disciplina " + disc.id() + " possui número de aulas semanais <= 0.");
         }
+
+        for (const auto& combo : disc.salasAlternativas()) {
+            for (const auto& s_id : combo) {
+                if (!s_id.empty() && !data.findSala(s_id)) {
+                    res.addError("Disciplina " + disc.id() + " referencia sala alternativa inexistente: " + s_id);
+                }
+            }
+        }
     }
 
     // Validar capacidade por quantidade de slots de cada duração e por semestre letivo
@@ -296,18 +304,22 @@ std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
 
     // Determinar combinações de salas admissíveis
     std::vector<std::vector<std::string>> salas_admissiveis;
-    if (aula.isTeorica()) {
-        const auto* primeira_turma = turmas_aula.front();
-        if (primeira_turma->temSalaTeoricaPredefinida()) {
-            salas_admissiveis.push_back({primeira_turma->salaTeoricaId()});
-        } else {
-            for (const auto& s_id : primeira_turma->salasTeoricasPermitidas()) {
-                salas_admissiveis.push_back({s_id});
-            }
+    for (const auto& combo : aula.salasAlternativas()) {
+        if (!combo.empty()) {
+            salas_admissiveis.push_back(combo);
         }
-    } else {
-        if (!aula.salasAlternativas().empty()) {
-            salas_admissiveis = aula.salasAlternativas();
+    }
+
+    if (salas_admissiveis.empty()) {
+        if (aula.isTeorica()) {
+            const auto* primeira_turma = turmas_aula.front();
+            if (primeira_turma->temSalaTeoricaPredefinida()) {
+                salas_admissiveis.push_back({primeira_turma->salaTeoricaId()});
+            } else {
+                for (const auto& s_id : primeira_turma->salasTeoricasPermitidas()) {
+                    salas_admissiveis.push_back({s_id});
+                }
+            }
         } else {
             for (const auto& sala : data.salas()) {
                 if (sala.tipo() == aula.tipo() || !sala.isTeorica()) {

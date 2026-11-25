@@ -552,6 +552,17 @@ public:
     void setSalasAlternativas(std::vector<std::vector<std::string>> salas) { salas_alternativas_ = std::move(salas); }
 
     /**
+     * @brief Indica se a aula possui ao menos uma combinação não vazia de salas explícitas.
+     * @return true se houver salas alternativas explicitamente configuradas.
+     */
+    bool temSalasAlternativasExplicitas() const noexcept {
+        for (const auto& combo : salas_alternativas_) {
+            if (!combo.empty()) return true;
+        }
+        return false;
+    }
+
+    /**
      * @brief Verifica se a aula é puramente teórica.
      * @return true se for teórica, false se for prática ou laboratório.
      */

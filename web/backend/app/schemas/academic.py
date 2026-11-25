@@ -175,6 +175,20 @@ class DisciplinaBase(BaseModel):
     exigir_aulas_consecutivas: bool = False
     max_aulas_por_dia_turma: int = Field(default=2, ge=0)
 
+    @field_validator("salas_alternativas", mode="before")
+    @classmethod
+    def normalize_salas_alternativas(cls, v: object) -> list[list[str]]:
+        if not isinstance(v, list):
+            return []
+        cleaned: list[list[str]] = []
+        for combo in v:
+            if not isinstance(combo, list):
+                continue
+            items = [s.strip() for s in combo if isinstance(s, str) and s.strip()]
+            if items:
+                cleaned.append(items)
+        return cleaned
+
     @model_validator(mode="after")
     def sync_semestre_with_regime(self) -> "DisciplinaBase":
         if self.regime == "ANUAL":

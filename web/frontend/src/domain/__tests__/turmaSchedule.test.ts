@@ -19,8 +19,8 @@ describe("domain turmaSchedule", () => {
     dias_letivos: ["SEG", "TER", "QUA", "QUI", "SEX"],
     jornada_padrao: {
       slots: [
-        { inicio: "07:30", fim: "08:20" },
-        { inicio: "08:20", fim: "09:10" },
+        { inicio: "08:00", fim: "08:45" },
+        { inicio: "08:45", fim: "09:30" },
       ],
     },
     excecoes_por_dia: {},
@@ -41,8 +41,8 @@ describe("domain turmaSchedule", () => {
     weekly.TER = {
       active: true,
       slots: [
-        { inicio: "07:30", fim: "08:20" },
-        { inicio: "13:30", fim: "14:20" },
+        { inicio: "08:00", fim: "08:45" },
+        { inicio: "13:15", fim: "14:00" },
       ],
     };
     weekly.SEX = { active: false, slots: [] };
@@ -58,12 +58,12 @@ describe("domain turmaSchedule", () => {
     const weekly = turmaToWeeklySchedule(baseTurma);
     weekly.SEG = {
       active: true,
-      slots: [{ inicio: "09:00", fim: "09:50" }],
+      slots: [{ inicio: "09:45", fim: "10:30" }],
     };
 
     const replicated = replicateDaySchedule(weekly, "SEG", ["QUA", "SEX"]);
-    expect(replicated.QUA.slots).toEqual([{ inicio: "09:00", fim: "09:50" }]);
-    expect(replicated.SEX.slots).toEqual([{ inicio: "09:00", fim: "09:50" }]);
+    expect(replicated.QUA.slots).toEqual([{ inicio: "09:45", fim: "10:30" }]);
+    expect(replicated.SEX.slots).toEqual([{ inicio: "09:45", fim: "10:30" }]);
     expect(replicated.TER.slots).toEqual(baseTurma.jornada_padrao.slots);
 
     // Mutate replicated QUA and ensure SEG is untouched
@@ -74,18 +74,18 @@ describe("domain turmaSchedule", () => {
   it("validates empty active days, start >= end, and overlapping slots", () => {
     expect(validateDaySchedule({ active: false, slots: [] }).valid).toBe(true);
     expect(
-      validateDaySchedule({ active: true, slots: [{ inicio: "08:00", fim: "08:50" }] }).valid
+      validateDaySchedule({ active: true, slots: [{ inicio: "08:00", fim: "08:45" }] }).valid
     ).toBe(true);
     expect(validateDaySchedule({ active: true, slots: [] }).valid).toBe(false);
     expect(
-      validateDaySchedule({ active: true, slots: [{ inicio: "09:00", fim: "08:50" }] }).valid
+      validateDaySchedule({ active: true, slots: [{ inicio: "09:00", fim: "08:45" }] }).valid
     ).toBe(false);
     expect(
       validateDaySchedule({
         active: true,
         slots: [
-          { inicio: "08:00", fim: "08:50" },
-          { inicio: "08:40", fim: "09:30" },
+          { inicio: "08:00", fim: "08:45" },
+          { inicio: "08:45", fim: "09:30" },
         ],
       }).valid
     ).toBe(false);
@@ -99,7 +99,7 @@ describe("domain turmaSchedule", () => {
 
   it("generates batch slots with optional break and suggests next slot", () => {
     const batch = generateBatchSlots({
-      startTime: "07:30",
+      startTime: "08:00",
       count: 4,
       durationMin: 50,
       hasBreak: true,
@@ -107,10 +107,11 @@ describe("domain turmaSchedule", () => {
       breakDurationMin: 15,
     });
     expect(batch).toEqual([
-      { inicio: "07:30", fim: "08:20" },
-      { inicio: "08:20", fim: "09:10" },
-      { inicio: "09:25", fim: "10:15" },
-      { inicio: "10:15", fim: "11:05" },
+      { inicio: "08:00", fim: "08:45" },
+      { inicio: "08:45", fim: "09:30" },
+      { inicio: "09:45", fim: "10:30" },
+      { inicio: "10:30", fim: "11:15" },
+      { inicio: "11:15", fim: "12:00" },
     ]);
 
     const noBreak = generateBatchSlots({

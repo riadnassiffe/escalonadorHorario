@@ -1,5 +1,9 @@
 build/
 web/frontend/node_modules/
+web/backend/.venv/
+web/backend/.__pycache__/
+web/backend/.pytest_cache/
+web/frontend/dist/
 html/
 *.mps
 __pycache__/

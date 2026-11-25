@@ -193,7 +193,7 @@ bool buildMilpProblem(const model::InstitutionData& data,
 
     // Vinculação sum_{c in C_a : sala(c)={r}} x_{a,c} - z_{g,r} <= 0 (agrupado por aula e sala)
     for (const auto& aula : data.aulas()) {
-        if (!aula.isTeorica() || aula.turmas().size() != 1) continue;
+        if (!aula.isTeorica() || aula.temSalasAlternativasExplicitas() || aula.turmas().size() != 1) continue;
         std::string g_id = aula.turmas().front();
         std::map<std::string, std::vector<int>> cols_por_sala;
         for (const auto& item : milp.vars_por_aula[aula.id()]) {

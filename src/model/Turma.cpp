@@ -124,12 +124,12 @@ std::vector<TimeInterval> JornadaTurma::defaultSlotsForShift(ShiftType shift) {
         case ShiftType::MANHA:
             // 07:30 - 11:45: 3x50m + 2x45m com intervalo 09:50 - 10:05
             return {
-                TimeInterval("07:30", "08:20"), // 50m
-                TimeInterval("08:20", "09:10"), // 50m
-                TimeInterval("09:10", "09:55"), // 45m
+                TimeInterval("08:00", "08:45"), // 45m
+                TimeInterval("08:45", "09:30"), // 45m
+                TimeInterval("09:45", "10:30"), // 45m
                 // Recreio: 09:55 - 10:10 (15m)
-                TimeInterval("10:10", "11:00"), // 50m
-                TimeInterval("11:00", "11:45")  // 45m
+                TimeInterval("10:30", "11:15"), // 45m
+                TimeInterval("11:15", "12:00")  // 45m
             };
         case ShiftType::TARDE:
             // 13:15 - 17:30: 3x50m + 2x45m com intervalo 15:35 - 15:50
@@ -152,19 +152,19 @@ std::vector<TimeInterval> JornadaTurma::defaultSlotsForShift(ShiftType shift) {
             };
         case ShiftType::INTEGRAL:
             return {
-                TimeInterval("07:30", "08:20"),
-                TimeInterval("08:20", "09:10"),
-                TimeInterval("09:10", "09:55"),
-                // Recreio manhã: 09:55 - 10:10
-                TimeInterval("10:10", "11:00"),
-                TimeInterval("11:00", "11:45"),
+                TimeInterval("08:00", "08:45"), // 45m
+                TimeInterval("08:45", "09:30"), // 45m
+                TimeInterval("09:45", "10:30"), // 45m
+                // Recreio: 09:55 - 10:10 (15m)
+                TimeInterval("10:30", "11:15"), // 45m
+                TimeInterval("11:15", "12:00"), // 45m
                 // Almoço: 11:45 - 13:15
-                TimeInterval("13:15", "14:05"),
-                TimeInterval("14:05", "14:55"),
-                TimeInterval("14:55", "15:40"),
+                TimeInterval("13:15", "14:00"),
+                TimeInterval("14:00", "14:45"),
+                TimeInterval("14:45", "15:30"),
                 // Recreio tarde: 15:40 - 15:55
-                TimeInterval("15:55", "16:45"),
-                TimeInterval("16:45", "17:30")
+                TimeInterval("15:45", "16:30"),
+                TimeInterval("16:30", "17:15")
             };
     }
     return defaultSlotsForShift(ShiftType::MANHA);

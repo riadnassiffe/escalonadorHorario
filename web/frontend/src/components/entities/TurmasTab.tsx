@@ -352,7 +352,7 @@ function TurmaModal({
   );
 
   const [showBatch, setShowBatch] = useState(false);
-  const [batchStart, setBatchStart] = useState("07:30");
+  const [batchStart, setBatchStart] = useState("08:00");
   const [batchCount, setBatchCount] = useState(5);
   const [batchDuration, setBatchDuration] = useState(50);
   const [batchHasBreak, setBatchHasBreak] = useState(true);

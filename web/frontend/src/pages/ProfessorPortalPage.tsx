@@ -123,7 +123,7 @@ export function ProfessorPortalPage() {
 
   const addDisp = (day: DayOfWeek) => {
     if (!canEdit) return;
-    const list = [...(disp[day] || []), { inicio: "07:30", fim: "12:00" }];
+    const list = [...(disp[day] || []), { inicio: "08:00", fim: "12:00" }];
     setDisp({ ...disp, [day]: list });
     setDirty(true);
     setFeedback(null);

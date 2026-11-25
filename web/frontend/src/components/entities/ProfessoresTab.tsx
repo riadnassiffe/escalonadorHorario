@@ -171,7 +171,7 @@ export function ProfessoresTab({ projectId, project, professores }: Props) {
       nome: "",
       email: "",
       preferencia_dias: { SEG: 5, TER: 5, QUA: 5, QUI: 5, SEX: 5 },
-      disponibilidade: Object.fromEntries(ALL_DAYS.map((d) => [d, [{ inicio: "07:30", fim: "12:00" }]])),
+      disponibilidade: Object.fromEntries(ALL_DAYS.map((d) => [d, [{ inicio: "08:00", fim: "12:00" }]])),
       turnos_pretendidos: Object.fromEntries(ALL_DAYS.map((d) => [d, ["MANHA", "TARDE", "NOITE"]])),
       carga_maxima_diaria_minutos: 0,
       max_aulas_por_dia: 0,

@@ -171,7 +171,7 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
 
     // Vinculação sum_{c in C_a : b_c = {r}} x_{a,c} <= z_{g,r} para aulas teóricas (seção 7 / R5)
     for (const auto& aula : data.aulas()) {
-        if (!aula.isTeorica() || aula.turmas().size() != 1) continue;
+        if (!aula.isTeorica() || aula.temSalasAlternativasExplicitas() || aula.turmas().size() != 1) continue;
         std::string g_id = aula.turmas().front();
         std::map<std::string, LinearExpr> expr_por_sala;
         for (const auto& item : vars_por_aula[aula.id()]) {

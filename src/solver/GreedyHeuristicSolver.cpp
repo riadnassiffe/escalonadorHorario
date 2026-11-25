@@ -242,7 +242,7 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
                 }
             }
 
-            if (aula->tipo() == "TEORICA" && !c.salas.empty()) {
+            if (aula->isTeorica() && !aula->temSalasAlternativasExplicitas() && !c.salas.empty()) {
                 for (const auto& t_id : aula->turmas()) {
                     auto it_base = turma_base_sala.find(t_id);
                     if (it_base != turma_base_sala.end()) {
@@ -291,7 +291,7 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
                 turma_ocup[{t_id, best_cand->dia}].push_back(range);
                 turma_disc_dia_count[{t_id, aula->disciplinaId(), best_cand->dia}]++;
                 turma_disc_dia_aulas[{t_id, aula->disciplinaId(), best_cand->dia}].push_back(range);
-                if (aula->tipo() == "TEORICA" && !best_cand->salas.empty()) {
+                if (aula->isTeorica() && !aula->temSalasAlternativasExplicitas() && !best_cand->salas.empty()) {
                     if (turma_base_sala.find(t_id) == turma_base_sala.end()) {
                         turma_base_sala[t_id] = best_cand->salas[0];
                     }
@@ -345,11 +345,13 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
                 if (aula->turmas().empty()) {
                     restricoes_quebradas.push_back("Nenhuma turma cadastrada/atribuída à aula");
                 }
-                bool tem_sala = false;
-                for (const auto& sala : data.salas()) {
-                    if (aula->isTeorica() || sala.tipo() == aula->tipo() || !sala.isTeorica()) {
-                        tem_sala = true;
-                        break;
+                bool tem_sala = aula->temSalasAlternativasExplicitas();
+                if (!tem_sala) {
+                    for (const auto& sala : data.salas()) {
+                        if (aula->isTeorica() || sala.tipo() == aula->tipo() || !sala.isTeorica()) {
+                            tem_sala = true;
+                            break;
+                        }
                     }
                 }
                 if (!tem_sala) {
