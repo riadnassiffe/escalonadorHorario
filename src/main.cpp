@@ -12,11 +12,21 @@
 #include "ui/ProfessorEditorDialog.h"
 #include "ui/TurmaEditorDialog.h"
 #include "ui/OptimizeDialog.h"
+#include "ui/LessonEditorDialog.h"
+#include "ui/RoomEditorDialog.h"
+#include "ui/AddLessonToScheduleDialog.h"
+#include "ui/SwapLessonDialog.h"
+#include "ui/MoveLessonDialog.h"
+#include "ui/ChangeRoomDialog.h"
 #include "ui/ScheduleReportExporter.h"
 #include "serialization/JsonSerialization.h"
 #include "solver/ScheduleSolver.h"
 #include <QApplication>
+#include <QCheckBox>
+#include <QDir>
 #include <QPixmap>
+#include <QPushButton>
+#include <QTabWidget>
 #include <iostream>
 #include <string>
 
@@ -55,7 +65,257 @@ int main(int argc, char* argv[]) {
                   << "  --save <ARQUIVO.json>        Salva o projeto JSON atualizado com a grade gerada\n"
                   << "  --warmstart-chain            Testa encadeamento guloso -> CP-SAT\n"
                   << "  --render-screenshots         Gera capturas de tela dos diálogos da interface\n"
+                  << "  --verify-ui-fit [JSON]       Verifica responsividade offscreen da GUI em telas de notebook\n"
                   << "  --help, -h                   Exibe esta mensagem de ajuda\n";
+        return 0;
+    }
+
+    if (argc > 1 && std::string(argv[1]) == "--verify-ui-fit") {
+        qputenv("QT_QPA_PLATFORM", "offscreen");
+        QApplication app(argc, argv);
+
+        std::string json_path;
+        std::string screenshots_dir;
+        for (int i = 2; i < argc; ++i) {
+            std::string arg = argv[i];
+            if (arg == "--screenshots-dir" && i + 1 < argc) {
+                screenshots_dir = argv[++i];
+            } else if (arg.rfind("--", 0) != 0 && json_path.empty()) {
+                json_path = arg;
+            }
+        }
+
+        if (!screenshots_dir.empty()) {
+            QDir().mkpath(QString::fromStdString(screenshots_dir));
+        }
+
+        scheduler::model::InstitutionData inst;
+        std::string err;
+        if (json_path.empty() || !scheduler::serialization::JsonSerialization::carregarArquivo(json_path, inst, err)) {
+            inst = scheduler::model::InstitutionData::criarExemploPadrao();
+            if (!json_path.empty()) {
+                std::cerr << "[AVISO] Falha ao carregar '" << json_path << "' (" << err << "); usando exemplo padrão.\n";
+            }
+        } else {
+            inst.gerarOcorrenciasAulas(true, scheduler::model::EscopoSemestreOtimizacao::TODAS_SEM_FILTRO);
+        }
+
+        int failures = 0;
+        const int max_w = 1024;
+        const int max_h = 600;
+
+        auto check_buttons_inside = [&](QWidget* root, const QString& label) {
+            const QRect r = root->rect();
+            for (auto* btn : root->findChildren<QPushButton*>()) {
+                if (!btn->isVisibleTo(root)) continue;
+                const QPoint top_left = btn->mapTo(root, QPoint(0, 0));
+                const QRect br(top_left, btn->size());
+                if (br.left() < r.left() || br.right() > r.right() || br.top() < r.top() || br.bottom() > r.bottom()) {
+                    std::cerr << "[FAIL] " << label.toStdString() << ": botão '" << btn->text().toStdString()
+                              << "' fora da janela (btn=" << br.x() << "," << br.y() << " " << br.width() << "x" << br.height()
+                              << " vs win=" << r.width() << "x" << r.height() << ")\n";
+                    failures++;
+                }
+            }
+        };
+
+        auto check_checkboxes_unclipped = [&](QWidget* root, const QString& label) {
+            for (auto* chk : root->findChildren<QCheckBox*>()) {
+                if (!chk->isVisibleTo(root)) continue;
+                auto* pw = chk->parentWidget();
+                const bool size_ok = chk->width() > 20 && chk->height() > 10;
+                const bool inside_parent = pw && pw->rect().contains(chk->geometry());
+                if (!size_ok || !inside_parent) {
+                    std::cerr << "[FAIL] " << label.toStdString() << ": checkbox '" << chk->text().toStdString()
+                              << "' recortada ou colapsada (geom=" << chk->x() << "," << chk->y()
+                              << " " << chk->width() << "x" << chk->height()
+                              << " parent=" << (pw ? pw->width() : -1) << "x" << (pw ? pw->height() : -1) << ")\n";
+                    failures++;
+                }
+            }
+        };
+
+        auto require_checkbox = [&](QWidget* root, const QString& label, const QString& text) {
+            QCheckBox* found = nullptr;
+            for (auto* chk : root->findChildren<QCheckBox*>()) {
+                if (chk->text() == text) { found = chk; break; }
+            }
+            if (!found || !found->isVisibleTo(root)) {
+                std::cerr << "[FAIL] " << label.toStdString() << ": checkbox obrigatória ausente/oculta: '"
+                          << text.toStdString() << "'\n";
+                failures++;
+                return;
+            }
+            auto* pw = found->parentWidget();
+            if (found->width() <= 20 || found->height() <= 10 || !pw || !pw->rect().contains(found->geometry())) {
+                std::cerr << "[FAIL] " << label.toStdString() << ": checkbox obrigatória '" << text.toStdString()
+                          << "' recortada (geom=" << found->x() << "," << found->y()
+                          << " " << found->width() << "x" << found->height()
+                          << " parent=" << (pw ? pw->width() : -1) << "x" << (pw ? pw->height() : -1) << ")\n";
+                failures++;
+            } else {
+                std::cout << "[OK] " << label.toStdString() << " checkbox '" << text.toStdString()
+                          << "' visível geom=(" << found->x() << "," << found->y()
+                          << " " << found->width() << "x" << found->height() << ")\n";
+            }
+        };
+
+        auto check_dialog = [&](QDialog& dlg, const QString& name, const QString& shot_file) {
+            dlg.show();
+            app.processEvents();
+            const QSize min_hint = dlg.minimumSizeHint();
+            const QSize min_sz = dlg.minimumSize();
+            const int eff_min_w = std::max(min_hint.width(), min_sz.width());
+            const int eff_min_h = std::max(min_hint.height(), min_sz.height());
+            if (eff_min_w > max_w || eff_min_h > max_h) {
+                std::cerr << "[FAIL] " << name.toStdString() << ": mínimo excede " << max_w << "x" << max_h
+                          << " (minHint=" << min_hint.width() << "x" << min_hint.height()
+                          << ", minSize=" << min_sz.width() << "x" << min_sz.height() << ")\n";
+                failures++;
+            } else {
+                std::cout << "[OK] " << name.toStdString() << " min=(" << eff_min_w << "x" << eff_min_h
+                          << ") cur=(" << dlg.width() << "x" << dlg.height() << ")\n";
+            }
+            if (!shot_file.isEmpty()) {
+                dlg.grab().save(shot_file);
+            }
+            check_checkboxes_unclipped(&dlg, name);
+            dlg.resize(std::min(dlg.width(), max_w), std::min(dlg.height(), max_h));
+            app.processEvents();
+            if (dlg.width() > max_w || dlg.height() > max_h) {
+                std::cerr << "[FAIL] " << name.toStdString() << ": não encolheu para " << max_w << "x" << max_h
+                          << " (ficou " << dlg.width() << "x" << dlg.height() << ")\n";
+                failures++;
+            }
+            check_buttons_inside(&dlg, name + " @1024x600");
+            check_checkboxes_unclipped(&dlg, name + " @1024x600");
+            dlg.hide();
+        };
+
+        const std::vector<std::pair<scheduler::ui::ModernTheme::ThemeMode, QString>> themes = {
+            {scheduler::ui::ModernTheme::ThemeMode::SystemKDE, "light"},
+            {scheduler::ui::ModernTheme::ThemeMode::ModernDark, "dark"}
+        };
+
+        for (const auto& [mode, tag] : themes) {
+            scheduler::ui::ModernTheme::setThemeMode(app, mode);
+
+            scheduler::ui::MainWindow win;
+            if (!json_path.empty()) {
+                win.loadProjectFile(QString::fromStdString(json_path));
+            }
+            win.show();
+            win.resize(1280, 720);
+            app.processEvents();
+
+            auto shot_path = [&](const QString& base) -> QString {
+                if (screenshots_dir.empty()) return {};
+                return QString::fromStdString(screenshots_dir) + "/" + tag + "_" + base + ".png";
+            };
+
+            if (!screenshots_dir.empty()) {
+                win.grab().save(shot_path("mainwindow"));
+            }
+
+            if (auto* tabs = win.findChild<QTabWidget*>()) {
+                for (int t = 0; t < tabs->count(); ++t) {
+                    tabs->setCurrentIndex(t);
+                    app.processEvents();
+                    const QSize mh = win.minimumSizeHint();
+                    const QSize ms = win.minimumSize();
+                    const int ew = std::max(mh.width(), ms.width());
+                    const int eh = std::max(mh.height(), ms.height());
+                    const QString tab_label = QString("MainWindow[%1]/tab%2").arg(tag).arg(t);
+                    if (ew > max_w || eh > max_h) {
+                        std::cerr << "[FAIL] " << tab_label.toStdString() << ": min (" << ew << "x" << eh << ") > "
+                                  << max_w << "x" << max_h << "\n";
+                        failures++;
+                    } else {
+                        std::cout << "[OK] " << tab_label.toStdString() << " min=(" << ew << "x" << eh << ")\n";
+                    }
+                    if (t == 5) {
+                        win.resize(1280, 720);
+                        app.processEvents();
+                        if (!screenshots_dir.empty()) {
+                            win.grab().save(shot_path("config_tab"));
+                        }
+                        check_checkboxes_unclipped(tabs->widget(t), tab_label + " @1280x720");
+                        require_checkbox(tabs->widget(t), tab_label, "Sem restrição de tempo");
+                        require_checkbox(tabs->widget(t), tab_label, "Sem restrição de memória");
+                    }
+                    win.resize(1280, 680);
+                    app.processEvents();
+                    if (win.width() > 1280 || win.height() > 680) {
+                        std::cerr << "[FAIL] " << tab_label.toStdString() << ": não coube em 1280x680 (ficou "
+                                  << win.width() << "x" << win.height() << ")\n";
+                        failures++;
+                    }
+                    win.resize(1024, 600);
+                    app.processEvents();
+                    if (win.width() > 1024 || win.height() > 600) {
+                        std::cerr << "[FAIL] " << tab_label.toStdString() << ": não coube em 1024x600 (ficou "
+                                  << win.width() << "x" << win.height() << ")\n";
+                        failures++;
+                    }
+                    if (t == 5) {
+                        check_checkboxes_unclipped(tabs->widget(t), tab_label + " @1024x600");
+                    }
+                }
+                tabs->setCurrentIndex(0);
+            }
+
+            scheduler::ui::OptimizeDialog opt_dlg(inst.config(), static_cast<int>(inst.grade().alocacoes().size()), &win);
+            opt_dlg.show();
+            app.processEvents();
+            require_checkbox(&opt_dlg, "OptimizeDialog[" + tag + "]", "Sem restrição de tempo");
+            require_checkbox(&opt_dlg, "OptimizeDialog[" + tag + "]", "Sem restrição de memória");
+            check_dialog(opt_dlg, "OptimizeDialog[" + tag + "]", shot_path("optimize_dialog"));
+
+            const scheduler::model::Turma* turma = inst.turmas().empty() ? nullptr : &inst.turmas().front();
+            scheduler::ui::TurmaEditorDialog turma_dlg(inst.salas(), &win, turma);
+            check_dialog(turma_dlg, "TurmaEditorDialog[" + tag + "]", shot_path("turma_dialog"));
+
+            const scheduler::model::Professor* prof = inst.professores().empty() ? nullptr : &inst.professores().front();
+            scheduler::ui::ProfessorEditorDialog prof_dlg(&win, prof);
+            check_dialog(prof_dlg, "ProfessorEditorDialog[" + tag + "]", shot_path("prof_dialog"));
+
+            const scheduler::model::Disciplina* lab_disc = nullptr;
+            for (const auto& d : inst.disciplinas()) {
+                if (!d.isTeorica()) { lab_disc = &d; break; }
+            }
+            if (!lab_disc && !inst.disciplinas().empty()) lab_disc = &inst.disciplinas().front();
+            scheduler::ui::LessonEditorDialog disc_dlg(inst.professores(), inst.turmas(), inst.salas(), &win, lab_disc);
+            check_dialog(disc_dlg, "LessonEditorDialog[" + tag + "]", shot_path("lesson_dialog"));
+
+            scheduler::ui::AddLessonToScheduleDialog add_dlg(inst, &win);
+            check_dialog(add_dlg, "AddLessonToScheduleDialog[" + tag + "]", shot_path("add_lesson_dialog"));
+
+            std::string first_aloc_id = inst.grade().alocacoes().empty() ? "" : inst.grade().alocacoes().front().aula_id;
+            scheduler::ui::SwapLessonDialog swap_dlg(inst, first_aloc_id, &win);
+            check_dialog(swap_dlg, "SwapLessonDialog[" + tag + "]", shot_path("swap_dialog"));
+
+            if (!first_aloc_id.empty()) {
+                std::vector<scheduler::model::TimeInterval> slots_vec;
+                if (!inst.turmas().empty()) {
+                    slots_vec = inst.turmas().front().jornadaPadrao().slots_letivos;
+                }
+                scheduler::ui::MoveLessonDialog move_dlg(inst, first_aloc_id, slots_vec, &win);
+                check_dialog(move_dlg, "MoveLessonDialog[" + tag + "]", "");
+
+                scheduler::ui::ChangeRoomDialog room_chg_dlg(inst, first_aloc_id, &win);
+                check_dialog(room_chg_dlg, "ChangeRoomDialog[" + tag + "]", "");
+            }
+
+            const scheduler::model::Room* room = inst.salas().empty() ? nullptr : &inst.salas().front();
+            scheduler::ui::RoomEditorDialog room_dlg(&win, room);
+            check_dialog(room_dlg, "RoomEditorDialog[" + tag + "]", "");
+        }
+
+        if (failures > 0) {
+            std::cerr << "\nTotal de falhas de responsividade: " << failures << "\n";
+            return 1;
+        }
+        std::cout << "\n[PASS] Todas as telas e diálogos cabem confortavelmente em 1024x600 e 1280x680!\n";
         return 0;
     }
 
@@ -174,8 +434,9 @@ int main(int argc, char* argv[]) {
             std::cout << "  [" << static_cast<int>(ratio * 100) << "%] " << msg << std::endl;
         });
 
-        data.setGrade(tt);
-        const auto& stats = tt.estatisticas();
+        const auto stats = tt.estatisticas();
+        const auto diags = tt.mensagensDiagnostico();
+        data.aplicarResultadoOtimizacao(std::move(tt), data.config().escopo_semestre);
         std::cout << "\n------------------ RESULTADOS DA OTIMIZAÇÃO ------------------" << std::endl;
         std::cout << "Status: " << stats.status << std::endl;
         std::cout << "Tempo de resolução: " << stats.tempo_execucao_ms << " ms" << std::endl;
@@ -185,7 +446,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Penalidade Dias Trabalhados (D): " << stats.penalidade_dias_D << std::endl;
         std::cout << "Penalidade Preferência Semanal Dias (W): " << stats.penalidade_preferencia_dias_W << std::endl;
         std::cout << "Penalidade Lacunas Turmas (JG): " << stats.penalidade_lacunas_turma_JG << " min" << std::endl;
-        for (const auto& msg : tt.mensagensDiagnostico()) {
+        for (const auto& msg : diags) {
             std::cout << "  " << msg << std::endl;
         }
 

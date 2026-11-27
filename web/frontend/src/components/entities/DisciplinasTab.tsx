@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ChevronDown, ChevronUp, Eye, EyeOff, Info, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronUp, Eye, EyeOff, Info, Pencil, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
 import { apiFetch } from "../../api/client";
 import {
   computeDisciplinaRoomOptions,
@@ -9,8 +9,29 @@ import {
   toggleRoomInSalasAlternativas,
 } from "../../domain/disciplinaRooms";
 import { filterAndSortItems, normalizeText } from "../../domain/searchSort";
+import { useUiStore } from "../../store/uiStore";
 import type { Disciplina, Professor, Room, Turma } from "../../types";
 import { SearchSortTableBar } from "../common/SearchSortTableBar";
+import { useResizableColumns, type ResizableColumnConfig } from "../common/useResizableColumns";
+
+type DisciplinaColumnKey =
+  | "code"
+  | "nome"
+  | "regime"
+  | "duracao"
+  | "turmasProfs"
+  | "salas"
+  | "acoes";
+
+const DISCIPLINA_COLUMNS: readonly ResizableColumnConfig<DisciplinaColumnKey>[] = [
+  { key: "code", label: "ID", defaultWidth: 110, minWidth: 72, maxWidth: 320 },
+  { key: "nome", label: "Nome", defaultWidth: 250, minWidth: 120, maxWidth: 640 },
+  { key: "regime", label: "Regime", defaultWidth: 130, minWidth: 88, maxWidth: 280 },
+  { key: "duracao", label: "Duração / Semanal", defaultWidth: 165, minWidth: 115, maxWidth: 340 },
+  { key: "turmasProfs", label: "Turmas / Profs", defaultWidth: 280, minWidth: 140, maxWidth: 720 },
+  { key: "salas", label: "Salas", defaultWidth: 180, minWidth: 100, maxWidth: 480 },
+  { key: "acoes", label: "Ações", defaultWidth: 96, minWidth: 88, maxWidth: 180 },
+];
 
 interface Props {
   projectId: string;
@@ -23,20 +44,48 @@ interface Props {
 export function DisciplinasTab({ projectId, disciplinas, professores, turmas, salas }: Props) {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
+  const [turmaFilter, setTurmaFilter] = useState("");
   const [sortBy, setSortBy] = useState("code");
   const [asc, setAsc] = useState(true);
   const [editing, setEditing] = useState<Disciplina | null>(null);
   const [creating, setCreating] = useState(false);
   const [modalError, setModalError] = useState("");
+  const {
+    disciplinasColumnWidths,
+    setDisciplinasColumnWidths,
+    resetDisciplinasColumnWidths,
+  } = useUiStore();
+  const {
+    widths,
+    totalWidth,
+    hasCustomWidths,
+    resizingKey,
+    registerHeaderRef,
+    getResizeHandleProps,
+  } = useResizableColumns({
+    columns: DISCIPLINA_COLUMNS,
+    persistedWidths: disciplinasColumnWidths,
+    onPersistWidths: setDisciplinasColumnWidths,
+  });
 
   const turmasByCode = useMemo(
     () => Object.fromEntries(turmas.map((t) => [t.code, t])) as Record<string, Turma>,
     [turmas]
   );
+  const professoresByCode = useMemo(
+    () => Object.fromEntries(professores.map((p) => [p.code, p])) as Record<string, Professor>,
+    [professores]
+  );
   const salasByCode = useMemo(
     () => Object.fromEntries(salas.map((r) => [r.code, r])) as Record<string, Room>,
     [salas]
   );
+
+  useEffect(() => {
+    if (turmaFilter && !turmasByCode[turmaFilter]) {
+      setTurmaFilter("");
+    }
+  }, [turmaFilter, turmasByCode]);
 
   const saveMutation = useMutation({
     mutationFn: async (d: Disciplina & { isNew: boolean }) => {
@@ -69,22 +118,25 @@ export function DisciplinasTab({ projectId, disciplinas, professores, turmas, sa
     },
   });
 
-  const filtered = useMemo(
-    () =>
-      filterAndSortItems(
-        disciplinas,
-        search,
-        (d) => {
-          const explicitRoomCodes = flattenSalasAlternativas(d.salas_alternativas);
-          const roomNames = explicitRoomCodes.map((c) => salasByCode[c]?.nome || c).join(" ");
-          const roomDesc = describeDisciplinaRooms(d, turmasByCode, salasByCode).label;
-          return `${d.code} ${d.nome} ${d.turmas.join(" ")} ${d.professores.join(" ")} ${explicitRoomCodes.join(" ")} ${roomNames} ${roomDesc}`;
-        },
-        (d) => (sortBy === "nome" ? d.nome : sortBy === "aulas" ? d.aulas_semanais : d.code),
-        asc
-      ),
-    [asc, disciplinas, salasByCode, search, sortBy, turmasByCode]
-  );
+  const filtered = useMemo(() => {
+    const byTurma = turmaFilter
+      ? disciplinas.filter((d) => d.turmas.includes(turmaFilter))
+      : disciplinas;
+    return filterAndSortItems(
+      byTurma,
+      search,
+      (d) => {
+        const turmaNames = d.turmas.map((c) => turmasByCode[c]?.nome || c).join(" ");
+        const profNames = d.professores.map((c) => professoresByCode[c]?.nome || c).join(" ");
+        const explicitRoomCodes = flattenSalasAlternativas(d.salas_alternativas);
+        const roomNames = explicitRoomCodes.map((c) => salasByCode[c]?.nome || c).join(" ");
+        const roomDesc = describeDisciplinaRooms(d, turmasByCode, salasByCode).label;
+        return `${d.code} ${d.nome} ${d.turmas.join(" ")} ${turmaNames} ${d.professores.join(" ")} ${profNames} ${explicitRoomCodes.join(" ")} ${roomNames} ${roomDesc}`;
+      },
+      (d) => (sortBy === "nome" ? d.nome : sortBy === "aulas" ? d.aulas_semanais : d.code),
+      asc
+    );
+  }, [asc, disciplinas, professoresByCode, salasByCode, search, sortBy, turmaFilter, turmasByCode]);
 
   const openNew = async () => {
     const res = await apiFetch<{ next_id: string }>(`/projects/${projectId}/disciplinas/next-id`);
@@ -99,7 +151,7 @@ export function DisciplinasTab({ projectId, disciplinas, professores, turmas, sa
       regime: "ANUAL",
       semestre: "AMBOS",
       professores: professores[0] ? [professores[0].code] : [],
-      turmas: turmas[0] ? [turmas[0].code] : [],
+      turmas: turmaFilter ? [turmaFilter] : turmas[0] ? [turmas[0].code] : [],
       salas_alternativas: [],
       exigir_aulas_consecutivas: false,
       max_aulas_por_dia_turma: 2,
@@ -109,7 +161,7 @@ export function DisciplinasTab({ projectId, disciplinas, professores, turmas, sa
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <SearchSortTableBar
           searchQuery={search}
           onSearchChange={setSearch}
@@ -125,53 +177,131 @@ export function DisciplinasTab({ projectId, disciplinas, professores, turmas, sa
           onSortByChange={setSortBy}
           ascending={asc}
           onToggleOrder={() => setAsc((s) => !s)}
+          hasActiveFilter={Boolean(search.trim() || turmaFilter)}
+          extraFilters={
+            <select
+              aria-label="Filtrar por turma"
+              value={turmaFilter}
+              onChange={(e) => setTurmaFilter(e.target.value)}
+              className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800"
+            >
+              <option value="">Todas as turmas</option>
+              {turmas.map((t) => (
+                <option key={t.code} value={t.code}>
+                  {t.nome} ({t.code})
+                </option>
+              ))}
+            </select>
+          }
         />
-        <button
-          onClick={openNew}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-blue-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          <Plus className="h-4 w-4" /> Adicionar Disciplina
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {hasCustomWidths && (
+            <button
+              type="button"
+              onClick={resetDisciplinasColumnWidths}
+              className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            >
+              <RotateCcw className="h-3.5 w-3.5" /> Resetar larguras
+            </button>
+          )}
+          <button
+            onClick={openNew}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-blue-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4" /> Adicionar Disciplina
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <table className="w-full text-left text-sm">
+        <table
+          className="table-fixed text-left text-sm"
+          style={{ width: `${totalWidth}px`, minWidth: "100%" }}
+        >
+          <colgroup>
+            {DISCIPLINA_COLUMNS.map((col) => (
+              <col
+                key={col.key}
+                data-column-key={col.key}
+                style={{ width: `${widths[col.key]}px` }}
+              />
+            ))}
+          </colgroup>
           <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-800/60">
             <tr>
-              <th className="px-4 py-2.5">ID</th>
-              <th className="px-4 py-2.5">Nome</th>
-              <th className="px-4 py-2.5">Regime</th>
-              <th className="px-4 py-2.5">Duração / Semanal</th>
-              <th className="px-4 py-2.5">Turmas / Profs</th>
-              <th className="px-4 py-2.5">Salas</th>
-              <th className="px-4 py-2.5 text-right">Ações</th>
+              {DISCIPLINA_COLUMNS.map((col) => (
+                <th
+                  key={col.key}
+                  ref={registerHeaderRef(col.key)}
+                  className={`relative select-none px-4 py-2.5 ${col.key === "acoes" ? "text-right" : ""}`}
+                >
+                  <span className="block truncate">{col.label}</span>
+                  <div
+                    {...getResizeHandleProps(col.key)}
+                    className="group absolute inset-y-0 right-0 flex w-2 cursor-col-resize items-center justify-end focus:outline-none"
+                  >
+                    <span
+                      className={`h-full w-[2px] transition-colors ${
+                        resizingKey === col.key
+                          ? "bg-blue-500"
+                          : "bg-slate-300/80 group-hover:bg-blue-500 group-focus-visible:bg-blue-500 dark:bg-slate-700/80"
+                      }`}
+                    />
+                  </div>
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-            {filtered.map((d) => {
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-6 text-center text-sm text-slate-500">
+                  <span>Nenhuma disciplina encontrada para os filtros aplicados.</span>
+                  {(search || turmaFilter) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearch("");
+                        setTurmaFilter("");
+                      }}
+                      className="ml-2 font-medium text-blue-600 hover:underline dark:text-blue-400"
+                    >
+                      Limpar filtros
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ) : (
+              filtered.map((d) => {
               const roomInfo = describeDisciplinaRooms(d, turmasByCode, salasByCode);
+              const regimeLabel = d.regime === "ANUAL" ? "Anual" : `Semestral (${d.semestre}º)`;
+              const duracaoLabel = `${d.duracao_minutos}m • ${d.aulas_semanais} aulas/sem`;
+              const profNames = d.professores.map((c) => professoresByCode[c]?.nome || c);
+              const turmasProfsLabel = `${d.turmas.join(", ")} | ${profNames.join(", ")}`;
               return (
                 <tr key={d.code} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                  <td className="px-4 py-2.5 font-mono text-xs font-semibold">{d.code}</td>
-                  <td className="px-4 py-2.5 font-medium">
+                  <td className="truncate px-4 py-2.5 font-mono text-xs font-semibold" title={d.code}>
+                    {d.code}
+                  </td>
+                  <td className="truncate px-4 py-2.5 font-medium" title={`${d.nome} (${d.tipo})`}>
                     {d.nome} <span className="text-xs text-slate-400">({d.tipo})</span>
                   </td>
-                  <td className="px-4 py-2.5 text-xs">
-                    {d.regime === "ANUAL" ? "Anual" : `Semestral (${d.semestre}º)`}
+                  <td className="truncate px-4 py-2.5 text-xs" title={regimeLabel}>
+                    {regimeLabel}
                   </td>
-                  <td className="px-4 py-2.5 text-xs">
-                    {d.duracao_minutos}m • {d.aulas_semanais} aulas/sem
+                  <td className="truncate px-4 py-2.5 text-xs" title={duracaoLabel}>
+                    {duracaoLabel}
                   </td>
-                  <td className="px-4 py-2.5 text-xs text-slate-500">
-                    {d.turmas.join(", ")} | {d.professores.join(", ")}
+                  <td className="truncate px-4 py-2.5 text-xs text-slate-500" title={turmasProfsLabel}>
+                    {turmasProfsLabel}
                   </td>
-                  <td className="px-4 py-2.5 text-xs">
+                  <td className="truncate px-4 py-2.5 text-xs" title={roomInfo.label}>
                     {roomInfo.isExplicit ? (
-                      <span className="inline-flex rounded-full bg-pink-100 px-2 py-0.5 text-[11px] font-medium text-pink-700 dark:bg-pink-950 dark:text-pink-300">
+                      <span className="inline-flex max-w-full truncate rounded-full bg-pink-100 px-2 py-0.5 text-[11px] font-medium text-pink-700 dark:bg-pink-950 dark:text-pink-300">
                         {roomInfo.label}
                       </span>
                     ) : (
-                      <span className="text-slate-500">{roomInfo.label}</span>
+                      <span className="block truncate text-slate-500">{roomInfo.label}</span>
                     )}
                   </td>
                   <td className="px-4 py-2.5 text-right whitespace-nowrap">
@@ -198,7 +328,8 @@ export function DisciplinasTab({ projectId, disciplinas, professores, turmas, sa
                   </td>
                 </tr>
               );
-            })}
+              })
+            )}
           </tbody>
         </table>
       </div>

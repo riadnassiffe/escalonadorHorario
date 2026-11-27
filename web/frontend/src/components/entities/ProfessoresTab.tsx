@@ -5,6 +5,7 @@ import { apiFetch } from "../../api/client";
 import { filterAndSortItems } from "../../domain/searchSort";
 import { ALL_DAYS, DAY_SHORT_LABELS } from "../../domain/time";
 import { useAuthStore } from "../../store/authStore";
+import { useTimetableStore } from "../../store/timetableStore";
 import type {
   BatchProvisionResponse,
   DayOfWeek,
@@ -48,21 +49,41 @@ export function ProfessoresTab({ projectId, project, professores }: Props) {
   const canManage = user?.role === "ADMIN" || user?.role === "COORDENADOR";
 
   const saveMutation = useMutation({
-    mutationFn: async (prof: Omit<Professor, "id"> & { isNew: boolean }) => {
-      if (prof.isNew) {
+    mutationFn: async ({ prof, isNew, originalCode }: { prof: Professor; isNew: boolean; originalCode: string }) => {
+      const payload = {
+        code: prof.code.trim(),
+        nome: prof.nome,
+        email: prof.email,
+        preferencia_dias: prof.preferencia_dias,
+        disponibilidade: prof.disponibilidade,
+        turnos_pretendidos: prof.turnos_pretendidos,
+        carga_maxima_diaria_minutos: prof.carga_maxima_diaria_minutos,
+        max_aulas_por_dia: prof.max_aulas_por_dia,
+        peso_janela: prof.peso_janela,
+      };
+      if (isNew) {
         return apiFetch<ProfessorCreateResponse>(`/projects/${projectId}/professores`, {
           method: "POST",
-          body: JSON.stringify(prof),
+          body: JSON.stringify(payload),
         });
       }
-      return apiFetch<Professor>(`/projects/${projectId}/professores/${encodeURIComponent(prof.code)}`, {
+      return apiFetch<Professor>(`/projects/${projectId}/professores/${encodeURIComponent(originalCode)}`, {
         method: "PUT",
-        body: JSON.stringify(prof),
+        body: JSON.stringify(payload),
       });
     },
     onSuccess: (res, vars) => {
       qc.invalidateQueries({ queryKey: ["professores", projectId] });
       qc.invalidateQueries({ queryKey: ["project", projectId] });
+      qc.invalidateQueries({ queryKey: ["disciplinas", projectId] });
+      qc.invalidateQueries({ queryKey: ["timetable", projectId] });
+      qc.invalidateQueries({ queryKey: ["unallocated", projectId] });
+      if (!vars.isNew && vars.originalCode !== res.code) {
+        const ttState = useTimetableStore.getState();
+        if (ttState.viewType === "PROFESSOR" && ttState.targetId === vars.originalCode) {
+          ttState.setTargetId(res.code);
+        }
+      }
       setEditing(null);
       setCreating(false);
       setModalError("");
@@ -328,6 +349,9 @@ export function ProfessoresTab({ projectId, project, professores }: Props) {
                         <KeyRound className="h-4 w-4" />
                       </button>
                       <button
+                        type="button"
+                        aria-label={`Editar ${p.nome}`}
+                        title="Editar professor"
                         onClick={() => {
                           setModalError("");
                           setEditing(structuredClone(p));
@@ -338,6 +362,9 @@ export function ProfessoresTab({ projectId, project, professores }: Props) {
                         <Pencil className="h-4 w-4" />
                       </button>
                       <button
+                        type="button"
+                        aria-label={`Remover ${p.nome}`}
+                        title="Remover professor"
                         onClick={() => {
                           if (window.confirm(`Remover professor ${p.nome}?`)) deleteMutation.mutate(p.code);
                         }}
@@ -365,7 +392,7 @@ export function ProfessoresTab({ projectId, project, professores }: Props) {
             setCreating(false);
             setModalError("");
           }}
-          onSave={(data) => saveMutation.mutate({ ...data, isNew: creating })}
+          onSave={(data) => saveMutation.mutate({ prof: data, isNew: creating, originalCode: editing.code })}
         />
       )}
 
@@ -602,17 +629,24 @@ function ProfessorModal({
         <div className="mt-4 space-y-4 text-sm">
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="text-xs font-medium text-slate-500">ID</label>
+              <label htmlFor="professor-code" className="text-xs font-medium text-slate-500">ID</label>
               <input
-                disabled={!isNew}
+                id="professor-code"
+                maxLength={64}
                 value={form.code}
                 onChange={(e) => setForm({ ...form, code: e.target.value })}
-                className="mt-1 w-full rounded border border-slate-300 px-3 py-1.5 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800"
+                className="mt-1 w-full rounded border border-slate-300 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-800"
               />
+              {!isNew && form.code.trim().length > 0 && form.code.trim() !== prof.code && (
+                <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
+                  Ao alterar o ID, disciplinas e grades vinculadas serão atualizadas automaticamente.
+                </p>
+              )}
             </div>
             <div className="col-span-2">
-              <label className="text-xs font-medium text-slate-500">Nome Completo</label>
+              <label htmlFor="professor-nome" className="text-xs font-medium text-slate-500">Nome Completo</label>
               <input
+                id="professor-nome"
                 value={form.nome}
                 onChange={(e) => setForm({ ...form, nome: e.target.value })}
                 className="mt-1 w-full rounded border border-slate-300 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-800"
@@ -785,7 +819,7 @@ function ProfessorModal({
         <div className="mt-5 flex justify-end gap-2">
           <button onClick={onClose} className="rounded-md border border-slate-300 px-4 py-2 text-sm dark:border-slate-700">Cancelar</button>
           <button
-            disabled={!form.nome.trim() || saving}
+            disabled={!form.code.trim() || !form.nome.trim() || saving}
             onClick={() => onSave(form)}
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >

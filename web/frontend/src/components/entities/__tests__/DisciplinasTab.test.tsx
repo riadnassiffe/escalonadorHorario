@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useUiStore } from "../../../store/uiStore";
 import { DisciplinasTab } from "../DisciplinasTab";
 import type { Disciplina, Professor, Room, Turma } from "../../../types";
 
@@ -85,7 +86,7 @@ const DISCIPLINAS: Disciplina[] = [
   },
 ];
 
-function renderTab() {
+function renderTab(disciplinas: Disciplina[] = DISCIPLINAS) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -93,7 +94,7 @@ function renderTab() {
     <QueryClientProvider client={qc}>
       <DisciplinasTab
         projectId="proj-1"
-        disciplinas={DISCIPLINAS}
+        disciplinas={disciplinas}
         professores={PROFESSORES}
         turmas={TURMAS}
         salas={SALAS}
@@ -105,6 +106,7 @@ function renderTab() {
 describe("DisciplinasTab", () => {
   beforeEach(() => {
     apiFetchMock.mockReset();
+    useUiStore.getState().resetDisciplinasColumnWidths();
   });
 
   it("opens Professores & Turmas expanded on create, allows hiding/showing and quick search", async () => {
@@ -197,5 +199,140 @@ describe("DisciplinasTab", () => {
     expect(callBody.tipo).toBe("TEORICA");
     expect(callBody.turmas).toEqual(["T02"]);
     expect(callBody.salas_alternativas).toEqual([["LAB01"]]);
+  });
+
+  it("filters disciplinas by turma selector, supports searching by turma name, clears filters, and preselects filtered turma on create", async () => {
+    apiFetchMock.mockResolvedValueOnce({ next_id: "D02" });
+    const multiDisciplinas: Disciplina[] = [
+      ...DISCIPLINAS,
+      {
+        id: "T02_QUI",
+        code: "T02_QUI",
+        nome: "Química Orgânica",
+        tipo: "TEORICA",
+        duracao_minutos: 50,
+        aulas_semanais: 2,
+        regime: "ANUAL",
+        semestre: "AMBOS",
+        professores: ["P02"],
+        turmas: ["T02"],
+        salas_alternativas: [],
+        exigir_aulas_consecutivas: false,
+        max_aulas_por_dia_turma: 2,
+      },
+    ];
+    renderTab(multiDisciplinas);
+
+    expect(screen.getByText("Física")).toBeTruthy();
+    expect(screen.getByText("Química Orgânica")).toBeTruthy();
+
+    // Select turma T02 in the turma filter
+    const turmaSelect = screen.getByLabelText(/Filtrar por turma/i) as HTMLSelectElement;
+    fireEvent.change(turmaSelect, { target: { value: "T02" } });
+
+    expect(screen.queryByText("Física")).toBeNull();
+    expect(screen.getByText("Química Orgânica")).toBeTruthy();
+    expect(screen.getByText("1 de 2 encontrados")).toBeTruthy();
+
+    // Combine with non-matching search -> empty state + Limpar filtros
+    const searchInput = screen.getByPlaceholderText(/Buscar disciplinas/i);
+    fireEvent.change(searchInput, { target: { value: "Inexistente" } });
+    expect(screen.getByText(/Nenhuma disciplina encontrada para os filtros aplicados/i)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /Limpar filtros/i }));
+    expect(turmaSelect.value).toBe("");
+    expect(screen.getByText("Física")).toBeTruthy();
+    expect(screen.getByText("Química Orgânica")).toBeTruthy();
+
+    // Search by turma name ("2º Ano B") in text search
+    fireEvent.change(searchInput, { target: { value: "2º Ano B" } });
+    expect(screen.queryByText("Física")).toBeNull();
+    expect(screen.getByText("Química Orgânica")).toBeTruthy();
+
+    // Clear search, select T02, and click Adicionar Disciplina -> T02 is preselected
+    fireEvent.change(searchInput, { target: { value: "" } });
+    fireEvent.change(turmaSelect, { target: { value: "T02" } });
+    fireEvent.click(screen.getByRole("button", { name: /Adicionar Disciplina/i }));
+    await screen.findByText("Nova Disciplina");
+
+    const turmaSection = screen.getByTestId("selector-turmas");
+    expect(within(turmaSection).getByRole("button", { name: /Remover 2º Ano B/i })).toBeTruthy();
+  });
+
+  it("displays professor names instead of IDs in the Turmas / Profs column with code fallback", () => {
+    const disciplinasWithMultipleAndUnknownProfs: Disciplina[] = [
+      ...DISCIPLINAS,
+      {
+        id: "T02_MAT",
+        code: "T02_MAT",
+        nome: "Matemática",
+        tipo: "TEORICA",
+        duracao_minutos: 50,
+        aulas_semanais: 4,
+        regime: "ANUAL",
+        semestre: "AMBOS",
+        professores: ["P01", "P02", "P99"],
+        turmas: ["T02"],
+        salas_alternativas: [],
+        exigir_aulas_consecutivas: false,
+        max_aulas_por_dia_turma: 2,
+      },
+    ];
+
+    renderTab(disciplinasWithMultipleAndUnknownProfs);
+
+    expect(screen.getByText("T01 | Carlos Silva")).toBeTruthy();
+    expect(screen.queryByText("T01 | P01")).toBeNull();
+    expect(screen.getByText("T02 | Carlos Silva, Ana Souza, P99")).toBeTruthy();
+  });
+
+  it("resizes columns via drag and keyboard, clamps to bounds, persists in uiStore, and resets", () => {
+    const { container } = renderTab();
+
+    const getColWidth = (key: string) => {
+      const col = container.querySelector(`col[data-column-key="${key}"]`) as HTMLTableColElement | null;
+      return col?.style.width;
+    };
+
+    expect(getColWidth("turmasProfs")).toBe("280px");
+    expect(screen.queryByRole("button", { name: /Resetar larguras/i })).toBeNull();
+
+    const turmasProfsHandle = screen.getByRole("separator", {
+      name: /Redimensionar coluna Turmas \/ Profs/i,
+    });
+
+    // Drag right (+120px) -> 400px and persists
+    fireEvent.mouseDown(turmasProfsHandle, { clientX: 500 });
+    fireEvent.mouseMove(window, { clientX: 620 });
+    fireEvent.mouseUp(window);
+
+    expect(getColWidth("turmasProfs")).toBe("400px");
+    expect(useUiStore.getState().disciplinasColumnWidths.turmasProfs).toBe(400);
+    expect(screen.getByRole("button", { name: /Resetar larguras/i })).toBeTruthy();
+
+    // Drag far left -> clamps to minWidth (140px)
+    fireEvent.mouseDown(turmasProfsHandle, { clientX: 500 });
+    fireEvent.mouseMove(window, { clientX: 0 });
+    fireEvent.mouseUp(window);
+
+    expect(getColWidth("turmasProfs")).toBe("140px");
+
+    // Keyboard ArrowRight increases by 16px -> 156px
+    fireEvent.keyDown(turmasProfsHandle, { key: "ArrowRight" });
+    expect(getColWidth("turmasProfs")).toBe("156px");
+
+    // Double-click resets only that column back to 280px and clears custom state
+    fireEvent.doubleClick(turmasProfsHandle);
+    expect(getColWidth("turmasProfs")).toBe("280px");
+    expect(screen.queryByRole("button", { name: /Resetar larguras/i })).toBeNull();
+
+    // Resize Nome column via keyboard and click Resetar larguras
+    const nomeHandle = screen.getByRole("separator", { name: /Redimensionar coluna Nome/i });
+    fireEvent.keyDown(nomeHandle, { key: "ArrowRight" });
+    expect(getColWidth("nome")).toBe("266px");
+
+    fireEvent.click(screen.getByRole("button", { name: /Resetar larguras/i }));
+    expect(getColWidth("nome")).toBe("250px");
+    expect(useUiStore.getState().disciplinasColumnWidths).toEqual({});
   });
 });

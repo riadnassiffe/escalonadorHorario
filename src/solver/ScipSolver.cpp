@@ -38,6 +38,17 @@ model::Timetable ScheduleSolver::solveScip(const model::InstitutionData& data,
         }
     }
 
+    if (stop_requested_.load()) {
+        model::TimetableStatistics stats;
+        stats.tempo_execucao_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start_time).count();
+        stats.total_aulas_esperadas = static_cast<int>(data.aulas().size());
+        stats.status = "CANCELLED";
+        timetable.setEstatisticas(stats);
+        timetable.addMensagemDiagnostico("[CANCELADO] Otimização interrompida pelo usuário antes de iniciar o solver SCIP.");
+        if (callback) callback("SCIP: Otimização cancelada pelo usuário.", 1.0);
+        return timetable;
+    }
+
     detail::MilpProblem milp;
     if (!detail::buildMilpProblem(data, milp, timetable, callback, "SCIP", seed_ptr)) {
         return timetable;
@@ -57,6 +68,7 @@ model::Timetable ScheduleSolver::solveScip(const model::InstitutionData& data,
     SCIPincludeDefaultPlugins(scip);
     SCIPcreateProbBasic(scip, "EscalonadorHorarios_SCIP");
     SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE);
+    SCIPsetBoolParam(scip, "misc/catchctrlc", FALSE);
 
     // Parâmetros de execução do SCIP
     SCIPsetIntParam(scip, "display/verblevel", data.config().log_search_progress ? 4 : 0);
@@ -109,9 +121,44 @@ model::Timetable ScheduleSolver::solveScip(const model::InstitutionData& data,
         }
     }
 
+    if (stop_requested_.load()) {
+        for (size_t i = 0; i < scip_vars.size(); ++i) {
+            if (scip_vars[i] != nullptr) {
+                SCIPreleaseVar(scip, &scip_vars[i]);
+            }
+        }
+        SCIPfree(&scip);
+        model::TimetableStatistics stats;
+        stats.tempo_execucao_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start_time).count();
+        stats.total_aulas_esperadas = static_cast<int>(data.aulas().size());
+        stats.status = "CANCELLED";
+        timetable.setEstatisticas(stats);
+        timetable.addMensagemDiagnostico("[CANCELADO] Otimização interrompida pelo usuário antes de iniciar o solver SCIP.");
+        if (callback) callback("SCIP: Otimização cancelada pelo usuário.", 1.0);
+        return timetable;
+    }
+
     if (callback) callback("Executando solver SCIP...", 0.65);
 
-    SCIPsolve(scip);
+    {
+        struct ScipInterruptGuard {
+            ScheduleSolver* owner;
+            explicit ScipInterruptGuard(ScheduleSolver* s, SCIP* scip_ptr) : owner(s) {
+                owner->setInterruptHandler([scip_ptr]() {
+                    SCIPinterruptSolve(scip_ptr);
+                });
+            }
+            ~ScipInterruptGuard() {
+                owner->clearInterruptHandler();
+            }
+        } guard(this, scip);
+
+        if (stop_requested_.load()) {
+            SCIPinterruptSolve(scip);
+        } else {
+            SCIPsolve(scip);
+        }
+    }
 
     auto end_time = std::chrono::steady_clock::now();
     double tempo_ms = std::chrono::duration<double, std::milli>(end_time - start_time).count();
@@ -119,13 +166,14 @@ model::Timetable ScheduleSolver::solveScip(const model::InstitutionData& data,
     SCIP_STATUS scip_status = SCIPgetStatus(scip);
     SCIP_SOL* best_sol = SCIPgetBestSol(scip);
     long long n_nodes = SCIPgetNNodes(scip);
+    bool was_interrupted = stop_requested_.load();
 
     std::string status_str = "UNKNOWN";
     if (scip_status == SCIP_STATUS_OPTIMAL) {
         status_str = "OPTIMAL";
     } else if (best_sol != nullptr) {
         status_str = "FEASIBLE";
-    } else if (scip_status == SCIP_STATUS_INFEASIBLE) {
+    } else if (scip_status == SCIP_STATUS_INFEASIBLE || scip_status == SCIP_STATUS_INFORUNBD) {
         status_str = "INFEASIBLE";
     }
 
@@ -143,7 +191,12 @@ model::Timetable ScheduleSolver::solveScip(const model::InstitutionData& data,
             " (" + std::to_string(milp.vars.size()) + " variáveis, " +
             std::to_string(milp.rows.size()) + " restrições, " +
             std::to_string(n_nodes) + " nós B&B).");
-        if (callback) callback("Grade gerada com sucesso pelo SCIP!", 1.0);
+        if (was_interrupted && status_str == "FEASIBLE") {
+            timetable.addMensagemDiagnostico("[INTERROMPIDO] Otimização interrompida pelo usuário. Aplicada a melhor solução viável encontrada até o momento.");
+            if (callback) callback("SCIP: Interrompido pelo usuário (melhor solução viável aplicada).", 1.0);
+        } else {
+            if (callback) callback("Grade gerada com sucesso pelo SCIP!", 1.0);
+        }
     } else if (status_str == "INFEASIBLE") {
         model::TimetableStatistics stats;
         stats.tempo_execucao_ms = tempo_ms;
@@ -158,14 +211,35 @@ model::Timetable ScheduleSolver::solveScip(const model::InstitutionData& data,
             }
         }
         if (callback) callback("SCIP: Problema inviável para as restrições informadas.", 1.0);
+    } else if (was_interrupted) {
+        model::TimetableStatistics stats;
+        stats.tempo_execucao_ms = tempo_ms;
+        stats.total_aulas_esperadas = static_cast<int>(data.aulas().size());
+        stats.status = "CANCELLED";
+        timetable.setEstatisticas(stats);
+        timetable.addMensagemDiagnostico("[CANCELADO] Otimização interrompida pelo usuário antes de encontrar uma solução viável.");
+        if (callback) callback("SCIP: Otimização cancelada pelo usuário.", 1.0);
     } else {
         model::TimetableStatistics stats;
         stats.tempo_execucao_ms = tempo_ms;
         stats.total_aulas_esperadas = static_cast<int>(data.aulas().size());
         stats.status = "UNKNOWN";
         timetable.setEstatisticas(stats);
-        timetable.addMensagemDiagnostico("[TEMPO_LIMITE] O solver SCIP atingiu o limite de tempo/memória antes de encontrar uma solução viável completa.");
-        if (callback) callback("SCIP: Limite atingido sem solução viável.", 1.0);
+        if (scip_status == SCIP_STATUS_MEMLIMIT) {
+            timetable.addMensagemDiagnostico(
+                "[LIMITE_MEMORIA] O solver SCIP atingiu o limite de memória configurado (" +
+                std::to_string(data.config().max_memoria_mb) +
+                " MB) antes de encontrar uma solução viável.");
+            if (callback) callback("SCIP: Limite de memória atingido sem solução viável.", 1.0);
+        } else if (scip_status == SCIP_STATUS_TIMELIMIT) {
+            timetable.addMensagemDiagnostico("[TEMPO_LIMITE] O solver SCIP atingiu o tempo limite antes de encontrar uma solução viável completa.");
+            if (callback) callback("SCIP: Tempo limite atingido sem solução viável.", 1.0);
+        } else {
+            timetable.addMensagemDiagnostico(
+                "[BUSCA_INTERROMPIDA] O solver SCIP encerrou antes de encontrar solução viável (SCIP_STATUS=" +
+                std::to_string(static_cast<int>(scip_status)) + ").");
+            if (callback) callback("SCIP: Busca encerrada sem solução viável.", 1.0);
+        }
     }
 
     for (size_t i = 0; i < scip_vars.size(); ++i) {

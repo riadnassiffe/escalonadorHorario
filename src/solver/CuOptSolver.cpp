@@ -252,8 +252,30 @@ model::Timetable ScheduleSolver::solveCuOpt(const model::InstitutionData& data,
         }
     }
 
+    if (stop_requested_.load()) {
+        model::TimetableStatistics stats;
+        stats.tempo_execucao_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start_time).count();
+        stats.total_aulas_esperadas = static_cast<int>(data.aulas().size());
+        stats.status = "CANCELLED";
+        timetable.setEstatisticas(stats);
+        timetable.addMensagemDiagnostico("[CANCELADO] Otimização interrompida pelo usuário antes de iniciar o solver cuOpt.");
+        if (callback) callback("cuOpt: Otimização cancelada pelo usuário.", 1.0);
+        return timetable;
+    }
+
     detail::MilpProblem milp;
     if (!detail::buildMilpProblem(data, milp, timetable, callback, "NVIDIA cuOpt", seed_ptr)) {
+        return timetable;
+    }
+
+    if (stop_requested_.load()) {
+        model::TimetableStatistics stats;
+        stats.tempo_execucao_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start_time).count();
+        stats.total_aulas_esperadas = static_cast<int>(data.aulas().size());
+        stats.status = "CANCELLED";
+        timetable.setEstatisticas(stats);
+        timetable.addMensagemDiagnostico("[CANCELADO] Otimização interrompida pelo usuário antes de iniciar o solver cuOpt.");
+        if (callback) callback("cuOpt: Otimização cancelada pelo usuário.", 1.0);
         return timetable;
     }
 
@@ -305,6 +327,8 @@ model::Timetable ScheduleSolver::solveCuOpt(const model::InstitutionData& data,
     std::vector<double> sol_vals(num_vars, 0.0);
     double objective_val = 0.0;
     std::string status_str = "UNKNOWN";
+    std::string highs_status_label;
+    bool highs_hit_time_limit = false;
 
     if (cuopt_dyn.load()) {
         if (callback) callback("cuOpt: Executando otimização na GPU NVIDIA via libcuopt nativa...", 0.65);
@@ -416,15 +440,36 @@ model::Timetable ScheduleSolver::solveCuOpt(const model::InstitutionData& data,
         lp.ensureColwise();
 
         HighsStatus pass_status = highs.passModel(model);
-        if (pass_status != HighsStatus::kError) {
+        if (pass_status != HighsStatus::kError && !stop_requested_.load()) {
             if (milp.has_warm_start && milp.warm_start_vals.size() == milp.vars.size()) {
                 HighsSolution init_sol;
                 init_sol.col_value = milp.warm_start_vals;
                 highs.setSolution(init_sol);
             }
+            highs.setCallback(
+                [this, &callback](int callback_type, const std::string&,
+                                  const HighsCallbackOutput* data_out,
+                                  HighsCallbackInput* data_in, void*) {
+                    const bool stop_now = stop_requested_.load();
+                    if (data_in) data_in->user_interrupt = stop_now;
+                    if (stop_now) return;
+                    if (callback && callback_type == kCallbackMipImprovingSolution && data_out) {
+                        callback("cuOpt: Nova solução viável (objetivo = " +
+                                 std::to_string(static_cast<long long>(std::llround(data_out->mip_primal_bound))) + ")...", 0.75);
+                    }
+                },
+                nullptr);
+            highs.startCallback(kCallbackMipInterrupt);
+            highs.startCallback(kCallbackSimplexInterrupt);
+            highs.startCallback(kCallbackIpmInterrupt);
+            if (callback) {
+                highs.startCallback(kCallbackMipImprovingSolution);
+            }
             highs.run();
 
             HighsModelStatus model_status = highs.getModelStatus();
+            highs_status_label = highs.modelStatusToString(model_status);
+            highs_hit_time_limit = (model_status == HighsModelStatus::kTimeLimit);
             const HighsInfo& info = highs.getInfo();
             const HighsSolution& sol = highs.getSolution();
             bool has_feasible = (info.primal_solution_status == kSolutionStatusFeasible) &&
@@ -438,7 +483,8 @@ model::Timetable ScheduleSolver::solveCuOpt(const model::InstitutionData& data,
                 status_str = "FEASIBLE";
                 sol_vals = sol.col_value;
                 objective_val = info.objective_function_value;
-            } else if (model_status == HighsModelStatus::kInfeasible) {
+            } else if (model_status == HighsModelStatus::kInfeasible ||
+                       model_status == HighsModelStatus::kUnboundedOrInfeasible) {
                 status_str = "INFEASIBLE";
             }
         }
@@ -475,7 +521,12 @@ model::Timetable ScheduleSolver::solveCuOpt(const model::InstitutionData& data,
                 "[NVIDIA cuOpt] Dica de aceleração: Para execução direta via GPU cuOpt, instale 'libcuopt-cu12' ou execute o script 'scripts/solve_cuopt.py' com container NVIDIA NGC.");
         }
 
-        if (callback) callback("Grade gerada com sucesso pelo NVIDIA cuOpt!", 1.0);
+        if (stop_requested_.load() && status_str == "FEASIBLE") {
+            timetable.addMensagemDiagnostico("[INTERROMPIDO] Otimização interrompida pelo usuário. Aplicada a melhor solução viável encontrada até o momento.");
+            if (callback) callback("cuOpt: Interrompido pelo usuário (melhor solução viável aplicada).", 1.0);
+        } else {
+            if (callback) callback("Grade gerada com sucesso pelo NVIDIA cuOpt!", 1.0);
+        }
     } else if (status_str == "INFEASIBLE") {
         model::TimetableStatistics stats;
         stats.tempo_execucao_ms = tempo_ms;
@@ -490,14 +541,29 @@ model::Timetable ScheduleSolver::solveCuOpt(const model::InstitutionData& data,
             }
         }
         if (callback) callback("cuOpt: Problema inviável para as restrições informadas.", 1.0);
+    } else if (stop_requested_.load()) {
+        model::TimetableStatistics stats;
+        stats.tempo_execucao_ms = tempo_ms;
+        stats.total_aulas_esperadas = static_cast<int>(data.aulas().size());
+        stats.status = "CANCELLED";
+        timetable.setEstatisticas(stats);
+        timetable.addMensagemDiagnostico("[CANCELADO] Otimização interrompida pelo usuário antes de encontrar uma solução viável.");
+        if (callback) callback("cuOpt: Otimização cancelada pelo usuário.", 1.0);
     } else {
         model::TimetableStatistics stats;
         stats.tempo_execucao_ms = tempo_ms;
         stats.total_aulas_esperadas = static_cast<int>(data.aulas().size());
         stats.status = "UNKNOWN";
         timetable.setEstatisticas(stats);
-        timetable.addMensagemDiagnostico("[TEMPO_LIMITE] O solver atingiu o tempo limite antes de encontrar uma solução viável completa.");
-        if (callback) callback("cuOpt: Tempo limite atingido sem solução viável.", 1.0);
+        if (highs_hit_time_limit) {
+            timetable.addMensagemDiagnostico("[TEMPO_LIMITE] O solver atingiu o tempo limite antes de encontrar uma solução viável completa.");
+            if (callback) callback("cuOpt: Tempo limite atingido sem solução viável.", 1.0);
+        } else {
+            timetable.addMensagemDiagnostico(
+                "[BUSCA_INTERROMPIDA] O solver encerrou sem solução viável" +
+                (highs_status_label.empty() ? std::string(".") : " (status: " + highs_status_label + ")."));
+            if (callback) callback("cuOpt: Busca encerrada sem solução viável.", 1.0);
+        }
     }
 
     detail::auditarConflitosEntreAulas(data, timetable);

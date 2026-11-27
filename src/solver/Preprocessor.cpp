@@ -187,45 +187,6 @@ ValidationResult Preprocessor::validarDados(const model::InstitutionData& data) 
                                std::to_string(total_req_aulas) + " aula(s)" + sem_label + " para " +
                                std::to_string(total_slots) + " slot(s) letivos cadastrados.");
             }
-
-            // Validar compatibilidade com R9 (1º slot do dia precisa ter duração compatível com alguma aula da turma)
-            if (total_req_aulas > 0) {
-                std::map<int, int> slots_por_dur_dias_validos_r9;
-                for (auto dia : turma.diasLetivos()) {
-                    auto jornada = turma.jornadaParaDia(dia);
-                    if (jornada.slots_letivos.empty()) continue;
-                    int first_dur = jornada.slots_letivos.front().durationMinutes();
-                    bool first_slot_ok = (req_map.find(first_dur) != req_map.end());
-                    if (first_slot_ok) {
-                        for (const auto& s : jornada.slots_letivos) {
-                            slots_por_dur_dias_validos_r9[s.durationMinutes()]++;
-                        }
-                    } else {
-                        bool has_later_compatible = false;
-                        for (size_t k = 1; k < jornada.slots_letivos.size(); ++k) {
-                            if (req_map.find(jornada.slots_letivos[k].durationMinutes()) != req_map.end()) {
-                                has_later_compatible = true;
-                                break;
-                            }
-                        }
-                        if (has_later_compatible) {
-                            res.addWarning("Turma " + turma.id() + " em " + model::dayToLongString(dia) +
-                                           " possui 1º slot de " + std::to_string(first_dur) +
-                                           " min sem nenhuma disciplina dessa duração" + sem_label +
-                                           " (a restrição R9 de início no 1º slot bloqueará alocações neste dia).");
-                        }
-                    }
-                }
-                for (const auto& [dur, qtd_req] : req_map) {
-                    int qtd_disp_r9 = slots_por_dur_dias_validos_r9.count(dur) ? slots_por_dur_dias_validos_r9[dur] : 0;
-                    if (qtd_req <= (slots_por_dur.count(dur) ? slots_por_dur[dur] : 0) && qtd_req > qtd_disp_r9) {
-                        res.addError("Turma " + turma.id() + " necessita de " + std::to_string(qtd_req) +
-                                     " aula(s) de " + std::to_string(dur) + " min" + sem_label +
-                                     ", mas apenas " + std::to_string(qtd_disp_r9) +
-                                     " slot(s) estão em dias cujo 1º slot da jornada pode ser ocupado (Restrição R9).");
-                    }
-                }
-            }
         };
 
         if (tem_s1 && tem_s2 && req_s1 == req_s2) {
@@ -329,16 +290,19 @@ std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
         }
     }
 
-    if (salas_admissiveis.empty()) {
-        diagnostico_aula.push_back("Não foi possível alocar a aula: " + aula.id() + " (" + aula.disciplinaNome() + ")"
-            + " | Professor: " + prof_nomes
-            + " | Turma: " + turma_nomes
-            + " | Restrições quebradas: Nenhuma sala física admissível cadastrada para o tipo '" + aula.tipo() + "'.");
-        return candidatos;
-    }
-
-    // Se aula estiver fixada pelo usuário (pinned)
+    // Se aula estiver fixada pelo usuário (pinned), preserva dia/horário e salas fixadas mesmo se salas_admissiveis estiver vazia
     if (aula.isPinned()) {
+        std::vector<std::string> rooms = aula.pinnedRooms();
+        if (rooms.empty() && !salas_admissiveis.empty()) {
+            rooms = salas_admissiveis.front();
+        }
+        if (rooms.empty()) {
+            diagnostico_aula.push_back("Não foi possível alocar a aula: " + aula.id() + " (" + aula.disciplinaNome() + ")"
+                + " | Professor: " + prof_nomes
+                + " | Turma: " + turma_nomes
+                + " | Restrições quebradas: Aula fixada não possui sala física informada nem sala admissível cadastrada.");
+            return candidatos;
+        }
         CandidateAllocation c;
         c.aula_id = aula.id();
         c.dia = aula.pinnedDay();
@@ -346,9 +310,17 @@ std::vector<CandidateAllocation> Preprocessor::gerarCandidatosParaAula(
         c.duration_minutes = aula.pinnedInterval().durationMinutes() > 0
                                  ? aula.pinnedInterval().durationMinutes()
                                  : dur_min;
-        c.salas = aula.pinnedRooms().empty() ? salas_admissiveis.front() : aula.pinnedRooms();
+        c.salas = std::move(rooms);
         c.custo_preferencia = 0;
         candidatos.push_back(std::move(c));
+        return candidatos;
+    }
+
+    if (salas_admissiveis.empty()) {
+        diagnostico_aula.push_back("Não foi possível alocar a aula: " + aula.id() + " (" + aula.disciplinaNome() + ")"
+            + " | Professor: " + prof_nomes
+            + " | Turma: " + turma_nomes
+            + " | Restrições quebradas: Nenhuma sala física admissível cadastrada para o tipo '" + aula.tipo() + "'.");
         return candidatos;
     }
 

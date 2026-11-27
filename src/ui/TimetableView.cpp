@@ -6,6 +6,7 @@
 #include "ui/TimetableView.h"
 #include "ui/SmartTableWidgetItem.h"
 #include "ui/ModernTheme.h"
+#include "ui/ResponsiveUi.h"
 #include "ui/MoveLessonDialog.h"
 #include "ui/SwapLessonDialog.h"
 #include "ui/ChangeRoomDialog.h"
@@ -37,119 +38,123 @@ TimetableView::TimetableView(model::InstitutionData& data, QWidget* parent)
  */
 void TimetableView::setupUi() {
     auto* main_layout = new QVBoxLayout(this);
-    main_layout->setContentsMargins(12, 12, 12, 12);
-    main_layout->setSpacing(12);
+    main_layout->setContentsMargins(8, 8, 8, 8);
+    main_layout->setSpacing(8);
 
-    // Barra superior de seleção e filtros
-    auto* top_panel = new QHBoxLayout();
-    top_panel->setSpacing(8);
+    // Barra superior responsiva de seleção, filtros e ações
+    auto* top_bar = new QWidget(this);
+    top_bar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+    auto* top_panel = new FlowLayout(top_bar, 0, 8, 6);
 
-    auto* lbl_mode = new QLabel("Modo:", this);
+    auto make_field = [top_bar](QLabel* lbl, QWidget* field) {
+        auto* box = new QWidget(top_bar);
+        auto* lay = new QHBoxLayout(box);
+        lay->setContentsMargins(0, 0, 0, 0);
+        lay->setSpacing(6);
+        lay->addWidget(lbl);
+        lay->addWidget(field);
+        return box;
+    };
+
+    auto* lbl_mode = new QLabel("Modo:", top_bar);
     lbl_mode->setStyleSheet("font-weight: bold; color: palette(highlight);");
-    top_panel->addWidget(lbl_mode);
 
-    combo_view_type_ = new QComboBox(this);
+    combo_view_type_ = new QComboBox(top_bar);
     combo_view_type_->addItem(ModernTheme::icon("turma"), "Por Turma", 0);
     combo_view_type_->addItem(ModernTheme::icon("professor"), "Por Professor", 1);
     combo_view_type_->addItem(ModernTheme::icon("room"), "Por Sala", 2);
     combo_view_type_->addItem(ModernTheme::icon("calendar"), "Todas as Disciplinas e Turmas", 3);
-    combo_view_type_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-    combo_view_type_->setMinimumWidth(180);
-    top_panel->addWidget(combo_view_type_);
+    makeComboResponsive(combo_view_type_, 12, 130);
+    combo_view_type_->setMaximumWidth(210);
+    top_panel->addWidget(make_field(lbl_mode, combo_view_type_));
 
-    top_panel->addSpacing(8);
-
-    lbl_entity_ = new QLabel("Selecionar Alvo:", this);
+    lbl_entity_ = new QLabel("Selecionar Alvo:", top_bar);
     lbl_entity_->setStyleSheet("font-weight: bold; color: palette(highlight);");
-    top_panel->addWidget(lbl_entity_);
 
-    combo_target_ = new QComboBox(this);
-    combo_target_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    combo_target_->setMinimumWidth(180);
-    combo_target_->setMaximumWidth(320);
-    top_panel->addWidget(combo_target_);
+    combo_target_ = new QComboBox(top_bar);
+    makeComboResponsive(combo_target_, 15, 150);
+    combo_target_->setMaximumWidth(280);
+    top_panel->addWidget(make_field(lbl_entity_, combo_target_));
 
-    top_panel->addSpacing(8);
-
-    auto* lbl_semestre = new QLabel("Semestre:", this);
+    auto* lbl_semestre = new QLabel("Semestre:", top_bar);
     lbl_semestre->setStyleSheet("font-weight: bold; color: palette(highlight);");
-    top_panel->addWidget(lbl_semestre);
 
-    combo_semestre_filtro_ = new QComboBox(this);
+    combo_semestre_filtro_ = new QComboBox(top_bar);
     combo_semestre_filtro_->addItem("Todos os Semestres (Geral)", 0);
     combo_semestre_filtro_->addItem("1º Semestre", 1);
     combo_semestre_filtro_->addItem("2º Semestre", 2);
-    combo_semestre_filtro_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-    combo_semestre_filtro_->setMinimumWidth(160);
-    top_panel->addWidget(combo_semestre_filtro_);
+    makeComboResponsive(combo_semestre_filtro_, 13, 130);
+    combo_semestre_filtro_->setMaximumWidth(210);
+    top_panel->addWidget(make_field(lbl_semestre, combo_semestre_filtro_));
 
-    top_panel->addStretch();
-
-    btn_toggle_orientation_ = new QPushButton(ModernTheme::icon("calendar"), "Grade: Horário × Dia", this);
+    btn_toggle_orientation_ = new QPushButton(ModernTheme::icon("calendar"), "Grade: Horário × Dia", top_bar);
     btn_toggle_orientation_->setObjectName("btnSecondary");
     btn_toggle_orientation_->setCursor(Qt::PointingHandCursor);
     btn_toggle_orientation_->setToolTip("Alterna a visualização da grade semanal entre Horário por Dia (linhas = horários, colunas = dias) e Dia por Horário (linhas = dias, colunas = horários)");
     top_panel->addWidget(btn_toggle_orientation_);
 
-    btn_swap_lesson_ = new QPushButton(ModernTheme::icon("swap"), "Trocar Aulas (Swap)...", this);
+    btn_swap_lesson_ = new QPushButton(ModernTheme::icon("swap"), "Trocar Aulas (Swap)...", top_bar);
     btn_swap_lesson_->setObjectName("btnSecondary");
     btn_swap_lesson_->setCursor(Qt::PointingHandCursor);
     btn_swap_lesson_->setToolTip("Permuta os horários entre a aula selecionada e outra aula da grade semanal");
     top_panel->addWidget(btn_swap_lesson_);
 
-    btn_add_lesson_ = new QPushButton(ModernTheme::icon("add"), "Alocar Disciplina...", this);
+    btn_add_lesson_ = new QPushButton(ModernTheme::icon("add"), "Alocar Disciplina...", top_bar);
     btn_add_lesson_->setObjectName("btnPrimary");
     btn_add_lesson_->setCursor(Qt::PointingHandCursor);
     btn_add_lesson_->setToolTip("Adiciona uma ocorrência de disciplina manualmente na grade semanal");
     top_panel->addWidget(btn_add_lesson_);
 
-    btn_clear_timetable_ = new QPushButton(ModernTheme::icon("delete"), "Limpar Grade...", this);
+    btn_clear_timetable_ = new QPushButton(ModernTheme::icon("delete"), "Limpar Grade...", top_bar);
     btn_clear_timetable_->setObjectName("btnSecondary");
     btn_clear_timetable_->setCursor(Qt::PointingHandCursor);
     btn_clear_timetable_->setToolTip("Remove todas as alocações da grade semanal para iniciar uma nova configuração inicial");
     top_panel->addWidget(btn_clear_timetable_);
 
-    main_layout->addLayout(top_panel);
+    main_layout->addWidget(top_bar);
 
     // Barra secundária de informações do alvo e busca rápida
-    auto* sub_panel = new QHBoxLayout();
-    sub_panel->setSpacing(8);
+    auto* sub_bar = new QWidget(this);
+    sub_bar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+    auto* sub_panel = new FlowLayout(sub_bar, 0, 8, 4);
 
-    lbl_info_banner_ = new QLabel(this);
+    lbl_info_banner_ = new QLabel(sub_bar);
     lbl_info_banner_->setObjectName("lblInfoBanner");
+    lbl_info_banner_->setWordWrap(true);
+    lbl_info_banner_->setMinimumWidth(160);
     lbl_info_banner_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    sub_panel->addWidget(lbl_info_banner_, 1);
+    sub_panel->addWidget(lbl_info_banner_);
 
-    btn_clear_selection_ = new QPushButton("✕ Limpar seleção", this);
+    btn_clear_selection_ = new QPushButton("✕ Limpar seleção", sub_bar);
     btn_clear_selection_->setObjectName("btnSecondary");
     btn_clear_selection_->setCursor(Qt::PointingHandCursor);
     btn_clear_selection_->setToolTip("Remove a seleção atual e oculta os indicadores de disponibilidade nos horários (Esc)");
     btn_clear_selection_->setVisible(false);
     sub_panel->addWidget(btn_clear_selection_);
 
-    btn_conflict_summary_ = new QPushButton("✅ Sem choques", this);
+    btn_conflict_summary_ = new QPushButton("✅ Sem choques", sub_bar);
     btn_conflict_summary_->setCursor(Qt::PointingHandCursor);
     btn_conflict_summary_->setToolTip("Clique para listar os choques de turma, professor, sala ou indisponibilidades na grade");
     sub_panel->addWidget(btn_conflict_summary_);
 
-    sub_panel->addSpacing(8);
-
-    search_lesson_ = new QLineEdit(this);
+    search_lesson_ = new QLineEdit(sub_bar);
     search_lesson_->addAction(ModernTheme::icon("search"), QLineEdit::LeadingPosition);
     search_lesson_->setPlaceholderText("Destacar aula/prof/sala...");
     search_lesson_->setClearButtonEnabled(true);
-    search_lesson_->setFixedWidth(220);
+    search_lesson_->setMinimumWidth(140);
+    search_lesson_->setMaximumWidth(220);
+    search_lesson_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     search_lesson_->setToolTip("Digite para localizar e destacar aulas na grade semanal");
     sub_panel->addWidget(search_lesson_);
 
-    lbl_search_count_ = new QLabel(this);
+    lbl_search_count_ = new QLabel(sub_bar);
     lbl_search_count_->setObjectName("lblSearchCount");
     lbl_search_count_->setVisible(false);
     sub_panel->addWidget(lbl_search_count_);
 
     updateBannerTheme();
 
-    main_layout->addLayout(sub_panel);
+    main_layout->addWidget(sub_bar);
 
     // Tabela da Grade Semanal com Drag & Drop
     table_ = new TimetableGridWidget(this);
@@ -160,7 +165,10 @@ void TimetableView::setupUi() {
     }
     table_->setHorizontalHeaderLabels(headers);
     table_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    table_->horizontalHeader()->setMinimumSectionSize(95);
     table_->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    table_->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    table_->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     table_->setContextMenuPolicy(Qt::CustomContextMenu);
     table_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     table_->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -1120,7 +1128,19 @@ void TimetableView::onSearchLessonChanged(const QString& query) {
  * @brief Abre o menu de contexto com ações de fixação, troca de sala e movimentação ao clicar na célula.
  * @param pos Ponto do clique do mouse.
  */
+void TimetableView::setReadOnlyMode(bool read_only) {
+    read_only_mode_ = read_only;
+    if (btn_swap_lesson_) btn_swap_lesson_->setEnabled(!read_only);
+    if (btn_add_lesson_) btn_add_lesson_->setEnabled(!read_only);
+    if (btn_clear_timetable_) btn_clear_timetable_->setEnabled(!read_only);
+    if (table_) {
+        table_->setAcceptDrops(!read_only);
+        table_->viewport()->setAcceptDrops(!read_only);
+    }
+}
+
 void TimetableView::onCellContextMenu(const QPoint& pos) {
+    if (read_only_mode_) return;
     auto* item = table_->itemAt(pos);
     if (!item) return;
 
@@ -1418,6 +1438,7 @@ void TimetableView::onCellContextMenu(const QPoint& pos) {
  * @param col Coluna da célula.
  */
 void TimetableView::onCellDoubleClicked(int row, int col) {
+    if (read_only_mode_) return;
     auto* item = table_->item(row, col);
     if (!item) return;
 
@@ -1472,6 +1493,7 @@ void TimetableView::onCellDoubleClicked(int row, int col) {
  * @param aula_id ID da aula a movimentar.
  */
 void TimetableView::moverAulaManual(const QString& aula_id) {
+    if (read_only_mode_) return;
     std::string aid = aula_id.toStdString();
     auto* a_aloc = data_.grade().findAula(aid);
     auto* a_model = data_.findAula(aid);
@@ -1540,6 +1562,9 @@ void TimetableView::moverAulaManual(const QString& aula_id) {
                 }
                 a_aloc->is_pinned = true;
                 a_model->setPinned(true);
+                a_model->setPinnedDay(a_aloc->dia);
+                a_model->setPinnedInterval(a_aloc->intervalo);
+                a_model->setPinnedRooms(a_aloc->salas);
                 data_.grade().addMensagemDiagnostico("[MANUAL] Sala da aula " + aid + " (" + a_aloc->disciplina_nome + ") alterada para " + s_nome + ".");
                 renderTimetable();
                 emit timetableModified();
@@ -1554,6 +1579,7 @@ void TimetableView::moverAulaManual(const QString& aula_id) {
  * @param aula_id ID da aula.
  */
 void TimetableView::mudarSalaManual(const QString& aula_id) {
+    if (read_only_mode_) return;
     std::string aid = aula_id.toStdString();
     auto* a_aloc = data_.grade().findAula(aid);
     auto* a_model = data_.findAula(aid);
@@ -1591,10 +1617,14 @@ void TimetableView::mudarSalaManual(const QString& aula_id) {
                 if (dlg.isPinned()) {
                     a_aloc->is_pinned = true;
                     a_model->setPinned(true);
+                    a_model->setPinnedDay(a_aloc->dia);
+                    a_model->setPinnedInterval(a_aloc->intervalo);
                     a_model->setPinnedRooms(a_aloc->salas);
                     conflito_aloc->is_pinned = true;
                     if (conflito_model) {
                         conflito_model->setPinned(true);
+                        conflito_model->setPinnedDay(conflito_aloc->dia);
+                        conflito_model->setPinnedInterval(conflito_aloc->intervalo);
                         conflito_model->setPinnedRooms(conflito_aloc->salas);
                     }
                 }
@@ -1613,6 +1643,8 @@ void TimetableView::mudarSalaManual(const QString& aula_id) {
         if (dlg.isPinned()) {
             a_aloc->is_pinned = true;
             a_model->setPinned(true);
+            a_model->setPinnedDay(a_aloc->dia);
+            a_model->setPinnedInterval(a_aloc->intervalo);
             a_model->setPinnedRooms(a_aloc->salas);
         }
 
@@ -1630,6 +1662,7 @@ void TimetableView::mudarSalaManual(const QString& aula_id) {
  * @param col Coluna da célula da tabela selecionada (-1 se nenhuma).
  */
 void TimetableView::alocarAulaManual(int row, int col) {
+    if (read_only_mode_) return;
     if (data_.disciplinas().empty()) {
         QMessageBox::information(this, "Sem Disciplinas",
             "Nenhuma disciplina cadastrada na instituição.\nCadastre primeiro as disciplinas na aba '📚 Disciplinas' para poder alocá-las na grade.");
@@ -1720,6 +1753,7 @@ void TimetableView::alocarAulaManual(int row, int col) {
  * @brief Limpa todas as alocações da grade horária permitindo reiniciar a montagem da grade.
  */
 void TimetableView::limparGradeCompleta() {
+    if (read_only_mode_) return;
     if (data_.grade().alocacoes().empty()) {
         QMessageBox::information(this, "Grade Vazia", "A grade horária já está vazia.");
         return;
@@ -1778,6 +1812,7 @@ std::vector<std::string> TimetableView::verificarConflitosMovimentacao(
  * @param target_col Coluna da célula de destino.
  */
 void TimetableView::onLessonDropRequested(const QString& aula_id, int target_row, int target_col) {
+    if (read_only_mode_) return;
     int time_idx = transpose_grid_ ? target_col : target_row;
     int day_idx = transpose_grid_ ? target_row : target_col;
     if (time_idx < 0 || time_idx >= static_cast<int>(row_intervals_.size())) return;
@@ -2092,6 +2127,7 @@ void TimetableView::onShowConflictsMenu() {
  * @param aula_id ID da aula de origem.
  */
 void TimetableView::trocarAulaManual(const QString& aula_id) {
+    if (read_only_mode_) return;
     if (data_.grade().alocacoes().size() < 2) {
         QMessageBox::information(this, "Aulas Insuficientes",
             "É necessário ter pelo menos 2 aulas alocadas na grade para realizar a permuta (troca de horários).");

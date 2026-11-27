@@ -7,9 +7,12 @@
 #include "solver/SolverCommon.h"
 #include "ortools/sat/cp_model.h"
 #include "ortools/sat/cp_model_solver.h"
+#include "ortools/sat/model.h"
 #include "ortools/sat/sat_parameters.pb.h"
+#include "ortools/util/time_limit.h"
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <map>
 #include <string>
 #include <vector>
@@ -171,7 +174,7 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
 
     // Vinculação sum_{c in C_a : b_c = {r}} x_{a,c} <= z_{g,r} para aulas teóricas (seção 7 / R5)
     for (const auto& aula : data.aulas()) {
-        if (!aula.isTeorica() || aula.temSalasAlternativasExplicitas() || aula.turmas().size() != 1) continue;
+        if (aula.isPinned() || !aula.isTeorica() || aula.temSalasAlternativasExplicitas() || aula.turmas().size() != 1) continue;
         std::string g_id = aula.turmas().front();
         std::map<std::string, LinearExpr> expr_por_sala;
         for (const auto& item : vars_por_aula[aula.id()]) {
@@ -288,47 +291,6 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
         add_turma_no_overlap(vars_turma_dia, "int");
     }
 
-    // 5.4b Início obrigatório da primeira aula no início da jornada da turma (seção 3.5 / [H11]):
-    // Toda turma que possuir aulas alocadas em um dia letivo deve obrigatoriamente
-    // ter sua primeira aula iniciando no slot inicial da jornada (T_ini).
-    auto add_turma_inicio_obrigatorio = [&](const std::map<std::pair<std::string, model::DayOfWeek>, std::vector<CandItem>>& map_vars) {
-        for (const auto& turma : data.turmas()) {
-            for (auto dia : turma.diasLetivos()) {
-                auto it = map_vars.find({turma.id(), dia});
-                if (it == map_vars.end() || it->second.empty()) continue;
-
-                auto jornada = turma.jornadaParaDia(dia);
-                if (jornada.slots_letivos.empty()) continue;
-                int t_ini = jornada.slots_letivos.front().start_min;
-
-                LinearExpr sum_start;
-                std::map<std::string, LinearExpr> later_expr_by_aula;
-
-                for (const auto& item : it->second) {
-                    if (item.cand->start_min == t_ini) {
-                        sum_start += item.var;
-                    } else if (item.cand->start_min > t_ini) {
-                        later_expr_by_aula[item.cand->aula_id] += item.var;
-                    }
-                }
-
-                // Para cada aula que inicia após t_ini, a soma de seus candidatos no dia após t_ini
-                // só pode ser ativada se houver uma aula iniciando exatamente em t_ini (R9).
-                for (const auto& [aula_id, expr_later] : later_expr_by_aula) {
-                    (void)aula_id;
-                    cp_model.AddLessOrEqual(expr_later, sum_start);
-                }
-            }
-        }
-    };
-
-    if (is_multi_sem) {
-        add_turma_inicio_obrigatorio(vars_turma_dia_s1);
-        add_turma_inicio_obrigatorio(vars_turma_dia_s2);
-    } else {
-        add_turma_inicio_obrigatorio(vars_turma_dia);
-    }
-
     // 5.5 Carga máxima diária do professor (seção 3.9)
     auto add_prof_carga_max = [&](const std::map<std::pair<std::string, model::DayOfWeek>, std::vector<CandItem>>& map_vars) {
         for (const auto& prof : data.professores()) {
@@ -337,10 +299,16 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
                     auto it = map_vars.find({prof.id(), dia});
                     if (it == map_vars.end()) continue;
                     LinearExpr minutos_dia;
+                    int pinned_min = 0;
                     for (const auto& item : it->second) {
                         minutos_dia += item.cand->duration_minutes * item.var;
+                        const auto* a_ptr = data.findAula(item.cand->aula_id);
+                        if (a_ptr && a_ptr->isPinned()) {
+                            pinned_min += item.cand->duration_minutes;
+                        }
                     }
-                    cp_model.AddLessOrEqual(minutos_dia, prof.cargaMaximaDiariaMinutos());
+                    int limite_dia = std::max(prof.cargaMaximaDiariaMinutos(), pinned_min);
+                    cp_model.AddLessOrEqual(minutos_dia, limite_dia);
                 }
             }
         }
@@ -356,6 +324,21 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
     if (data.config().preenchimento_integral_jornada) {
         auto add_preenchimento_integral = [&](const std::map<std::pair<std::string, model::DayOfWeek>, std::vector<CandItem>>& map_vars) {
             for (const auto& turma : data.turmas()) {
+                bool has_unpinned = false;
+                for (auto dia : turma.diasLetivos()) {
+                    auto it_chk = map_vars.find({turma.id(), dia});
+                    if (it_chk == map_vars.end()) continue;
+                    for (const auto& item : it_chk->second) {
+                        const auto* a_ptr = data.findAula(item.cand->aula_id);
+                        if (!a_ptr || !a_ptr->isPinned()) {
+                            has_unpinned = true;
+                            break;
+                        }
+                    }
+                    if (has_unpinned) break;
+                }
+                if (!has_unpinned) continue;
+
                 for (auto dia : turma.diasLetivos()) {
                     auto jornada = turma.jornadaParaDia(dia);
                     auto it = map_vars.find({turma.id(), dia});
@@ -394,19 +377,25 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
                     for (auto dia : model::allDays()) {
                         LinearExpr aulas_disc_dia;
                         bool has_day_vars = false;
+                        int pinned_on_day = 0;
                         for (int i = 1; i <= disc.aulasSemanais(); ++i) {
                             std::string aula_id = disc.id() + "_" + std::to_string(i);
                             auto it_v = vars_por_aula.find(aula_id);
                             if (it_v == vars_por_aula.end()) continue;
+                            const auto* a_ptr = data.findAula(aula_id);
                             for (const auto& item : it_v->second) {
                                 if (item.cand->dia == dia) {
                                     aulas_disc_dia += item.var;
                                     has_day_vars = true;
+                                    if (a_ptr && a_ptr->isPinned()) {
+                                        pinned_on_day++;
+                                    }
                                 }
                             }
                         }
                         if (has_day_vars) {
-                            cp_model.AddLessOrEqual(aulas_disc_dia, max_por_dia);
+                            int limite_dia = std::max(max_por_dia, pinned_on_day);
+                            cp_model.AddLessOrEqual(aulas_disc_dia, limite_dia);
                         }
                     }
                 }
@@ -432,6 +421,28 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
         }
         if (block_size < 2) continue;
         int num_days = n_aulas / block_size;
+
+        int pinned_total = 0;
+        std::map<model::DayOfWeek, int> pinned_per_day;
+        for (int i = 1; i <= n_aulas; ++i) {
+            std::string aula_id = disc.id() + "_" + std::to_string(i);
+            const auto* a_ptr = data.findAula(aula_id);
+            if (a_ptr && a_ptr->isPinned()) {
+                pinned_total++;
+                pinned_per_day[a_ptr->pinnedDay()]++;
+            }
+        }
+        bool pin_incompatible = (pinned_total == n_aulas) || (static_cast<int>(pinned_per_day.size()) > num_days);
+        if (!pin_incompatible) {
+            for (const auto& [d_pin, cnt_pin] : pinned_per_day) {
+                (void)d_pin;
+                if (cnt_pin > block_size) {
+                    pin_incompatible = true;
+                    break;
+                }
+            }
+        }
+        if (pin_incompatible) continue;
 
         std::vector<BoolVar> dias_ativas;
         for (auto dia : model::allDays()) {
@@ -723,6 +734,17 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
                                          " aulas da distribuição atual em tela foram fornecidas como solução inicial (Hint).");
     }
 
+    if (stop_requested_.load()) {
+        model::TimetableStatistics stats;
+        stats.tempo_execucao_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start_time).count();
+        stats.total_aulas_esperadas = static_cast<int>(data.aulas().size());
+        stats.status = "CANCELLED";
+        timetable.setEstatisticas(stats);
+        timetable.addMensagemDiagnostico("[CANCELADO] Otimização interrompida pelo usuário antes de iniciar a busca.");
+        if (callback) callback("CP-SAT: Otimização cancelada pelo usuário.", 1.0);
+        return timetable;
+    }
+
     if (callback) callback("Executando solver CP-SAT...", 0.60);
 
     // 7. Parâmetros e Resolução
@@ -735,24 +757,65 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
     }
     params.set_num_workers(data.config().num_threads);
     params.set_log_search_progress(data.config().log_search_progress);
+    params.set_catch_sigint_signal(false);
 
     auto model_proto = cp_model.Build();
-    const CpSolverResponse response = SolveWithParameters(model_proto, params);
+    Model sat_model;
+    sat_model.Add(NewSatParameters(params));
+
+    // O OR-Tools SharedTimeLimit::Stop() grava `true` no booleano externo registrado
+    // quando a busca termina internamente (INFEASIBLE, OPTIMAL, limite de memória etc.).
+    // Mantemos uma flag local isolada para que apenas requestStop() marque stop_requested_.
+    std::atomic<bool> cp_sat_stop{false};
+    sat_model.GetOrCreate<TimeLimit>()->RegisterExternalBooleanAsLimit(&cp_sat_stop);
+    if (callback) {
+        sat_model.Add(NewFeasibleSolutionObserver([&callback](const CpSolverResponse& r) {
+            callback("CP-SAT: Nova solução viável (objetivo = " +
+                     std::to_string(static_cast<long long>(std::llround(r.objective_value()))) + ")...", 0.75);
+        }));
+    }
+
+    CpSolverResponse response;
+    bool skipped_before_solve = false;
+    {
+        struct CpSatInterruptGuard {
+            ScheduleSolver* owner;
+            CpSatInterruptGuard(ScheduleSolver* s, std::atomic<bool>* flag) : owner(s) {
+                owner->setInterruptHandler([flag]() {
+                    flag->store(true);
+                });
+            }
+            ~CpSatInterruptGuard() {
+                owner->clearInterruptHandler();
+            }
+        } guard(this, &cp_sat_stop);
+
+        if (stop_requested_.load()) {
+            cp_sat_stop.store(true);
+            skipped_before_solve = true;
+        } else {
+            response = SolveCpModel(model_proto, &sat_model);
+        }
+    }
 
     auto end_time = std::chrono::steady_clock::now();
     double tempo_ms = std::chrono::duration<double, std::milli>(end_time - start_time).count();
 
     model::TimetableStatistics stats;
     stats.tempo_execucao_ms = tempo_ms;
-    stats.valor_objetivo = response.objective_value();
+    stats.valor_objetivo = skipped_before_solve ? 0.0 : response.objective_value();
     stats.total_aulas_esperadas = static_cast<int>(data.aulas().size());
 
-    if (response.status() == CpSolverStatus::OPTIMAL) {
+    if (skipped_before_solve) {
+        stats.status = "CANCELLED";
+    } else if (response.status() == CpSolverStatus::OPTIMAL) {
         stats.status = "OPTIMAL";
     } else if (response.status() == CpSolverStatus::FEASIBLE) {
         stats.status = "FEASIBLE";
     } else if (response.status() == CpSolverStatus::INFEASIBLE) {
         stats.status = "INFEASIBLE";
+    } else if (response.status() == CpSolverStatus::MODEL_INVALID) {
+        stats.status = "MODEL_INVALID";
     } else {
         stats.status = "UNKNOWN";
     }
@@ -817,7 +880,12 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
         stats.penalidade_preferencias_P = static_cast<int>(SolutionIntegerValue(response, expr_P));
 
         timetable.setEstatisticas(stats);
-        if (callback) callback("Grade gerada com sucesso!", 1.0);
+        if (stop_requested_.load() && stats.status == "FEASIBLE") {
+            timetable.addMensagemDiagnostico("[INTERROMPIDO] Otimização interrompida pelo usuário. Aplicada a melhor solução viável encontrada até o momento.");
+            if (callback) callback("CP-SAT: Interrompido pelo usuário (melhor solução viável aplicada).", 1.0);
+        } else {
+            if (callback) callback("Grade gerada com sucesso!", 1.0);
+        }
     } else if (stats.status == "INFEASIBLE") {
         timetable.setEstatisticas(stats);
         timetable.addMensagemDiagnostico("[INVIABILIDADE] O solver CP-SAT determinou que o conjunto de restrições não possui solução viável.");
@@ -836,12 +904,43 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
             }
         }
         if (callback) callback("Inviável: Sem solução para as restrições informadas.", 1.0);
+    } else if (stats.status == "MODEL_INVALID") {
+        timetable.setEstatisticas(stats);
+        std::string info = response.solution_info();
+        timetable.addMensagemDiagnostico(
+            "[ERRO] Modelo CP-SAT inválido" + (info.empty() ? std::string(".") : ": " + info));
+        if (callback) callback("CP-SAT: Modelo matemático inválido.", 1.0);
+    } else if (stop_requested_.load()) {
+        stats.status = "CANCELLED";
+        timetable.setEstatisticas(stats);
+        timetable.addMensagemDiagnostico("[CANCELADO] Otimização interrompida pelo usuário antes de encontrar uma solução viável.");
+        if (callback) callback("CP-SAT: Otimização cancelada pelo usuário.", 1.0);
     } else {
         timetable.setEstatisticas(stats);
+        const std::string sol_info = response.solution_info();
+        if (!sol_info.empty()) {
+            timetable.addMensagemDiagnostico("[CP-SAT] Detalhes do encerramento: " + sol_info);
+        }
+        const bool has_mem_limit = !data.config().sem_limite_memoria && data.config().max_memoria_mb > 0;
         if (data.config().sem_limite_tempo) {
-            timetable.addMensagemDiagnostico("[BUSCA_INTERROMPIDA] O solver CP-SAT finalizou a busca sem encontrar uma solução viável completa.");
-            timetable.addMensagemDiagnostico("Dica: Verifique a disponibilidade dos professores, salas compatíveis ou flexibilize restrições.");
+            std::string msg = "[BUSCA_INTERROMPIDA] O solver CP-SAT finalizou a busca sem encontrar uma solução viável completa.";
+            if (has_mem_limit) {
+                msg += " (Limite de memória configurado: " + std::to_string(data.config().max_memoria_mb) + " MB.)";
+            }
+            timetable.addMensagemDiagnostico(msg);
+            timetable.addMensagemDiagnostico("Dica: Verifique a disponibilidade dos professores, salas compatíveis, limite de memória ou flexibilize restrições.");
             if (callback) callback("Busca finalizada sem encontrar solução viável.", 1.0);
+        } else if (data.config().tempo_limite_segundos > 0.0 &&
+                   tempo_ms < data.config().tempo_limite_segundos * 1000.0 * 0.85) {
+            std::string msg = "[LIMITE_MEMORIA_OU_BUSCA] O solver CP-SAT encerrou antes do tempo limite configurado (" +
+                              std::to_string(static_cast<int>(std::llround(tempo_ms / 1000.0))) + "s de " +
+                              std::to_string(static_cast<int>(std::llround(data.config().tempo_limite_segundos))) + "s) sem solução viável.";
+            if (has_mem_limit) {
+                msg += " Limite de memória configurado: " + std::to_string(data.config().max_memoria_mb) + " MB.";
+            }
+            timetable.addMensagemDiagnostico(msg);
+            timetable.addMensagemDiagnostico("Dica: Aumente ou remova o limite de memória RAM, ou verifique restrições conflitantes nos logs.");
+            if (callback) callback("CP-SAT encerrou antes do tempo limite sem solução viável.", 1.0);
         } else {
             timetable.addMensagemDiagnostico("[TEMPO_LIMITE] O tempo limite de resolução foi atingido antes de encontrar uma solução viável completa.");
             timetable.addMensagemDiagnostico("Dica: Aumente o tempo limite, selecione 'Sem restrição de tempo' ou utilize a Heurística Gulosa para gerar uma solução inicial rápida.");

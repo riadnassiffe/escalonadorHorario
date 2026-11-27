@@ -5,6 +5,7 @@
 
 #include "ui/MoveLessonDialog.h"
 #include "ui/ModernTheme.h"
+#include "ui/ResponsiveUi.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -28,32 +29,40 @@ MoveLessonDialog::MoveLessonDialog(model::InstitutionData& data,
     : QDialog(parent), data_(data), aula_id_(aula_id), available_slots_(available_slots) {
     setWindowTitle("Mover Aula Manualmente");
     setWindowIcon(ModernTheme::icon("swap"));
-    setMinimumWidth(500);
+    setMinimumSize(420, 340);
     setupUi();
     updateValidationStatus();
+    fitWindowToScreen(this, QSize(520, 460));
 }
 
 /**
  * @brief Constrói o layout, cartões informativos e controles de seleção de dia, horário e sala.
  */
 void MoveLessonDialog::setupUi() {
-    auto* main_layout = new QVBoxLayout(this);
-    main_layout->setSpacing(14);
-    main_layout->setContentsMargins(18, 18, 18, 18);
+    auto* root_layout = new QVBoxLayout(this);
+    root_layout->setSpacing(10);
+    root_layout->setContentsMargins(12, 12, 12, 12);
+
+    auto* body_widget = new QWidget(this);
+    auto* main_layout = new QVBoxLayout(body_widget);
+    main_layout->setSpacing(12);
+    main_layout->setContentsMargins(2, 2, 2, 2);
 
     const auto* aula_aloc = data_.grade().findAula(aula_id_);
     const auto* aula_model = data_.findAula(aula_id_);
 
     // Card informativo da aula
-    auto* grp_info = new QGroupBox("Detalhes da Aula Selecionada", this);
+    auto* grp_info = new QGroupBox("Detalhes da Aula Selecionada", body_widget);
     auto* layout_info = new QFormLayout(grp_info);
     layout_info->setSpacing(8);
+    layout_info->setFieldGrowthPolicy(QFormLayout::ExpandingFieldsGrow);
 
     QString disc_title = aula_aloc ? QString::fromStdString(aula_aloc->disciplina_nome) : "Aula Desconhecida";
     if (aula_model) {
         disc_title += QString(" (%1 - %2 min)").arg(QString::fromStdString(aula_model->tipo())).arg(aula_model->duracaoMinutos());
     }
     auto* lbl_disc = new QLabel(disc_title, grp_info);
+    lbl_disc->setWordWrap(true);
     lbl_disc->setStyleSheet("font-weight: bold; font-size: 13px; color: palette(highlight);");
     layout_info->addRow("Disciplina:", lbl_disc);
 
@@ -65,7 +74,9 @@ void MoveLessonDialog::setupUi() {
             prof_names += QString::fromStdString(p ? p->nome() : aula_aloc->professores[i]);
         }
     }
-    layout_info->addRow("Professor(es):", new QLabel(prof_names.isEmpty() ? "Não informado" : prof_names, grp_info));
+    auto* lbl_profs = new QLabel(prof_names.isEmpty() ? "Não informado" : prof_names, grp_info);
+    lbl_profs->setWordWrap(true);
+    layout_info->addRow("Professor(es):", lbl_profs);
 
     QString turma_names;
     if (aula_aloc) {
@@ -75,21 +86,25 @@ void MoveLessonDialog::setupUi() {
             turma_names += QString::fromStdString(t ? t->nome() : aula_aloc->turmas[i]);
         }
     }
-    layout_info->addRow("Turma(s):", new QLabel(turma_names.isEmpty() ? "Não informada" : turma_names, grp_info));
+    auto* lbl_turmas = new QLabel(turma_names.isEmpty() ? "Não informada" : turma_names, grp_info);
+    lbl_turmas->setWordWrap(true);
+    layout_info->addRow("Turma(s):", lbl_turmas);
 
     QString cur_time = aula_aloc ? QString("%1 às %2").arg(QString::fromStdString(model::dayToLongString(aula_aloc->dia)))
                                                           .arg(QString::fromStdString(aula_aloc->intervalo.toString()))
                                    : "Não alocada";
     auto* lbl_cur = new QLabel(cur_time, grp_info);
+    lbl_cur->setWordWrap(true);
     lbl_cur->setStyleSheet("font-weight: 500;");
     layout_info->addRow("Horário Atual:", lbl_cur);
 
     main_layout->addWidget(grp_info);
 
     // Painel de seleção de novo horário
-    auto* grp_destino = new QGroupBox("Novo Posicionamento na Grade", this);
+    auto* grp_destino = new QGroupBox("Novo Posicionamento na Grade", body_widget);
     auto* form_destino = new QFormLayout(grp_destino);
-    form_destino->setSpacing(10);
+    form_destino->setSpacing(8);
+    form_destino->setFieldGrowthPolicy(QFormLayout::ExpandingFieldsGrow);
 
     combo_dia_ = new QComboBox(grp_destino);
     for (auto d : model::allDays()) {
@@ -99,6 +114,7 @@ void MoveLessonDialog::setupUi() {
         int day_idx = static_cast<int>(aula_aloc->dia);
         combo_dia_->setCurrentIndex(day_idx);
     }
+    makeComboResponsive(combo_dia_, 16, 180);
     form_destino->addRow("Novo Dia da Semana:", combo_dia_);
 
     combo_horario_ = new QComboBox(grp_destino);
@@ -126,6 +142,7 @@ void MoveLessonDialog::setupUi() {
     if (combo_horario_->count() > 0) {
         combo_horario_->setCurrentIndex(selected_slot_idx);
     }
+    makeComboResponsive(combo_horario_, 18, 180);
     form_destino->addRow("Novo Horário:", combo_horario_);
 
     combo_sala_ = new QComboBox(grp_destino);
@@ -145,21 +162,26 @@ void MoveLessonDialog::setupUi() {
     if (combo_sala_->count() > 0) {
         combo_sala_->setCurrentIndex(selected_room_idx);
     }
+    makeComboResponsive(combo_sala_, 20, 180);
     form_destino->addRow("Nova Sala / Lab:", combo_sala_);
 
     main_layout->addWidget(grp_destino);
 
     // Feedback de status e conflitos
-    lbl_conflito_status_ = new QLabel(this);
+    lbl_conflito_status_ = new QLabel(body_widget);
     lbl_conflito_status_->setWordWrap(true);
     lbl_conflito_status_->setStyleSheet("padding: 8px; border-radius: 6px; font-size: 11px;");
     main_layout->addWidget(lbl_conflito_status_);
+    main_layout->addStretch();
 
-    // Botões de Ação
+    root_layout->addWidget(wrapInScrollArea(body_widget, this), 1);
+
+    // Botões de Ação (fixos no rodapé)
     auto* btn_layout = new QHBoxLayout();
     btn_layout->addStretch();
 
     auto* btn_cancelar = new QPushButton("Cancelar", this);
+    btn_cancelar->setObjectName("btnSecondary");
     connect(btn_cancelar, &QPushButton::clicked, this, &QDialog::reject);
     btn_layout->addWidget(btn_cancelar);
 
@@ -169,7 +191,7 @@ void MoveLessonDialog::setupUi() {
     connect(btn_mover_, &QPushButton::clicked, this, &QDialog::accept);
     btn_layout->addWidget(btn_mover_);
 
-    main_layout->addLayout(btn_layout);
+    root_layout->addLayout(btn_layout);
 
     connect(combo_dia_, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &MoveLessonDialog::onSelectionChanged);

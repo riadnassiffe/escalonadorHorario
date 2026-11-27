@@ -65,6 +65,10 @@ void TimetableGridWidget::mousePressEvent(QMouseEvent* event) {
  * @param event Evento de movimento do mouse.
  */
 void TimetableGridWidget::mouseMoveEvent(QMouseEvent* event) {
+    if (!acceptDrops()) {
+        QTableWidget::mouseMoveEvent(event);
+        return;
+    }
     if (!(event->buttons() & Qt::LeftButton)) {
         QTableWidget::mouseMoveEvent(event);
         return;

@@ -151,6 +151,7 @@ class TurmaCopyRequest(BaseModel):
     nome: str = Field(min_length=1, max_length=200)
     code: str | None = None
     copy_disciplinas: bool = False
+    disciplina_codes: list[str] | None = None
     sala_teorica_id: str | None = None
     salas_teoricas_permitidas: list[str] | None = None
 

@@ -41,6 +41,8 @@ inline QString removeAccents(const QString& str) {
  */
 class SmartTableWidgetItem : public QTableWidgetItem {
 public:
+    static constexpr int SortKeyRole = Qt::UserRole + 100;
+
     /**
      * @brief Constrói o item com o texto especificado.
      * @param text Texto exibido na célula da tabela.
@@ -62,6 +64,12 @@ public:
      * @return true se este item antecede `other` na ordem natural; false caso contrário.
      */
     bool operator<(const QTableWidgetItem& other) const override {
+        const QVariant lhs = data(SortKeyRole);
+        const QVariant rhs = other.data(SortKeyRole);
+        if (lhs.isValid() && rhs.isValid()) {
+            return lhs.toLongLong() < rhs.toLongLong();
+        }
+
         thread_local QCollator collator;
         thread_local bool initialized = false;
         if (!initialized) {

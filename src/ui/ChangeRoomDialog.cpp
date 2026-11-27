@@ -5,6 +5,7 @@
 
 #include "ui/ChangeRoomDialog.h"
 #include "ui/ModernTheme.h"
+#include "ui/ResponsiveUi.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGroupBox>
@@ -32,18 +33,23 @@ ChangeRoomDialog::ChangeRoomDialog(model::InstitutionData& data,
 void ChangeRoomDialog::setupUi() {
     setWindowTitle("Alterar Sala de Aula");
     setWindowIcon(ModernTheme::icon("room"));
-    setMinimumWidth(520);
+    setMinimumSize(440, 340);
     setModal(true);
 
     const auto* a_aloc = data_.grade().findAula(aula_id_);
     if (!a_aloc) return;
 
-    auto* main_lay = new QVBoxLayout(this);
-    main_lay->setSpacing(14);
-    main_lay->setContentsMargins(20, 20, 20, 20);
+    auto* root_lay = new QVBoxLayout(this);
+    root_lay->setSpacing(10);
+    root_lay->setContentsMargins(12, 12, 12, 12);
+
+    auto* body_widget = new QWidget(this);
+    auto* main_lay = new QVBoxLayout(body_widget);
+    main_lay->setSpacing(12);
+    main_lay->setContentsMargins(2, 2, 2, 2);
 
     // 1. Card de informações da aula
-    auto* card_aula = new QFrame(this);
+    auto* card_aula = new QFrame(body_widget);
     card_aula->setObjectName("cardAula");
     bool is_dark = ModernTheme::isDarkTheme();
     card_aula->setStyleSheet(QString(
@@ -51,7 +57,6 @@ void ChangeRoomDialog::setupUi() {
         "  background-color: %1;"
         "  border: 1px solid %2;"
         "  border-radius: 8px;"
-        "  padding: 12px;"
         "}"
     ).arg(is_dark ? "#1e293b" : "#f8fafc", is_dark ? "#334155" : "#e2e8f0"));
 
@@ -64,6 +69,7 @@ void ChangeRoomDialog::setupUi() {
         .arg(QString::fromStdString(a_aloc->disciplina_nome))
         .arg(a_aloc->tipo == "LABORATORIO" ? "#ec4899" : (a_aloc->tipo == "ESPECIAL" ? "#8b5cf6" : "#3b82f6"))
         .arg(QString::fromStdString(a_aloc->tipo)), card_aula);
+    lbl_titulo->setWordWrap(true);
     QFont f_title = lbl_titulo->font();
     f_title.setPointSize(12);
     lbl_titulo->setFont(f_title);
@@ -74,6 +80,7 @@ void ChangeRoomDialog::setupUi() {
         .arg(QString::fromStdString(model::dayToLongString(a_aloc->dia)))
         .arg(QString::fromStdString(a_aloc->horarioFormatado()))
         .arg(a_aloc->intervalo.durationMinutes()), card_aula);
+    lbl_horario->setWordWrap(true);
     card_lay->addWidget(lbl_horario);
 
     // Turmas e Professores
@@ -90,6 +97,7 @@ void ChangeRoomDialog::setupUi() {
     }
     auto* lbl_turma_prof = new QLabel(QString("👥 <b>Turma:</b> %1 &nbsp;&nbsp;|&nbsp;&nbsp; 👨‍🏫 <b>Prof:</b> %2")
         .arg(turmas_str, profs_str), card_aula);
+    lbl_turma_prof->setWordWrap(true);
     card_lay->addWidget(lbl_turma_prof);
 
     // Sala atual
@@ -105,17 +113,19 @@ void ChangeRoomDialog::setupUi() {
     auto* lbl_sala_atual = new QLabel(QString("📍 <b>Sala Atual:</b> <span style='color: %1;'>%2</span>")
         .arg(is_dark ? "#38bdf8" : "#0284c7")
         .arg(QString::fromStdString(sala_atual_desc)), card_aula);
+    lbl_sala_atual->setWordWrap(true);
     card_lay->addWidget(lbl_sala_atual);
 
     main_lay->addWidget(card_aula);
 
     // 2. Seção de Seleção da Nova Sala
-    auto* gb_select = new QGroupBox("Selecionar Nova Sala / Laboratório", this);
+    auto* gb_select = new QGroupBox("Selecionar Nova Sala / Laboratório", body_widget);
     auto* gb_lay = new QVBoxLayout(gb_select);
     gb_lay->setSpacing(10);
 
     combo_salas_ = new QComboBox(gb_select);
-    combo_salas_->setMinimumHeight(34);
+    combo_salas_->setMinimumHeight(32);
+    makeComboResponsive(combo_salas_, 24, 220);
 
     // Lambda para testar sobreposição de semestre e tempo
     auto time_overlaps = [](const model::TimeInterval& t1, const model::TimeInterval& t2) {
@@ -178,19 +188,22 @@ void ChangeRoomDialog::setupUi() {
     // Status da sala selecionada
     lbl_status_ = new QLabel(gb_select);
     lbl_status_->setWordWrap(true);
-    lbl_status_->setMinimumHeight(45);
+    lbl_status_->setMinimumHeight(40);
     lbl_status_->setStyleSheet("padding: 8px; border-radius: 6px; font-size: 11px;");
     gb_lay->addWidget(lbl_status_);
 
     main_lay->addWidget(gb_select);
 
     // 3. Opções
-    chk_pin_ = new QCheckBox("Fixar esta sala para a aula (preservar em futuras reotimizações)", this);
+    chk_pin_ = new QCheckBox("Fixar esta sala para a aula (preservar em futuras reotimizações)", body_widget);
     chk_pin_->setIcon(ModernTheme::icon("pin"));
     chk_pin_->setChecked(true);
     main_lay->addWidget(chk_pin_);
+    main_lay->addStretch();
 
-    // 4. Botões de ação
+    root_lay->addWidget(wrapInScrollArea(body_widget, this), 1);
+
+    // 4. Botões de ação (fixos no rodapé)
     auto* btn_lay = new QHBoxLayout();
     btn_lay->addStretch();
 
@@ -207,7 +220,7 @@ void ChangeRoomDialog::setupUi() {
     btn_confirm_->setDefault(true);
     btn_lay->addWidget(btn_confirm_);
 
-    main_lay->addLayout(btn_lay);
+    root_lay->addLayout(btn_lay);
 
     connect(combo_salas_, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &ChangeRoomDialog::onRoomChanged);
@@ -216,6 +229,7 @@ void ChangeRoomDialog::setupUi() {
     connect(btn_swap_, &QPushButton::clicked, this, &ChangeRoomDialog::onSwapClicked);
 
     updateRoomStatus();
+    fitWindowToScreen(this, QSize(520, 460));
 }
 
 /**

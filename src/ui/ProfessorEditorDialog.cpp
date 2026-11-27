@@ -5,6 +5,7 @@
 
 #include "ui/ProfessorEditorDialog.h"
 #include "ui/ModernTheme.h"
+#include "ui/ResponsiveUi.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -51,13 +52,11 @@ ProfessorEditorDialog::ProfessorEditorDialog(QWidget* parent, const model::Profe
  */
 void ProfessorEditorDialog::setupUi() {
     setWindowIcon(ModernTheme::icon("professor"));
-    setMinimumWidth(750);
-    setMinimumHeight(580);
-    resize(780, 630);
+    setMinimumSize(520, 420);
 
     auto* root_layout = new QVBoxLayout(this);
-    root_layout->setContentsMargins(12, 12, 12, 12);
-    root_layout->setSpacing(10);
+    root_layout->setContentsMargins(10, 10, 10, 10);
+    root_layout->setSpacing(8);
 
     // 1. Dados Básicos de Identificação
     auto* form_card = new QWidget(this);
@@ -105,29 +104,30 @@ void ProfessorEditorDialog::setupUi() {
     layout_tab_disp->addWidget(lbl_disp_info);
 
     // Barra de Presets Rápidos
-    auto* bar_presets = new QHBoxLayout();
-    bar_presets->setSpacing(6);
-    auto* lbl_pre_tit = new QLabel("⚡ Preencher:", tab_disp);
+    auto* bar_presets_wrap = new QWidget(tab_disp);
+    bar_presets_wrap->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+    auto* bar_presets = new FlowLayout(bar_presets_wrap, 0, 6, 6);
+    auto* lbl_pre_tit = new QLabel("⚡ Preencher:", bar_presets_wrap);
     lbl_pre_tit->setStyleSheet("font-weight: bold; color: palette(highlight);");
     bar_presets->addWidget(lbl_pre_tit);
 
-    auto* btn_def_m = new QPushButton(ModernTheme::icon("morning"), "Manhã", tab_disp);
+    auto* btn_def_m = new QPushButton(ModernTheme::icon("morning"), "Manhã", bar_presets_wrap);
     btn_def_m->setObjectName("btnSecondary");
     btn_def_m->setToolTip("Preencher toda a semana com horário matutino (07:30 às 12:00)");
 
-    auto* btn_def_t = new QPushButton(ModernTheme::icon("afternoon"), "Tarde", tab_disp);
+    auto* btn_def_t = new QPushButton(ModernTheme::icon("afternoon"), "Tarde", bar_presets_wrap);
     btn_def_t->setObjectName("btnSecondary");
     btn_def_t->setToolTip("Preencher toda a semana com horário vespertino (13:15 às 18:00)");
 
-    auto* btn_def_int = new QPushButton(ModernTheme::icon("integral"), "Integral", tab_disp);
+    auto* btn_def_int = new QPushButton(ModernTheme::icon("integral"), "Integral", bar_presets_wrap);
     btn_def_int->setObjectName("btnSecondary");
     btn_def_int->setToolTip("Preencher toda a semana com horário integral (07:30 às 18:00)");
 
-    auto* btn_def_n = new QPushButton(ModernTheme::icon("evening"), "Noite", tab_disp);
+    auto* btn_def_n = new QPushButton(ModernTheme::icon("evening"), "Noite", bar_presets_wrap);
     btn_def_n->setObjectName("btnSecondary");
     btn_def_n->setToolTip("Preencher toda a semana com horário noturno (18:30 às 22:30)");
 
-    auto* btn_def_all = new QPushButton(ModernTheme::icon("integral"), "Dia Todo", tab_disp);
+    auto* btn_def_all = new QPushButton(ModernTheme::icon("integral"), "Dia Todo", bar_presets_wrap);
     btn_def_all->setObjectName("btnSecondary");
     btn_def_all->setToolTip("Preencher toda a semana com dia completo (07:00 às 22:30)");
 
@@ -136,8 +136,7 @@ void ProfessorEditorDialog::setupUi() {
     bar_presets->addWidget(btn_def_int);
     bar_presets->addWidget(btn_def_n);
     bar_presets->addWidget(btn_def_all);
-    bar_presets->addStretch();
-    layout_tab_disp->addLayout(bar_presets);
+    layout_tab_disp->addWidget(bar_presets_wrap);
 
     connect(btn_def_m, &QPushButton::clicked, this, &ProfessorEditorDialog::onSetDefaultMorning);
     connect(btn_def_t, &QPushButton::clicked, this, &ProfessorEditorDialog::onSetDefaultAfternoon);
@@ -146,18 +145,19 @@ void ProfessorEditorDialog::setupUi() {
     connect(btn_def_all, &QPushButton::clicked, this, &ProfessorEditorDialog::onSetDefaultWholeDay);
 
     // Barra de Ações para Intervalos
-    auto* bar_actions = new QHBoxLayout();
-    auto* btn_add = new QPushButton(ModernTheme::icon("add"), "Adicionar Intervalo", tab_disp);
-    auto* btn_rem = new QPushButton(ModernTheme::icon("delete"), "Remover Selecionado", tab_disp);
+    auto* bar_actions_wrap = new QWidget(tab_disp);
+    bar_actions_wrap->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+    auto* bar_actions = new FlowLayout(bar_actions_wrap, 0, 6, 6);
+    auto* btn_add = new QPushButton(ModernTheme::icon("add"), "Adicionar Intervalo", bar_actions_wrap);
+    auto* btn_rem = new QPushButton(ModernTheme::icon("delete"), "Remover Selecionado", bar_actions_wrap);
     btn_rem->setObjectName("btnSecondary");
-    auto* btn_clear = new QPushButton(ModernTheme::icon("delete"), "Limpar Todos", tab_disp);
+    auto* btn_clear = new QPushButton(ModernTheme::icon("delete"), "Limpar Todos", bar_actions_wrap);
     btn_clear->setObjectName("btnSecondary");
 
     bar_actions->addWidget(btn_add);
     bar_actions->addWidget(btn_rem);
     bar_actions->addWidget(btn_clear);
-    bar_actions->addStretch();
-    layout_tab_disp->addLayout(bar_actions);
+    layout_tab_disp->addWidget(bar_actions_wrap);
 
     connect(btn_add, &QPushButton::clicked, this, &ProfessorEditorDialog::onAddInterval);
     connect(btn_rem, &QPushButton::clicked, this, &ProfessorEditorDialog::onRemoveInterval);
@@ -168,11 +168,12 @@ void ProfessorEditorDialog::setupUi() {
     table_disp_->setColumnCount(3);
     table_disp_->setHorizontalHeaderLabels({"Dia da Semana", "Hora Início", "Hora Término"});
     table_disp_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Interactive);
-    table_disp_->setColumnWidth(0, 220);
+    table_disp_->setColumnWidth(0, 170);
     table_disp_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
     table_disp_->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
-    table_disp_->verticalHeader()->setDefaultSectionSize(40);
+    table_disp_->verticalHeader()->setDefaultSectionSize(38);
     table_disp_->verticalHeader()->setVisible(false);
+    table_disp_->setMinimumHeight(140);
     table_disp_->setSelectionBehavior(QAbstractItemView::SelectRows);
     table_disp_->setSelectionMode(QAbstractItemView::SingleSelection);
     table_disp_->setAlternatingRowColors(true);
@@ -209,27 +210,31 @@ void ProfessorEditorDialog::setupUi() {
     layout_janela->addWidget(lbl_janela_info);
 
     auto* row_janela = new QHBoxLayout();
+    row_janela->setSpacing(8);
     auto* lbl_janela_tit = new QLabel("Aversão a Janelas (0 a 10):", grp_janela);
-    lbl_janela_tit->setFixedWidth(190);
+    lbl_janela_tit->setMinimumWidth(140);
+    lbl_janela_tit->setWordWrap(true);
     lbl_janela_tit->setStyleSheet("font-weight: 600;");
-    row_janela->addWidget(lbl_janela_tit);
+    row_janela->addWidget(lbl_janela_tit, 2);
 
     slider_peso_janela_ = new QSlider(Qt::Horizontal, grp_janela);
     slider_peso_janela_->setRange(0, 10);
     slider_peso_janela_->setValue(8);
     slider_peso_janela_->setTickInterval(1);
     slider_peso_janela_->setTickPosition(QSlider::TicksBelow);
-    row_janela->addWidget(slider_peso_janela_);
+    row_janela->addWidget(slider_peso_janela_, 3);
 
     lbl_val_peso_janela_ = new QLabel("8", grp_janela);
-    lbl_val_peso_janela_->setFixedWidth(30);
+    lbl_val_peso_janela_->setFixedWidth(28);
     lbl_val_peso_janela_->setStyleSheet("font-weight: bold; color: palette(highlight); font-size: 14px;");
-    row_janela->addWidget(lbl_val_peso_janela_);
+    row_janela->addWidget(lbl_val_peso_janela_, 0);
 
     lbl_desc_peso_janela_ = new QLabel("Baixa tolerância a janelas", grp_janela);
-    lbl_desc_peso_janela_->setFixedWidth(230);
+    lbl_desc_peso_janela_->setMinimumWidth(140);
+    lbl_desc_peso_janela_->setMaximumWidth(220);
+    lbl_desc_peso_janela_->setWordWrap(true);
     lbl_desc_peso_janela_->setStyleSheet("font-size: 12px;");
-    row_janela->addWidget(lbl_desc_peso_janela_);
+    row_janela->addWidget(lbl_desc_peso_janela_, 2);
 
     connect(slider_peso_janela_, &QSlider::valueChanged, this, &ProfessorEditorDialog::onSliderJanelaChanged);
     layout_janela->addLayout(row_janela);
@@ -248,19 +253,20 @@ void ProfessorEditorDialog::setupUi() {
     lbl_turnos_info->setWordWrap(true);
     layout_turnos->addWidget(lbl_turnos_info);
 
-    auto* tool_turnos = new QHBoxLayout();
-    auto* btn_all_shifts = new QPushButton("Todos os Turnos", grp_turnos);
+    auto* tool_turnos_wrap = new QWidget(grp_turnos);
+    tool_turnos_wrap->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+    auto* tool_turnos = new FlowLayout(tool_turnos_wrap, 0, 6, 6);
+    auto* btn_all_shifts = new QPushButton("Todos os Turnos", tool_turnos_wrap);
     btn_all_shifts->setObjectName("btnSecondary");
-    auto* btn_morning_only = new QPushButton("Apenas Manhã", grp_turnos);
+    auto* btn_morning_only = new QPushButton("Apenas Manhã", tool_turnos_wrap);
     btn_morning_only->setObjectName("btnSecondary");
-    auto* btn_morn_aft = new QPushButton("Manhã e Tarde", grp_turnos);
+    auto* btn_morn_aft = new QPushButton("Manhã e Tarde", tool_turnos_wrap);
     btn_morn_aft->setObjectName("btnSecondary");
 
     tool_turnos->addWidget(btn_all_shifts);
     tool_turnos->addWidget(btn_morning_only);
     tool_turnos->addWidget(btn_morn_aft);
-    tool_turnos->addStretch();
-    layout_turnos->addLayout(tool_turnos);
+    layout_turnos->addWidget(tool_turnos_wrap);
 
     connect(btn_all_shifts, &QPushButton::clicked, this, &ProfessorEditorDialog::onSelectAllShifts);
     connect(btn_morning_only, &QPushButton::clicked, this, &ProfessorEditorDialog::onSelectMorningOnly);
@@ -307,9 +313,9 @@ void ProfessorEditorDialog::setupUi() {
         auto* row_layout = new QHBoxLayout();
 
         auto* lbl_dia = new QLabel(QString::fromStdString(model::dayToLongString(d)) + ":", grp_pesos);
-        lbl_dia->setFixedWidth(110);
+        lbl_dia->setFixedWidth(105);
         lbl_dia->setStyleSheet("font-weight: 600;");
-        row_layout->addWidget(lbl_dia);
+        row_layout->addWidget(lbl_dia, 0);
 
         auto* slider = new QSlider(Qt::Horizontal, grp_pesos);
         slider->setRange(0, 10);
@@ -317,19 +323,21 @@ void ProfessorEditorDialog::setupUi() {
         slider->setTickInterval(1);
         slider->setTickPosition(QSlider::TicksBelow);
         sliders_dias_[i] = slider;
-        row_layout->addWidget(slider);
+        row_layout->addWidget(slider, 3);
 
         auto* lbl_val = new QLabel("5", grp_pesos);
-        lbl_val->setFixedWidth(30);
+        lbl_val->setFixedWidth(28);
         lbl_val->setStyleSheet("font-weight: bold; color: palette(highlight); font-size: 14px;");
         lbls_valores_dias_[i] = lbl_val;
-        row_layout->addWidget(lbl_val);
+        row_layout->addWidget(lbl_val, 0);
 
         auto* lbl_desc = new QLabel("Neutra", grp_pesos);
-        lbl_desc->setFixedWidth(160);
+        lbl_desc->setMinimumWidth(110);
+        lbl_desc->setMaximumWidth(160);
+        lbl_desc->setWordWrap(true);
         lbl_desc->setStyleSheet("font-size: 12px;");
         lbls_desc_dias_[i] = lbl_desc;
-        row_layout->addWidget(lbl_desc);
+        row_layout->addWidget(lbl_desc, 1);
 
         connect(slider, &QSlider::valueChanged, this, &ProfessorEditorDialog::onSliderValueChanged);
         layout_pesos->addLayout(row_layout);
@@ -364,6 +372,7 @@ void ProfessorEditorDialog::setupUi() {
 
     onSliderValueChanged();
     onSliderJanelaChanged();
+    fitWindowToScreen(this, QSize(760, 580));
 }
 
 /**

@@ -3,6 +3,7 @@
 #include <sstream>
 #include <cctype>
 #include <cstdio>
+#include <set>
 
 /**
  * @file InstitutionData.cpp
@@ -346,12 +347,24 @@ Lesson* InstitutionData::findAula(const std::string& id) {
 void InstitutionData::gerarOcorrenciasAulas(bool preservar_fixadas, EscopoSemestreOtimizacao escopo) {
     std::vector<Lesson> novas_aulas;
 
-    // Mapa de aulas fixadas previamente
-    std::map<std::string, Lesson> fixadas;
+    // Mapa de aulas fixadas previamente (aulas_ + fonte canônica grade_.alocacoes())
+    struct PinnedState {
+        DayOfWeek dia{DayOfWeek::SEG};
+        TimeInterval intervalo;
+        std::vector<std::string> salas;
+    };
+    std::map<std::string, PinnedState> fixadas;
     if (preservar_fixadas) {
         for (const auto& a : aulas_) {
             if (a.isPinned()) {
-                fixadas[a.id()] = a;
+                fixadas[a.id()] = {a.pinnedDay(), a.pinnedInterval(), a.pinnedRooms()};
+            }
+        }
+        for (const auto& aloc : grade_.alocacoes()) {
+            if (aloc.is_pinned) {
+                fixadas[aloc.aula_id] = {aloc.dia, aloc.intervalo, aloc.salas};
+            } else {
+                fixadas.erase(aloc.aula_id);
             }
         }
     }
@@ -383,9 +396,9 @@ void InstitutionData::gerarOcorrenciasAulas(bool preservar_fixadas, EscopoSemest
             auto it = fixadas.find(aula_id);
             if (it != fixadas.end()) {
                 aula.setPinned(true);
-                aula.setPinnedDay(it->second.pinnedDay());
-                aula.setPinnedInterval(it->second.pinnedInterval());
-                aula.setPinnedRooms(it->second.pinnedRooms());
+                aula.setPinnedDay(it->second.dia);
+                aula.setPinnedInterval(it->second.intervalo);
+                aula.setPinnedRooms(it->second.salas);
             }
 
             novas_aulas.push_back(std::move(aula));
@@ -393,6 +406,82 @@ void InstitutionData::gerarOcorrenciasAulas(bool preservar_fixadas, EscopoSemest
     }
 
     aulas_ = std::move(novas_aulas);
+}
+
+bool InstitutionData::aplicarResultadoOtimizacao(Timetable novo_resultado,
+                                                 EscopoSemestreOtimizacao escopo) {
+    const std::string& st = novo_resultado.estatisticas().status;
+    const bool has_valid_solution =
+        (st == "OPTIMAL" || st == "FEASIBLE") && !novo_resultado.alocacoes().empty();
+
+    if (!has_valid_solution) {
+        if (grade_.alocacoes().empty()) {
+            grade_ = std::move(novo_resultado);
+        }
+        return false;
+    }
+
+    std::set<std::string> novas_ids;
+    for (const auto& aloc : novo_resultado.alocacoes()) {
+        novas_ids.insert(aloc.aula_id);
+    }
+
+    bool mesclou_outro_semestre = false;
+    for (const auto& prev_aloc : grade_.alocacoes()) {
+        if (novas_ids.count(prev_aloc.aula_id) > 0) {
+            continue;
+        }
+        const auto* disc = findDisciplina(prev_aloc.disciplina_id);
+        if (!disc) {
+            continue;
+        }
+
+        bool fora_do_escopo = false;
+        if (escopo == EscopoSemestreOtimizacao::SEMESTRE_1) {
+            fora_do_escopo =
+                (disc->isSemestral() && disc->semestre() == SemestreLetivo::SEMESTRE_2) ||
+                (prev_aloc.regime == RegimeDisciplina::SEMESTRAL &&
+                 (prev_aloc.semestre == SemestreLetivo::SEMESTRE_2 || prev_aloc.semestre_alocado == 2));
+        } else if (escopo == EscopoSemestreOtimizacao::SEMESTRE_2) {
+            fora_do_escopo =
+                (disc->isSemestral() && disc->semestre() == SemestreLetivo::SEMESTRE_1) ||
+                (prev_aloc.regime == RegimeDisciplina::SEMESTRAL &&
+                 (prev_aloc.semestre == SemestreLetivo::SEMESTRE_1 || prev_aloc.semestre_alocado == 1));
+        }
+
+        if (fora_do_escopo) {
+            novo_resultado.addAllocatedLesson(prev_aloc);
+            novas_ids.insert(prev_aloc.aula_id);
+            mesclou_outro_semestre = true;
+        } else if (prev_aloc.is_pinned) {
+            novo_resultado.addAllocatedLesson(prev_aloc);
+            novas_ids.insert(prev_aloc.aula_id);
+            novo_resultado.addMensagemDiagnostico(
+                "[PRESERVADA] Aula fixada '" + prev_aloc.disciplina_nome + "' (" + prev_aloc.aula_id +
+                ") foi mantida na grade (não incluída na solução parcial do solver).");
+        }
+    }
+
+    for (const auto& [turma_id, sala_id] : grade_.salasTeoricasDesignadas()) {
+        if (novo_resultado.salaTeoricaTurma(turma_id).empty()) {
+            novo_resultado.setSalaTeoricaDesignada(turma_id, sala_id);
+        }
+    }
+
+    TimetableStatistics stats = novo_resultado.estatisticas();
+    stats.total_aulas_alocadas = static_cast<int>(novo_resultado.alocacoes().size());
+    if (mesclou_outro_semestre) {
+        int total_esp = 0;
+        for (const auto& d : disciplinas_) {
+            total_esp += d.aulasSemanais();
+        }
+        stats.total_aulas_esperadas = total_esp;
+    }
+    novo_resultado.setEstatisticas(stats);
+
+    grade_ = std::move(novo_resultado);
+    gerarOcorrenciasAulas(true, EscopoSemestreOtimizacao::TODAS_SEM_FILTRO);
+    return true;
 }
 
 /**
@@ -1031,6 +1120,266 @@ std::vector<SlotConflictInfo> InstitutionData::avaliarTrocaAulas(
     }
 
     return conflitos;
+}
+
+namespace {
+
+std::string formatTurmasResumo(const InstitutionData& data, const std::vector<std::string>& turma_ids) {
+    std::string out;
+    for (size_t i = 0; i < turma_ids.size(); ++i) {
+        if (i > 0) out += ", ";
+        const auto* t = data.findTurma(turma_ids[i]);
+        out += (t && !t->nome().empty()) ? t->nome() : turma_ids[i];
+    }
+    return out;
+}
+
+bool alocacaoAtendeSemestre(const AllocatedLesson& aloc, SemestreLetivo sem) {
+    if (aloc.regime == RegimeDisciplina::ANUAL) {
+        return true;
+    }
+    if (sem == SemestreLetivo::SEMESTRE_1) {
+        return aloc.semestre == SemestreLetivo::SEMESTRE_1 ||
+               (aloc.semestre == SemestreLetivo::AMBOS && aloc.semestre_alocado != 2);
+    }
+    if (sem == SemestreLetivo::SEMESTRE_2) {
+        return aloc.semestre == SemestreLetivo::SEMESTRE_2 ||
+               (aloc.semestre == SemestreLetivo::AMBOS && aloc.semestre_alocado == 2);
+    }
+    return true;
+}
+
+} // namespace
+
+ProfessorWorkloadSummary InstitutionData::calcularCargaProfessor(const std::string& prof_id) const {
+    ProfessorWorkloadSummary summary;
+
+    if (const auto* prof = findProfessor(prof_id)) {
+        for (const auto& [dia, raw_intervals] : prof->todasDisponibilidades()) {
+            (void)dia;
+            std::vector<TimeInterval> intervals;
+            for (const auto& inter : raw_intervals) {
+                if (inter.durationMinutes() > 0) {
+                    intervals.push_back(inter);
+                }
+            }
+            if (intervals.empty()) continue;
+
+            std::sort(intervals.begin(), intervals.end());
+            int day_minutes = 0;
+            TimeInterval current = intervals.front();
+            for (size_t i = 1; i < intervals.size(); ++i) {
+                if (intervals[i].start_min <= current.end_min) {
+                    current.end_min = std::max(current.end_min, intervals[i].end_min);
+                } else {
+                    day_minutes += current.durationMinutes();
+                    current = intervals[i];
+                }
+            }
+            day_minutes += current.durationMinutes();
+            if (day_minutes > 0) {
+                summary.minutos_disponiveis += day_minutes;
+                summary.dias_com_disponibilidade++;
+            }
+        }
+    }
+
+    for (const auto& d : disciplinas_) {
+        const auto& profs = d.professores();
+        if (std::find(profs.begin(), profs.end(), prof_id) == profs.end()) {
+            continue;
+        }
+
+        const int aulas = std::max(0, d.aulasSemanais());
+        const int dur = std::max(0, d.duracaoMinutos());
+        const int mins = aulas * dur;
+        const bool s1 = d.atendeSemestre(SemestreLetivo::SEMESTRE_1);
+        const bool s2 = d.atendeSemestre(SemestreLetivo::SEMESTRE_2);
+
+        if (s1) {
+            summary.minutos_s1 += mins;
+            summary.aulas_s1 += aulas;
+        }
+        if (s2) {
+            summary.minutos_s2 += mins;
+            summary.aulas_s2 += aulas;
+        }
+
+        DisciplinaCargaItem item;
+        item.disciplina_id = d.id();
+        item.disciplina_nome = d.nome();
+        item.turmas_resumo = formatTurmasResumo(*this, d.turmas());
+        item.regime_semestre = d.regimeSemestreFormatado();
+        item.aulas_semanais = aulas;
+        item.duracao_minutos = dur;
+        item.minutos_semanais = mins;
+        item.atende_s1 = s1;
+        item.atende_s2 = s2;
+        item.is_alternativa = false;
+        summary.disciplinas.push_back(std::move(item));
+    }
+
+    for (const auto& aloc : grade_.alocacoes()) {
+        if (std::find(aloc.professores.begin(), aloc.professores.end(), prof_id) == aloc.professores.end()) {
+            continue;
+        }
+        const int dur = std::max(0, aloc.intervalo.durationMinutes());
+        if (alocacaoAtendeSemestre(aloc, SemestreLetivo::SEMESTRE_1)) {
+            summary.alocado_minutos_s1 += dur;
+            summary.alocado_aulas_s1 += 1;
+        }
+        if (alocacaoAtendeSemestre(aloc, SemestreLetivo::SEMESTRE_2)) {
+            summary.alocado_minutos_s2 += dur;
+            summary.alocado_aulas_s2 += 1;
+        }
+    }
+
+    return summary;
+}
+
+RoomWorkloadSummary InstitutionData::calcularCargaSala(const std::string& sala_id) const {
+    RoomWorkloadSummary summary;
+    const auto* sala_ptr = findSala(sala_id);
+
+    enum class RoomLinkKind { NENHUM, FIXO, ALTERNATIVO };
+
+    for (const auto& d : disciplinas_) {
+        RoomLinkKind link = RoomLinkKind::NENHUM;
+
+        // Regra 1: salas explicitas na disciplina (mesma precedencia de Preprocessor::gerarCandidatosParaAula)
+        std::vector<std::vector<std::string>> combos_validos;
+        for (const auto& combo : d.salasAlternativas()) {
+            std::vector<std::string> clean_combo;
+            for (const auto& sid : combo) {
+                if (!sid.empty()) clean_combo.push_back(sid);
+            }
+            if (!clean_combo.empty()) {
+                combos_validos.push_back(std::move(clean_combo));
+            }
+        }
+
+        if (!combos_validos.empty()) {
+            bool in_all = true;
+            bool in_any = false;
+            for (const auto& combo : combos_validos) {
+                const bool found = std::find(combo.begin(), combo.end(), sala_id) != combo.end();
+                if (found) {
+                    in_any = true;
+                } else {
+                    in_all = false;
+                }
+            }
+            if (in_all) {
+                link = RoomLinkKind::FIXO;
+            } else if (in_any) {
+                link = RoomLinkKind::ALTERNATIVO;
+            }
+        } else if (d.isTeorica()) {
+            // Regra 2: disciplina teorica sem salas explicitas -> sala fixa ou permitidas da turma principal
+            if (!d.turmas().empty()) {
+                if (const auto* turma = findTurma(d.turmas().front())) {
+                    if (turma->temSalaTeoricaPredefinida()) {
+                        if (turma->salaTeoricaId() == sala_id) {
+                            link = RoomLinkKind::FIXO;
+                        }
+                    } else {
+                        std::vector<std::string> valid_perm;
+                        for (const auto& sid : turma->salasTeoricasPermitidas()) {
+                            if (!sid.empty() && findSala(sid) &&
+                                std::find(valid_perm.begin(), valid_perm.end(), sid) == valid_perm.end()) {
+                                valid_perm.push_back(sid);
+                            }
+                        }
+                        if (valid_perm.empty()) {
+                            for (const auto& sid : turma->salasTeoricasPermitidas()) {
+                                if (!sid.empty() &&
+                                    std::find(valid_perm.begin(), valid_perm.end(), sid) == valid_perm.end()) {
+                                    valid_perm.push_back(sid);
+                                }
+                            }
+                        }
+                        if (valid_perm.size() == 1 && valid_perm.front() == sala_id) {
+                            link = RoomLinkKind::FIXO;
+                        } else if (std::find(valid_perm.begin(), valid_perm.end(), sala_id) != valid_perm.end()) {
+                            link = RoomLinkKind::ALTERNATIVO;
+                        }
+                    }
+                }
+            }
+        } else {
+            // Regra 3: atividade nao teorica sem salas explicitas -> todas as salas compativeis
+            if (sala_ptr && (sala_ptr->tipo() == d.tipo() || !sala_ptr->isTeorica())) {
+                int compativeis = 0;
+                for (const auto& r : salas_) {
+                    if (r.tipo() == d.tipo() || !r.isTeorica()) {
+                        compativeis++;
+                    }
+                }
+                link = (compativeis <= 1) ? RoomLinkKind::FIXO : RoomLinkKind::ALTERNATIVO;
+            }
+        }
+
+        if (link == RoomLinkKind::NENHUM) {
+            continue;
+        }
+
+        const int aulas = std::max(0, d.aulasSemanais());
+        const int dur = std::max(0, d.duracaoMinutos());
+        const int mins = aulas * dur;
+        const bool s1 = d.atendeSemestre(SemestreLetivo::SEMESTRE_1);
+        const bool s2 = d.atendeSemestre(SemestreLetivo::SEMESTRE_2);
+
+        DisciplinaCargaItem item;
+        item.disciplina_id = d.id();
+        item.disciplina_nome = d.nome();
+        item.turmas_resumo = formatTurmasResumo(*this, d.turmas());
+        item.regime_semestre = d.regimeSemestreFormatado();
+        item.aulas_semanais = aulas;
+        item.duracao_minutos = dur;
+        item.minutos_semanais = mins;
+        item.atende_s1 = s1;
+        item.atende_s2 = s2;
+        item.is_alternativa = (link == RoomLinkKind::ALTERNATIVO);
+
+        if (link == RoomLinkKind::FIXO) {
+            if (s1) {
+                summary.fixo_minutos_s1 += mins;
+                summary.fixo_aulas_s1 += aulas;
+            }
+            if (s2) {
+                summary.fixo_minutos_s2 += mins;
+                summary.fixo_aulas_s2 += aulas;
+            }
+            summary.disciplinas_fixas.push_back(std::move(item));
+        } else {
+            if (s1) {
+                summary.alt_minutos_s1 += mins;
+                summary.alt_aulas_s1 += aulas;
+            }
+            if (s2) {
+                summary.alt_minutos_s2 += mins;
+                summary.alt_aulas_s2 += aulas;
+            }
+            summary.disciplinas_alternativas.push_back(std::move(item));
+        }
+    }
+
+    for (const auto& aloc : grade_.alocacoes()) {
+        if (std::find(aloc.salas.begin(), aloc.salas.end(), sala_id) == aloc.salas.end()) {
+            continue;
+        }
+        const int dur = std::max(0, aloc.intervalo.durationMinutes());
+        if (alocacaoAtendeSemestre(aloc, SemestreLetivo::SEMESTRE_1)) {
+            summary.alocado_minutos_s1 += dur;
+            summary.alocado_aulas_s1 += 1;
+        }
+        if (alocacaoAtendeSemestre(aloc, SemestreLetivo::SEMESTRE_2)) {
+            summary.alocado_minutos_s2 += dur;
+            summary.alocado_aulas_s2 += 1;
+        }
+    }
+
+    return summary;
 }
 
 } // namespace scheduler::model

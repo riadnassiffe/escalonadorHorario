@@ -40,6 +40,11 @@ public:
      */
     void refreshView();
 
+    /**
+     * @brief Habilita ou desabilita edições manuais na grade durante otimizações em segundo plano.
+     */
+    void setReadOnlyMode(bool read_only);
+
 signals:
     /**
      * @brief Emitido quando uma aula tem seu estado de fixação alterado pelo usuário.
@@ -222,6 +227,7 @@ private:
     QPushButton* btn_clear_timetable_{nullptr};
 
     bool transpose_grid_{false};
+    bool read_only_mode_{false};
     QString selected_aula_id_;
     std::vector<model::TimeInterval> row_intervals_;
 };

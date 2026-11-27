@@ -5,6 +5,7 @@
 
 #include "ui/LessonEditorDialog.h"
 #include "ui/ModernTheme.h"
+#include "ui/ResponsiveUi.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -53,88 +54,107 @@ LessonEditorDialog::LessonEditorDialog(const std::vector<model::Professor>& prof
  */
 void LessonEditorDialog::setupUi() {
     setWindowIcon(ModernTheme::icon("disciplina"));
-    setMinimumWidth(550);
-    auto* main_layout = new QVBoxLayout(this);
-    main_layout->setSpacing(14);
+    setMinimumSize(440, 360);
+    auto* root_layout = new QVBoxLayout(this);
+    root_layout->setContentsMargins(12, 12, 12, 12);
+    root_layout->setSpacing(10);
+
+    auto* body_widget = new QWidget(this);
+    auto* main_layout = new QVBoxLayout(body_widget);
+    main_layout->setContentsMargins(2, 2, 2, 2);
+    main_layout->setSpacing(12);
 
     auto* form_layout = new QFormLayout();
+    form_layout->setFieldGrowthPolicy(QFormLayout::ExpandingFieldsGrow);
 
-    txt_nome_ = new QLineEdit(this);
+    txt_nome_ = new QLineEdit(body_widget);
     txt_nome_->setPlaceholderText("Ex: Matemática, Física Experimental");
     form_layout->addRow("Nome da Disciplina:", txt_nome_);
 
-    combo_regime_ = new QComboBox(this);
+    combo_regime_ = new QComboBox(body_widget);
     combo_regime_->addItem(ModernTheme::icon("calendar"), "Anual (Ano Letivo Completo)", "ANUAL");
     combo_regime_->addItem(ModernTheme::icon("calendar"), "Semestral", "SEMESTRAL");
+    makeComboResponsive(combo_regime_, 18, 180);
     form_layout->addRow("Regime:", combo_regime_);
 
-    combo_semestre_ = new QComboBox(this);
+    combo_semestre_ = new QComboBox(body_widget);
     combo_semestre_->addItem("Ambos os Semestres (Ano Todo)", "AMBOS");
     combo_semestre_->addItem("1º Semestre", "1");
     combo_semestre_->addItem("2º Semestre", "2");
     combo_semestre_->setEnabled(false); // Anual por padrão
+    makeComboResponsive(combo_semestre_, 18, 180);
     form_layout->addRow("Semestre de Oferta:", combo_semestre_);
 
-    combo_tipo_ = new QComboBox(this);
+    combo_tipo_ = new QComboBox(body_widget);
     combo_tipo_->addItem("Teórica (Usa a sala fixa da turma)", "TEORICA");
     combo_tipo_->addItem("Laboratório (Usa salas especiais/laboratórios)", "LABORATORIO");
     combo_tipo_->addItem("Atividade Especial (Quadra/Oficina)", "ESPECIAL");
+    makeComboResponsive(combo_tipo_, 20, 180);
     form_layout->addRow("Tipo de Atividade:", combo_tipo_);
 
-    combo_duracao_ = new QComboBox(this);
+    combo_duracao_ = new QComboBox(body_widget);
     combo_duracao_->addItem("45 minutos (9 slots de 5 min)", 45);
     combo_duracao_->addItem("50 minutos (10 slots de 5 min)", 50);
     combo_duracao_->addItem("90 minutos (18 slots de 5 min)", 90);
     combo_duracao_->addItem("100 minutos (20 slots de 5 min)", 100);
     combo_duracao_->setCurrentIndex(1); // 50 min padrão
+    makeComboResponsive(combo_duracao_, 18, 180);
     form_layout->addRow("Duração por Aula (Seção 1.1):", combo_duracao_);
 
-    spin_aulas_semanais_ = new QSpinBox(this);
+    spin_aulas_semanais_ = new QSpinBox(body_widget);
     spin_aulas_semanais_->setRange(1, 30);
     spin_aulas_semanais_->setValue(4);
     spin_aulas_semanais_->setSuffix(" aulas por semana");
     form_layout->addRow("Carga Semanal:", spin_aulas_semanais_);
 
-    combo_prof_ = new QComboBox(this);
+    combo_prof_ = new QComboBox(body_widget);
     for (const auto& p : profs_) {
         combo_prof_->addItem(QString::fromStdString(p.nome()),
                              QString::fromStdString(p.id()));
     }
+    makeComboResponsive(combo_prof_, 20, 180);
     form_layout->addRow("Professor Responsável:", combo_prof_);
 
-    combo_turma_ = new QComboBox(this);
+    combo_turma_ = new QComboBox(body_widget);
     for (const auto& t : turmas_) {
         combo_turma_->addItem(QString::fromStdString(t.nome()),
                               QString::fromStdString(t.id()));
     }
+    makeComboResponsive(combo_turma_, 20, 180);
     form_layout->addRow("Turma:", combo_turma_);
 
-    spin_max_dia_ = new QSpinBox(this);
+    spin_max_dia_ = new QSpinBox(body_widget);
     spin_max_dia_->setRange(1, 10);
     spin_max_dia_->setValue(2);
     spin_max_dia_->setSuffix(" aulas por dia");
     form_layout->addRow("Máximo por Dia:", spin_max_dia_);
 
-    check_consecutivas_ = new QCheckBox("Aulas devem ser ministradas em blocos consecutivos", this);
+    check_consecutivas_ = new QCheckBox("Aulas devem ser ministradas em blocos consecutivos", body_widget);
     form_layout->addRow("", check_consecutivas_);
 
     main_layout->addLayout(form_layout);
 
     // Painel de Salas Alternativas para Laboratório / Especial
-    widget_salas_alternativas_ = new QWidget(this);
+    widget_salas_alternativas_ = new QWidget(body_widget);
     auto* lay_alt = new QVBoxLayout(widget_salas_alternativas_);
     lay_alt->setContentsMargins(0, 0, 0, 0);
-    lay_alt->addWidget(new QLabel("Salas Admissíveis para esta Atividade Especial (Selecione 1 ou mais):", this));
+    auto* lbl_alt = new QLabel("Salas Admissíveis para esta Atividade Especial (Selecione 1 ou mais):", widget_salas_alternativas_);
+    lbl_alt->setWordWrap(true);
+    lay_alt->addWidget(lbl_alt);
 
-    list_salas_alternativas_ = new QListWidget(this);
+    list_salas_alternativas_ = new QListWidget(widget_salas_alternativas_);
     list_salas_alternativas_->setSelectionMode(QAbstractItemView::MultiSelection);
-    list_salas_alternativas_->setMaximumHeight(90);
+    list_salas_alternativas_->setMinimumHeight(80);
+    list_salas_alternativas_->setMaximumHeight(120);
     for (const auto& s : salas_) {
         auto* item = new QListWidgetItem(QString::fromStdString(s.nome() + " (" + s.tipo() + ")"), list_salas_alternativas_);
         item->setData(Qt::UserRole, QString::fromStdString(s.id()));
     }
     lay_alt->addWidget(list_salas_alternativas_);
     main_layout->addWidget(widget_salas_alternativas_);
+    main_layout->addStretch();
+
+    root_layout->addWidget(wrapInScrollArea(body_widget, this), 1);
 
     connect(combo_tipo_, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &LessonEditorDialog::onTipoChanged);
@@ -144,7 +164,7 @@ void LessonEditorDialog::setupUi() {
     onTipoChanged(combo_tipo_->currentIndex());
     onRegimeChanged(combo_regime_->currentIndex());
 
-    // Botões
+    // Botões (fixos no rodapé)
     auto* btn_box = new QHBoxLayout();
     btn_box->addStretch();
     auto* btn_cancel = new QPushButton("Cancelar", this);
@@ -152,7 +172,9 @@ void LessonEditorDialog::setupUi() {
     auto* btn_save = new QPushButton(ModernTheme::icon("save_file"), "Salvar Disciplina", this);
     btn_box->addWidget(btn_cancel);
     btn_box->addWidget(btn_save);
-    main_layout->addLayout(btn_box);
+    root_layout->addLayout(btn_box);
+
+    fitWindowToScreen(this, QSize(560, 540));
 
     connect(btn_cancel, &QPushButton::clicked, this, &QDialog::reject);
     connect(btn_save, &QPushButton::clicked, [this]() {

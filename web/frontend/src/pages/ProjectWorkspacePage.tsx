@@ -7,7 +7,6 @@ import {
   FileCode2,
   FileSpreadsheet,
   Moon,
-  Sparkles,
   Square,
   Sun,
   Upload,
@@ -194,15 +193,6 @@ export function ProjectWorkspacePage() {
             >
               <FileSpreadsheet className="h-3.5 w-3.5" /> CSV
             </button>
-            <button
-              onClick={async () => {
-                await apiFetch(`/projects/${projectId}/load-example`, { method: "POST" });
-                invalidateAll();
-              }}
-              className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2.5 py-1.5 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-            >
-              <Sparkles className="h-3.5 w-3.5" /> Exemplo
-            </button>
             <button onClick={toggleDarkMode} className="rounded-lg border border-slate-300 p-1.5 dark:border-slate-700">
               {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
@@ -256,7 +246,7 @@ export function ProjectWorkspacePage() {
           {activeTab === "professores" && (
             <ProfessoresTab projectId={projectId} project={project} professores={professores} />
           )}
-          {activeTab === "turmas" && <TurmasTab projectId={projectId} turmas={turmas} salas={salas} disciplinas={disciplinas} />}
+          {activeTab === "turmas" && <TurmasTab projectId={projectId} turmas={turmas} salas={salas} disciplinas={disciplinas} professores={professores} />}
           {activeTab === "salas" && <SalasTab projectId={projectId} salas={salas} />}
           {activeTab === "disciplinas" && (
             <DisciplinasTab projectId={projectId} disciplinas={disciplinas} professores={professores} turmas={turmas} salas={salas} />

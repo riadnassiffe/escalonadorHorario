@@ -125,11 +125,13 @@ if(BUILD_DESKTOP_GUI)
         src/ui/ScheduleReportExporter.cpp
         src/ui/TableSearchSortBar.cpp
         src/ui/OptimizeDialog.cpp
+        src/ui/ResponsiveUi.cpp
         src/ui/MainWindow.cpp
     )
 
     set(UI_HEADERS
         include/ui/ModernTheme.h
+        include/ui/ResponsiveUi.h
         include/ui/SmartTableWidgetItem.h
         include/ui/TableSearchSortBar.h
         include/ui/TimetableGridWidget.h

@@ -47,6 +47,69 @@ struct SlotConflictInfo {
 };
 
 /**
+ * @struct DisciplinaCargaItem
+ * @brief Detalha a contribuição de uma disciplina para a carga horária semanal de um docente ou sala.
+ */
+struct DisciplinaCargaItem {
+    std::string disciplina_id;
+    std::string disciplina_nome;
+    std::string turmas_resumo;
+    std::string regime_semestre;
+    int aulas_semanais{0};
+    int duracao_minutos{0};
+    int minutos_semanais{0};
+    bool atende_s1{false};
+    bool atende_s2{false};
+    bool is_alternativa{false};
+};
+
+/**
+ * @struct ProfessorWorkloadSummary
+ * @brief Consolida a carga horária semanal de um professor a partir das disciplinas e disponibilidade.
+ */
+struct ProfessorWorkloadSummary {
+    int minutos_s1{0};
+    int minutos_s2{0};
+    int aulas_s1{0};
+    int aulas_s2{0};
+    int minutos_disponiveis{0};
+    int dias_com_disponibilidade{0};
+    int alocado_minutos_s1{0};
+    int alocado_minutos_s2{0};
+    int alocado_aulas_s1{0};
+    int alocado_aulas_s2{0};
+    std::vector<DisciplinaCargaItem> disciplinas;
+
+    /**
+     * @brief Verifica se a carga semanal planejada em algum semestre supera a disponibilidade cadastrada.
+     */
+    bool excedeDisponibilidade() const noexcept {
+        return minutos_s1 > minutos_disponiveis || minutos_s2 > minutos_disponiveis;
+    }
+};
+
+/**
+ * @struct RoomWorkloadSummary
+ * @brief Consolida a carga horária semanal de uma sala ou laboratório (fixa, alternativa e alocada).
+ */
+struct RoomWorkloadSummary {
+    int fixo_minutos_s1{0};
+    int fixo_minutos_s2{0};
+    int fixo_aulas_s1{0};
+    int fixo_aulas_s2{0};
+    int alt_minutos_s1{0};
+    int alt_minutos_s2{0};
+    int alt_aulas_s1{0};
+    int alt_aulas_s2{0};
+    int alocado_minutos_s1{0};
+    int alocado_minutos_s2{0};
+    int alocado_aulas_s1{0};
+    int alocado_aulas_s2{0};
+    std::vector<DisciplinaCargaItem> disciplinas_fixas;
+    std::vector<DisciplinaCargaItem> disciplinas_alternativas;
+};
+
+/**
  * @class InstitutionData
  * @brief Armazena e gerencia todas as entidades e configurações do sistema de agendamento escolar.
  *
@@ -352,6 +415,17 @@ public:
     void setGrade(Timetable grade) { grade_ = std::move(grade); }
 
     /**
+     * @brief Aplica o resultado de uma otimização preservando a grade anterior em falhas,
+     *        mesclando alocações de outro semestre em escopo parcial e protegendo aulas fixadas.
+     *
+     * @param novo_resultado Grade retornada pelo solver.
+     * @param escopo Escopo de semestre usado na otimização.
+     * @return true se a grade foi atualizada com uma solução viável; false se a grade anterior foi mantida.
+     */
+    bool aplicarResultadoOtimizacao(Timetable novo_resultado,
+                                    EscopoSemestreOtimizacao escopo = EscopoSemestreOtimizacao::TODAS_SEM_FILTRO);
+
+    /**
      * @brief Realiza a auditoria completa de conflitos de restrições na grade horária atual.
      *
      * Valida choques de turma, choques de professor, choques de sala, indisponibilidades docentes,
@@ -392,6 +466,20 @@ public:
     std::vector<SlotConflictInfo> avaliarTrocaAulas(
         const std::string& aula_a_id,
         const std::string& aula_b_id) const;
+
+    /**
+     * @brief Calcula o resumo da carga horária semanal de um professor com base nas disciplinas vinculadas.
+     * @param prof_id Identificador único do professor.
+     * @return Estrutura ProfessorWorkloadSummary com totais por semestre, disponibilidade e disciplinas.
+     */
+    ProfessorWorkloadSummary calcularCargaProfessor(const std::string& prof_id) const;
+
+    /**
+     * @brief Calcula o resumo da carga horária semanal de uma sala ou laboratório a partir das disciplinas.
+     * @param sala_id Identificador único da sala/laboratório.
+     * @return Estrutura RoomWorkloadSummary diferenciando vínculos fixos, alternativos e alocados.
+     */
+    RoomWorkloadSummary calcularCargaSala(const std::string& sala_id) const;
 
     /**
      * @brief Remove todos os dados cadastrados (professores, salas, turmas, disciplinas, aulas e grade).

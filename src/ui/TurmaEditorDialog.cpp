@@ -5,6 +5,7 @@
 
 #include "ui/TurmaEditorDialog.h"
 #include "ui/ModernTheme.h"
+#include "ui/ResponsiveUi.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -47,17 +48,16 @@ TurmaEditorDialog::TurmaEditorDialog(
     }
     validateAllDays();
     onSalaModeChanged();
+    fitWindowToScreen(this, QSize(800, 600));
 }
 
 void TurmaEditorDialog::setupUi() {
     setWindowIcon(ModernTheme::icon("turma"));
-    setMinimumWidth(780);
-    setMinimumHeight(620);
-    resize(840, 680);
+    setMinimumSize(500, 380);
 
     auto* main_layout = new QVBoxLayout(this);
-    main_layout->setContentsMargins(12, 12, 12, 12);
-    main_layout->setSpacing(10);
+    main_layout->setContentsMargins(10, 10, 10, 10);
+    main_layout->setSpacing(8);
 
     // 1. Identificação Básica
     auto* form_card = new QWidget(this);
@@ -74,6 +74,7 @@ void TurmaEditorDialog::setupUi() {
     combo_turno_->addItem("Tarde (TARDE)", static_cast<int>(model::ShiftType::TARDE));
     combo_turno_->addItem("Noite (NOITE)", static_cast<int>(model::ShiftType::NOITE));
     combo_turno_->addItem("Integral / Misto (INTEGRAL)", static_cast<int>(model::ShiftType::INTEGRAL));
+    makeComboResponsive(combo_turno_, 16, 150);
 
     auto* lbl_nome = new QLabel("Nome da Turma:", form_card);
     lbl_nome->setStyleSheet("font-weight: 600; font-size: 13px;");
@@ -94,31 +95,35 @@ void TurmaEditorDialog::setupUi() {
     // ABA 1: SLOTS DE HORÁRIO POR DIA DA SEMANA
     // =========================================================================
     auto* tab_jornadas = new QWidget(main_tabs);
-    auto* layout_tab_j = new QVBoxLayout(tab_jornadas);
-    layout_tab_j->setContentsMargins(10, 12, 10, 10);
+    auto* tab_jornadas_root = new QVBoxLayout(tab_jornadas);
+    tab_jornadas_root->setContentsMargins(0, 0, 0, 0);
+
+    auto* jornadas_content = new QWidget(tab_jornadas);
+    auto* layout_tab_j = new QVBoxLayout(jornadas_content);
+    layout_tab_j->setContentsMargins(8, 10, 8, 8);
     layout_tab_j->setSpacing(8);
 
-    auto* bar_semana = new QHBoxLayout();
-    bar_semana->setSpacing(6);
-    auto* lbl_rapido = new QLabel("⚡ Aplicar modelo em toda a semana:", tab_jornadas);
+    auto* bar_semana_wrap = new QWidget(jornadas_content);
+    bar_semana_wrap->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+    auto* bar_semana = new FlowLayout(bar_semana_wrap, 0, 6, 6);
+    auto* lbl_rapido = new QLabel("⚡ Aplicar modelo em toda a semana:", bar_semana_wrap);
     lbl_rapido->setStyleSheet("font-weight: bold; color: palette(highlight);");
     bar_semana->addWidget(lbl_rapido);
 
-    auto* btn_all_manha = new QPushButton(ModernTheme::icon("morning"), "Modelo Manhã", tab_jornadas);
+    auto* btn_all_manha = new QPushButton(ModernTheme::icon("morning"), "Modelo Manhã", bar_semana_wrap);
     btn_all_manha->setObjectName("btnSecondary");
-    auto* btn_all_tarde = new QPushButton(ModernTheme::icon("afternoon"), "Modelo Tarde", tab_jornadas);
+    auto* btn_all_tarde = new QPushButton(ModernTheme::icon("afternoon"), "Modelo Tarde", bar_semana_wrap);
     btn_all_tarde->setObjectName("btnSecondary");
-    auto* btn_all_integral = new QPushButton(ModernTheme::icon("integral"), "Modelo Integral", tab_jornadas);
+    auto* btn_all_integral = new QPushButton(ModernTheme::icon("integral"), "Modelo Integral", bar_semana_wrap);
     btn_all_integral->setObjectName("btnSecondary");
-    auto* btn_all_noite = new QPushButton(ModernTheme::icon("evening"), "Modelo Noite", tab_jornadas);
+    auto* btn_all_noite = new QPushButton(ModernTheme::icon("evening"), "Modelo Noite", bar_semana_wrap);
     btn_all_noite->setObjectName("btnSecondary");
 
     bar_semana->addWidget(btn_all_manha);
     bar_semana->addWidget(btn_all_tarde);
     bar_semana->addWidget(btn_all_integral);
     bar_semana->addWidget(btn_all_noite);
-    bar_semana->addStretch();
-    layout_tab_j->addLayout(bar_semana);
+    layout_tab_j->addWidget(bar_semana_wrap);
 
     connect(btn_all_manha, &QPushButton::clicked, this, [this]() {
         applyPresetToAllDays(model::ShiftType::MANHA);
@@ -137,7 +142,7 @@ void TurmaEditorDialog::setupUi() {
         combo_turno_->setCurrentIndex(combo_turno_->findData(static_cast<int>(model::ShiftType::NOITE)));
     });
 
-    tab_dias_ = new QTabWidget(tab_jornadas);
+    tab_dias_ = new QTabWidget(jornadas_content);
     for (int i = 0; i < 5; ++i) {
         auto d = static_cast<model::DayOfWeek>(i);
         QString tab_title = QString::fromStdString(model::dayToString(d));
@@ -145,59 +150,72 @@ void TurmaEditorDialog::setupUi() {
     }
     layout_tab_j->addWidget(tab_dias_);
 
-    lbl_resumo_semanal_ = new QLabel(tab_jornadas);
-    lbl_resumo_semanal_->setStyleSheet("font-size: 11px; padding: 6px; background-color: palette(base); "
-                                       "border: 1px solid palette(mid); border-radius: 4px;");
+    lbl_resumo_semanal_ = new QLabel(jornadas_content);
+    if (ModernTheme::isDarkTheme()) {
+        lbl_resumo_semanal_->setStyleSheet(
+            "font-size: 11px; padding: 6px; background-color: #0f172a; color: #f8fafc; "
+            "border: 1px solid #334155; border-radius: 4px;");
+    } else {
+        lbl_resumo_semanal_->setStyleSheet(
+            "font-size: 11px; padding: 6px; background-color: palette(base); "
+            "border: 1px solid palette(mid); border-radius: 4px;");
+    }
     lbl_resumo_semanal_->setWordWrap(true);
     layout_tab_j->addWidget(lbl_resumo_semanal_);
 
+    tab_jornadas_root->addWidget(wrapInScrollArea(jornadas_content, tab_jornadas));
     main_tabs->addTab(tab_jornadas, ModernTheme::icon("calendar"), "Slots && Horários por Dia");
 
     // =========================================================================
     // ABA 2: SALA TEÓRICA PERMANENTE
     // =========================================================================
     auto* tab_sala = new QWidget(main_tabs);
-    auto* layout_tab_sala = new QVBoxLayout(tab_sala);
-    layout_tab_sala->setContentsMargins(12, 14, 12, 12);
-    layout_tab_sala->setSpacing(12);
+    auto* tab_sala_root = new QVBoxLayout(tab_sala);
+    tab_sala_root->setContentsMargins(0, 0, 0, 0);
+
+    auto* sala_content = new QWidget(tab_sala);
+    auto* layout_tab_sala = new QVBoxLayout(sala_content);
+    layout_tab_sala->setContentsMargins(10, 12, 10, 10);
+    layout_tab_sala->setSpacing(10);
 
     auto* lbl_sala_info = new QLabel(
         "Defina a política de sala permanente para aulas teóricas da turma durante a semana.<br>"
-        "Você pode definir uma sala fixa específica no cadastro ou permitir que o otimizador escolha a melhor sala fixa permanente.", tab_sala);
+        "Você pode definir uma sala fixa específica no cadastro ou permitir que o otimizador escolha a melhor sala fixa permanente.", sala_content);
     lbl_sala_info->setStyleSheet("font-size: 11px;");
     lbl_sala_info->setWordWrap(true);
     layout_tab_sala->addWidget(lbl_sala_info);
 
-    rad_sala_fixa_ = new QRadioButton("🏛️ Sala Teórica Pré-definida no cadastro:", tab_sala);
+    rad_sala_fixa_ = new QRadioButton("🏛️ Sala Teórica Pré-definida no cadastro:", sala_content);
     rad_sala_fixa_->setStyleSheet("font-weight: bold; font-size: 13px;");
     rad_sala_fixa_->setChecked(true);
     layout_tab_sala->addWidget(rad_sala_fixa_);
 
-    combo_sala_fixa_ = new QComboBox(tab_sala);
+    combo_sala_fixa_ = new QComboBox(sala_content);
     for (const auto& s : salas_disponiveis_) {
         combo_sala_fixa_->addItem(QString::fromStdString(s.nome()),
                                   QString::fromStdString(s.id()));
     }
+    makeComboResponsive(combo_sala_fixa_, 16, 180);
     layout_tab_sala->addWidget(combo_sala_fixa_);
 
-    rad_sala_opt_ = new QRadioButton("🎯 Otimizador seleciona uma sala fixa permanente dentre as permitidas:", tab_sala);
+    rad_sala_opt_ = new QRadioButton("🎯 Otimizador seleciona uma sala fixa permanente dentre as permitidas:", sala_content);
     rad_sala_opt_->setStyleSheet("font-weight: bold; font-size: 13px;");
     layout_tab_sala->addWidget(rad_sala_opt_);
 
     auto* bar_sel_salas = new QHBoxLayout();
-    auto* btn_sel_all = new QPushButton("Selecionar Todas", tab_sala);
+    auto* btn_sel_all = new QPushButton("Selecionar Todas", sala_content);
     btn_sel_all->setObjectName("btnSecondary");
-    auto* btn_desel_all = new QPushButton("Desmarcar Todas", tab_sala);
+    auto* btn_desel_all = new QPushButton("Desmarcar Todas", sala_content);
     btn_desel_all->setObjectName("btnSecondary");
-    bar_sel_salas->addWidget(new QLabel("Salas permitidas para escolha:", tab_sala));
+    bar_sel_salas->addWidget(new QLabel("Salas permitidas para escolha:", sala_content));
     bar_sel_salas->addStretch();
     bar_sel_salas->addWidget(btn_sel_all);
     bar_sel_salas->addWidget(btn_desel_all);
     layout_tab_sala->addLayout(bar_sel_salas);
 
-    list_salas_permitidas_ = new QListWidget(tab_sala);
+    list_salas_permitidas_ = new QListWidget(sala_content);
     list_salas_permitidas_->setSelectionMode(QAbstractItemView::MultiSelection);
-    list_salas_permitidas_->setMinimumHeight(180);
+    list_salas_permitidas_->setMinimumHeight(110);
     for (const auto& s : salas_disponiveis_) {
         auto* item = new QListWidgetItem(QString::fromStdString(s.nome()), list_salas_permitidas_);
         item->setData(Qt::UserRole, QString::fromStdString(s.id()));
@@ -215,6 +233,7 @@ void TurmaEditorDialog::setupUi() {
     connect(rad_sala_opt_, &QRadioButton::toggled, this, &TurmaEditorDialog::onSalaModeChanged);
 
     layout_tab_sala->addStretch();
+    tab_sala_root->addWidget(wrapInScrollArea(sala_content, tab_sala));
 
     main_tabs->addTab(tab_sala, ModernTheme::icon("room"), "Sala Teórica Permanente");
 
@@ -299,36 +318,35 @@ QWidget* TurmaEditorDialog::createDayTab(int day_idx) {
     panel_layout->setSpacing(8);
 
     // Barra de Ações do Dia (Presets + Ferramentas de Slots)
-    auto* actions_row = new QHBoxLayout();
-    actions_row->setSpacing(6);
+    auto* actions_wrap = new QWidget(w.content_panel);
+    actions_wrap->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+    auto* actions_row = new FlowLayout(actions_wrap, 0, 6, 6);
 
-    auto* btn_add_slot = new QPushButton(ModernTheme::icon("add"), "Adicionar Slot", w.content_panel);
+    auto* btn_add_slot = new QPushButton(ModernTheme::icon("add"), "Adicionar Slot", actions_wrap);
     btn_add_slot->setObjectName("btnSecondary");
-    auto* btn_rem_slot = new QPushButton(ModernTheme::icon("delete"), "Remover", w.content_panel);
+    auto* btn_rem_slot = new QPushButton(ModernTheme::icon("delete"), "Remover", actions_wrap);
     btn_rem_slot->setObjectName("btnSecondary");
-    auto* btn_gen_slots = new QPushButton("⚡ Gerar em Lote...", w.content_panel);
+    auto* btn_gen_slots = new QPushButton("⚡ Gerar em Lote...", actions_wrap);
     btn_gen_slots->setObjectName("btnSecondary");
 
     actions_row->addWidget(btn_add_slot);
     actions_row->addWidget(btn_rem_slot);
     actions_row->addWidget(btn_gen_slots);
-    actions_row->addSpacing(12);
 
-    auto* btn_p_manha = new QPushButton(ModernTheme::icon("morning"), "Manhã", w.content_panel);
+    auto* btn_p_manha = new QPushButton(ModernTheme::icon("morning"), "Manhã", actions_wrap);
     btn_p_manha->setObjectName("btnSecondary");
-    auto* btn_p_tarde = new QPushButton(ModernTheme::icon("afternoon"), "Tarde", w.content_panel);
+    auto* btn_p_tarde = new QPushButton(ModernTheme::icon("afternoon"), "Tarde", actions_wrap);
     btn_p_tarde->setObjectName("btnSecondary");
-    auto* btn_p_integral = new QPushButton(ModernTheme::icon("integral"), "Integral", w.content_panel);
+    auto* btn_p_integral = new QPushButton(ModernTheme::icon("integral"), "Integral", actions_wrap);
     btn_p_integral->setObjectName("btnSecondary");
-    auto* btn_p_noite = new QPushButton(ModernTheme::icon("evening"), "Noite", w.content_panel);
+    auto* btn_p_noite = new QPushButton(ModernTheme::icon("evening"), "Noite", actions_wrap);
     btn_p_noite->setObjectName("btnSecondary");
 
     actions_row->addWidget(btn_p_manha);
     actions_row->addWidget(btn_p_tarde);
     actions_row->addWidget(btn_p_integral);
     actions_row->addWidget(btn_p_noite);
-    actions_row->addStretch();
-    panel_layout->addLayout(actions_row);
+    panel_layout->addWidget(actions_wrap);
 
     connect(btn_add_slot, &QPushButton::clicked, this, [this, day_idx]() {
         auto& tbl = days_widgets_[day_idx].table_slots;
@@ -376,7 +394,7 @@ QWidget* TurmaEditorDialog::createDayTab(int day_idx) {
     w.table_slots->setSelectionBehavior(QAbstractItemView::SelectRows);
     w.table_slots->setSelectionMode(QAbstractItemView::SingleSelection);
     w.table_slots->verticalHeader()->setVisible(false);
-    w.table_slots->setMinimumHeight(210);
+    w.table_slots->setMinimumHeight(95);
     panel_layout->addWidget(w.table_slots);
 
     auto* lbl_hint = new QLabel(
@@ -514,6 +532,7 @@ void TurmaEditorDialog::openGenerateSlotsDialog(int day_idx) {
 
     connect(btn_cancel, &QPushButton::clicked, &dlg, &QDialog::reject);
     connect(btn_ok, &QPushButton::clicked, &dlg, &QDialog::accept);
+    fitWindowToScreen(&dlg, QSize(420, 340));
 
     if (dlg.exec() == QDialog::Accepted) {
         std::vector<model::TimeInterval> generated;
@@ -597,6 +616,7 @@ void TurmaEditorDialog::copyDayScheduleToOthers(int source_day_idx) {
 
     connect(btn_cancel, &QPushButton::clicked, &dlg, &QDialog::reject);
     connect(btn_ok, &QPushButton::clicked, &dlg, &QDialog::accept);
+    fitWindowToScreen(&dlg, QSize(420, 340));
 
     if (dlg.exec() == QDialog::Accepted) {
         auto src_jornada = getJornadaFromWidgets(days_widgets_[source_day_idx]);

@@ -16,6 +16,13 @@
 #include <QLabel>
 #include <QPlainTextEdit>
 #include <QProgressBar>
+#include <QToolButton>
+#include <QAction>
+#include <QList>
+#include <QTimer>
+#include <QElapsedTimer>
+#include <QCloseEvent>
+#include <thread>
 
 namespace scheduler::ui {
 
@@ -38,6 +45,17 @@ public:
      * @param parent Widget pai na hierarquia Qt (opcional).
      */
     explicit MainWindow(QWidget* parent = nullptr);
+    ~MainWindow() override;
+
+    /**
+     * @brief Carrega um arquivo JSON de projeto diretamente para a interface.
+     * @param path Caminho do arquivo JSON.
+     * @return true se carregado com sucesso; false caso contrário.
+     */
+    bool loadProjectFile(const QString& path);
+
+protected:
+    void closeEvent(QCloseEvent* event) override;
 
 private slots:
     /**
@@ -225,12 +243,31 @@ private:
      */
     void refreshDisciplinasTable();
 
+    void onStopOptimization();
+    void setOptimizationUiState(bool running);
+    void onOptimizationProgress(const QString& algo_name, const QString& msg, double ratio);
+    void onOptimizationFinished(model::Timetable tt,
+                                bool was_stopped,
+                                model::EscopoSemestreOtimizacao solved_scope);
+    void updateOptimizationStatusBar();
+
     model::InstitutionData data_;
     solver::ScheduleSolver solver_;
 
     QTabWidget* tab_widget_{nullptr};
     TimetableView* timetable_view_{nullptr};
     ConfigWidget* config_widget_{nullptr};
+    QToolButton* btn_optimize_{nullptr};
+    QList<QWidget*> mutating_widgets_;
+    QList<QAction*> mutating_actions_;
+
+    bool is_optimizing_{false};
+    bool stop_requested_ui_{false};
+    QString active_algo_name_;
+    QString last_solver_msg_;
+    std::thread solver_thread_;
+    QTimer* elapsed_timer_{nullptr};
+    QElapsedTimer optimization_elapsed_;
 
     // KPI Banner Widgets
     QFrame* kpi_banner_card_{nullptr};

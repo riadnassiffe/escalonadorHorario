@@ -5,6 +5,7 @@
 
 #include "ui/SwapLessonDialog.h"
 #include "ui/ModernTheme.h"
+#include "ui/ResponsiveUi.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -34,27 +35,27 @@ SwapLessonDialog::SwapLessonDialog(model::InstitutionData& data,
 
     setWindowTitle("Trocar Horários de Aulas (Swap)");
     setWindowIcon(ModernTheme::icon("swap"));
-    resize(780, 620);
-    setMinimumSize(680, 520);
+    setMinimumSize(500, 400);
 
     setupUi();
     populateOrigemCombo();
     populateDestinoTable();
     updateValidationStatus();
+    fitWindowToScreen(this, QSize(760, 560));
 }
 
 void SwapLessonDialog::setupUi() {
     auto* main_layout = new QVBoxLayout(this);
-    main_layout->setSpacing(12);
-    main_layout->setContentsMargins(16, 16, 16, 16);
+    main_layout->setSpacing(10);
+    main_layout->setContentsMargins(12, 12, 12, 12);
 
     // 1. Seção da Aula de Origem
     auto* grp_origem = new QGroupBox("Aula de Origem (A mover para novo horário)", this);
     auto* layout_origem = new QVBoxLayout(grp_origem);
-    layout_origem->setSpacing(8);
+    layout_origem->setSpacing(6);
 
     combo_origem_ = new QComboBox(grp_origem);
-    combo_origem_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    makeComboResponsive(combo_origem_, 26, 220);
     layout_origem->addWidget(combo_origem_);
 
     lbl_origem_details_ = new QLabel(grp_origem);
@@ -90,6 +91,8 @@ void SwapLessonDialog::setupUi() {
     table_destino_->setSelectionMode(QAbstractItemView::SingleSelection);
     table_destino_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     table_destino_->verticalHeader()->setVisible(false);
+    table_destino_->setMinimumHeight(140);
+    table_destino_->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     layout_destino->addWidget(table_destino_);
 
     main_layout->addWidget(grp_destino, 1);
@@ -100,13 +103,13 @@ void SwapLessonDialog::setupUi() {
     lbl_validation_status_->setStyleSheet("padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 500;");
     main_layout->addWidget(lbl_validation_status_);
 
-    // 4. Rodapé e Botões
-    auto* bottom_bar = new QHBoxLayout();
+    // 4. Opção de fixação e rodapé de botões
     chk_pinned_ = new QCheckBox("Fixar horários das aulas após a troca (Pin 📌)", this);
     chk_pinned_->setChecked(true);
     chk_pinned_->setToolTip("Bloqueia ambas as aulas para que não sejam alteradas pelo otimizador automático.");
-    bottom_bar->addWidget(chk_pinned_);
+    main_layout->addWidget(chk_pinned_);
 
+    auto* bottom_bar = new QHBoxLayout();
     bottom_bar->addStretch();
 
     btn_cancel_ = new QPushButton("Cancelar", this);
@@ -431,7 +434,10 @@ std::vector<std::string> SwapLessonDialog::verificarConflitosTroca(
 void SwapLessonDialog::updateValidationStatus() {
     if (selected_destino_id_.empty() || selected_origem_id_.empty()) {
         lbl_validation_status_->setText("Selecione uma aula de destino na tabela acima para avaliar a troca de horários.");
-        lbl_validation_status_->setStyleSheet("background-color: palette(base); color: palette(window-text); border: 1px solid palette(mid);");
+        lbl_validation_status_->setStyleSheet(
+            ModernTheme::isDarkTheme()
+                ? "background-color: #0f172a; color: #f8fafc; border: 1px solid #334155; padding: 8px 12px; border-radius: 6px; font-size: 12px;"
+                : "background-color: palette(base); color: palette(window-text); border: 1px solid palette(mid); padding: 8px 12px; border-radius: 6px; font-size: 12px;");
         btn_confirm_->setEnabled(false);
         return;
     }

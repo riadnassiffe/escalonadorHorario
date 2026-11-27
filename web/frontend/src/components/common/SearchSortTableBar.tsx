@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { ArrowDownAZ, ArrowUpZA, Search, X } from "lucide-react";
 
 interface Props {
@@ -11,6 +12,8 @@ interface Props {
   onSortByChange: (v: string) => void;
   ascending: boolean;
   onToggleOrder: () => void;
+  extraFilters?: ReactNode;
+  hasActiveFilter?: boolean;
 }
 
 export function SearchSortTableBar({
@@ -24,7 +27,11 @@ export function SearchSortTableBar({
   onSortByChange,
   ascending,
   onToggleOrder,
+  extraFilters,
+  hasActiveFilter,
 }: Props) {
+  const isFiltered = hasActiveFilter ?? Boolean(searchQuery);
+
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
       <div className="relative flex-1 min-w-[220px]">
@@ -47,8 +54,10 @@ export function SearchSortTableBar({
         )}
       </div>
 
+      {extraFilters}
+
       <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-        {searchQuery ? `${filteredCount} de ${totalCount} encontrados` : `${totalCount} ${entityLabel}`}
+        {isFiltered ? `${filteredCount} de ${totalCount} encontrados` : `${totalCount} ${entityLabel}`}
       </span>
 
       <div className="flex items-center gap-2">

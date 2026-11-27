@@ -108,6 +108,9 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
     }
 
     for (int i = 0; i < total_aulas; ++i) {
+        if (stop_requested_.load()) {
+            break;
+        }
         const auto* aula = sorted_aulas[i];
         int aula_sem = aula->isAnual() ? 3 : ((aula->semestre() == model::SemestreLetivo::SEMESTRE_2 || aula->semestreAtivo() == 2) ? 2 : 1);
         if (callback && i % 5 == 0) {
@@ -153,7 +156,7 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
                     conflict = true;
                     break;
                 }
-                if (data.config().distribuir_disciplinas_na_semana) {
+                if (!aula->isPinned() && data.config().distribuir_disciplinas_na_semana) {
                     const auto* disc = data.findDisciplina(aula->disciplinaId());
                     int max_lim = (disc && disc->maxAulasPorDiaTurma() > 0) ? disc->maxAulasPorDiaTurma() : data.config().max_aulas_disciplina_dia_turma;
                     int cnt = turma_disc_dia_count[{t_id, aula->disciplinaId(), c.dia}];
@@ -171,32 +174,6 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
                     int cnt = turma_disc_dia_count[{t_id, aula->disciplinaId(), c.dia}];
                     if (cnt > 0) {
                         penalty -= 400.0; // Bônus forte para agrupar as aulas no mesmo dia
-                    }
-                }
-            }
-
-            // Início prioritário da primeira aula no primeiro slot da jornada da turma
-            for (const auto& t_id : aula->turmas()) {
-                const auto* t = data.findTurma(t_id);
-                if (t) {
-                    auto j = t->jornadaParaDia(c.dia);
-                    if (!j.slots_letivos.empty()) {
-                        int t_ini = j.slots_letivos.front().start_min;
-                        const auto& existing = turma_ocup[{t_id, c.dia}];
-                        bool existing_in_sem = false;
-                        for (const auto& r : existing) {
-                            if (semestres_conflitam(r.semester, aula_sem)) {
-                                existing_in_sem = true;
-                                break;
-                            }
-                        }
-                        if (!existing_in_sem) {
-                            if (c.start_min == t_ini) {
-                                penalty -= 1000.0; // Forte incentivo para a primeira aula iniciar no início da jornada
-                            } else {
-                                penalty += 800.0; // Desestimula iniciar o dia fora do horário inicial
-                            }
-                        }
                     }
                 }
             }
@@ -503,7 +480,19 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
     stats.penalidade_dias_D = total_D;
     stats.penalidade_preferencia_dias_W = total_W;
 
-    if (alocadas_count == total_aulas) {
+    if (stop_requested_.load()) {
+        if (alocadas_count == 0) {
+            stats.status = "CANCELLED";
+            timetable.addMensagemDiagnostico("[CANCELADO] Heurística interrompida pelo usuário.");
+            if (callback) callback("Heurística: Otimização cancelada pelo usuário.", 1.0);
+        } else {
+            stats.status = "FEASIBLE";
+            timetable.addMensagemDiagnostico("[INTERROMPIDO] Heurística interrompida pelo usuário (" +
+                                             std::to_string(alocadas_count) + " de " +
+                                             std::to_string(total_aulas) + " aulas alocadas).");
+            if (callback) callback("Heurística: Interrompida pelo usuário (solução parcial aplicada).", 1.0);
+        }
+    } else if (alocadas_count == total_aulas) {
         stats.status = "FEASIBLE";
         timetable.addMensagemDiagnostico("[HEURÍSTICA] Todas as " + std::to_string(total_aulas) + " aulas foram alocadas com sucesso em " + std::to_string(static_cast<int>(elapsed)) + " ms.");
         if (callback) callback("Grade gerada via Heurística Construtiva Gulosa!", 1.0);

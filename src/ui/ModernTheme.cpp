@@ -129,8 +129,8 @@ static QString getDarkStyleSheet() {
         QToolBar {
             background-color: #1e293b;
             border-bottom: 1px solid #334155;
-            spacing: 8px;
-            padding: 6px 12px;
+            spacing: 6px;
+            padding: 4px 8px;
         }
 
         QToolButton {
@@ -138,7 +138,7 @@ static QString getDarkStyleSheet() {
             color: #f8fafc;
             border: 1px solid #475569;
             border-radius: 6px;
-            padding: 6px 14px;
+            padding: 5px 10px;
             font-weight: 500;
         }
 
@@ -155,13 +155,31 @@ static QString getDarkStyleSheet() {
             background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #2563eb, stop:1 #38bdf8);
             color: #ffffff;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 13px;
             border: none;
-            padding: 8px 20px;
+            padding: 6px 14px;
         }
 
         QToolButton#btnOptimize:hover {
             background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1d4ed8, stop:1 #0284c7);
+        }
+
+        QToolButton#btnStopOptimize {
+            background-color: #dc2626;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 13px;
+            border: none;
+            padding: 6px 14px;
+        }
+
+        QToolButton#btnStopOptimize:hover {
+            background-color: #b91c1c;
+        }
+
+        QToolButton#btnStopOptimize:disabled {
+            background-color: #991b1b;
+            color: #fca5a5;
         }
 
         QFrame#kpiBannerCard {
@@ -195,12 +213,12 @@ static QString getDarkStyleSheet() {
         QTabBar::tab {
             background-color: #0f172a;
             color: #94a3b8;
-            padding: 10px 18px;
+            padding: 7px 12px;
             border-top-left-radius: 6px;
             border-top-right-radius: 6px;
             border: 1px solid #334155;
             border-bottom: none;
-            margin-right: 4px;
+            margin-right: 3px;
             font-weight: 600;
         }
 
@@ -243,7 +261,7 @@ static QString getDarkStyleSheet() {
             color: #ffffff;
             border: none;
             border-radius: 6px;
-            padding: 8px 16px;
+            padding: 6px 12px;
             font-weight: 600;
         }
 
@@ -367,8 +385,8 @@ static QString getDarkStyleSheet() {
         QGroupBox {
             border: 1px solid #334155;
             border-radius: 8px;
-            margin-top: 18px;
-            padding: 16px 12px 12px 12px;
+            margin-top: 14px;
+            padding: 12px 10px 10px 10px;
             font-weight: 600;
             color: #38bdf8;
         }
@@ -475,6 +493,23 @@ QString ModernTheme::getStyleSheet(ThemeMode mode) {
             font-weight: bold;
             border-radius: 6px;
             padding: 6px 16px;
+        }
+
+        QToolButton#btnStopOptimize {
+            background-color: #dc2626;
+            color: #ffffff;
+            font-weight: bold;
+            border-radius: 6px;
+            padding: 6px 16px;
+        }
+
+        QToolButton#btnStopOptimize:hover {
+            background-color: #b91c1c;
+        }
+
+        QToolButton#btnStopOptimize:disabled {
+            background-color: #991b1b;
+            color: #fecaca;
         }
 
         QPushButton#btnDanger {

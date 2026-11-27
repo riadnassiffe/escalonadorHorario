@@ -12,6 +12,7 @@
 #include "ui/OptimizeDialog.h"
 #include "ui/ScheduleReportExporter.h"
 #include "ui/ModernTheme.h"
+#include "ui/ResponsiveUi.h"
 #include "serialization/JsonSerialization.h"
 #include <QMenuBar>
 #include <QMenu>
@@ -28,9 +29,50 @@
 #include <QStatusBar>
 #include <QDateTime>
 #include <QShortcut>
+#include <QCloseEvent>
+#include <QPointer>
+#include <QMetaObject>
+#include <QStyle>
+#include <QApplication>
+#include <algorithm>
 #include <set>
 
 namespace scheduler::ui {
+
+namespace {
+
+QString formatHorasMin(int minutos) {
+    const int safe = std::max(0, minutos);
+    return QString("%1h%2").arg(safe / 60).arg(safe % 60, 2, 10, QChar('0'));
+}
+
+QString formatDisciplinasTooltip(const std::vector<model::DisciplinaCargaItem>& items, int max_items = 12) {
+    if (items.empty()) {
+        return "<i>Nenhuma disciplina vinculada.</i>";
+    }
+    QStringList lines;
+    const int limit = std::min<int>(static_cast<int>(items.size()), max_items);
+    for (int i = 0; i < limit; ++i) {
+        const auto& item = items[i];
+        const QString turma_info = item.turmas_resumo.empty()
+            ? QString("")
+            : QString(" [%1]").arg(QString::fromStdString(item.turmas_resumo).toHtmlEscaped());
+        lines << QString("• <b>%1</b>%2 (%3) — %4a × %5m = %6m")
+                     .arg(QString::fromStdString(item.disciplina_nome).toHtmlEscaped(),
+                          turma_info,
+                          QString::fromStdString(item.regime_semestre).toHtmlEscaped())
+                     .arg(item.aulas_semanais)
+                     .arg(item.duracao_minutos)
+                     .arg(item.minutos_semanais);
+    }
+    if (static_cast<int>(items.size()) > max_items) {
+        lines << QString("<i>... e mais %1 disciplina(s).</i>")
+                     .arg(static_cast<int>(items.size()) - max_items);
+    }
+    return lines.join("<br>");
+}
+
+} // namespace
 
 /**
  * @brief Construtor da janela principal.
@@ -42,37 +84,77 @@ MainWindow::MainWindow(QWidget* parent)
     onLoadDefaultExample();
 }
 
+MainWindow::~MainWindow() {
+    if (solver_thread_.joinable()) {
+        solver_.requestStop();
+        solver_thread_.join();
+    }
+}
+
+void MainWindow::closeEvent(QCloseEvent* event) {
+    if (is_optimizing_) {
+        auto resp = QMessageBox::question(
+            this,
+            "Otimização em Andamento",
+            "Uma otimização ainda está sendo executada em segundo plano.\n\n"
+            "Deseja interromper a busca e fechar o aplicativo?",
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::No);
+        if (resp != QMessageBox::Yes) {
+            event->ignore();
+            return;
+        }
+        solver_.requestStop();
+        statusBar()->showMessage("Interrompendo otimização para encerrar...");
+        QApplication::processEvents();
+        if (solver_thread_.joinable()) {
+            solver_thread_.join();
+        }
+    } else if (solver_thread_.joinable()) {
+        solver_thread_.join();
+    }
+    event->accept();
+}
+
 /**
  * @brief Inicializa e organiza os componentes visuais principais, abas e banners.
  */
 void MainWindow::setupUi() {
     setWindowTitle("Escalonador Inteligente de Horários Escolares");
     setWindowIcon(ModernTheme::icon("app_icon"));
-    resize(1300, 850);
+    setMinimumSize(780, 500);
 
     setupMenuBar();
     setupToolBar();
 
     auto* central_widget = new QWidget(this);
     auto* main_layout = new QVBoxLayout(central_widget);
-    main_layout->setContentsMargins(12, 8, 12, 12);
-    main_layout->setSpacing(10);
+    main_layout->setContentsMargins(8, 6, 8, 8);
+    main_layout->setSpacing(6);
 
     setupKpiBanner();
     main_layout->addWidget(kpi_banner_card_);
 
     tab_widget_ = new QTabWidget(this);
+    tab_widget_->setUsesScrollButtons(true);
 
     timetable_view_ = new TimetableView(data_, this);
-    connect(timetable_view_, &TimetableView::timetableModified, this, &MainWindow::updateKpiBanner);
+    connect(timetable_view_, &TimetableView::timetableModified, this, [this]() {
+        updateKpiBanner();
+        refreshProfessoresTable();
+        refreshSalasTable();
+    });
     connect(timetable_view_, &TimetableView::lessonPinChanged, this, [this](const QString&, bool) {
         updateKpiBanner();
     });
     connect(timetable_view_, &TimetableView::lessonMoved, this, [this](const QString& aid, const QString& details) {
         statusBar()->showMessage("Aula " + aid + " modificada na grade: " + details, 6000);
         updateKpiBanner();
+        refreshProfessoresTable();
+        refreshSalasTable();
     });
     config_widget_ = new ConfigWidget(this);
+    mutating_widgets_.append(config_widget_);
 
     tab_widget_->addTab(timetable_view_, ModernTheme::icon("calendar"), "Grade Semanal");
     tab_widget_->addTab(createProfessoresTab(), ModernTheme::icon("professor"), "Professores");
@@ -91,6 +173,12 @@ void MainWindow::setupUi() {
     progress_bar_->setVisible(false);
     statusBar()->addPermanentWidget(progress_bar_);
     statusBar()->showMessage("Pronto para otimizar.");
+
+    elapsed_timer_ = new QTimer(this);
+    elapsed_timer_->setInterval(1000);
+    connect(elapsed_timer_, &QTimer::timeout, this, &MainWindow::updateOptimizationStatusBar);
+
+    fitWindowToScreen(this, QSize(1280, 780));
 }
 
 /**
@@ -98,10 +186,10 @@ void MainWindow::setupUi() {
  */
 void MainWindow::setupMenuBar() {
     auto* menu_arquivo = menuBar()->addMenu("&Arquivo");
-    menu_arquivo->addAction(ModernTheme::icon("new_project"), "Novo Projeto", QKeySequence::New, this, &MainWindow::onNewProject);
-    menu_arquivo->addAction(ModernTheme::icon("open_file"), "Abrir JSON...", QKeySequence::Open, this, &MainWindow::onOpenFile);
+    mutating_actions_.append(menu_arquivo->addAction(ModernTheme::icon("new_project"), "Novo Projeto", QKeySequence::New, this, &MainWindow::onNewProject));
+    mutating_actions_.append(menu_arquivo->addAction(ModernTheme::icon("open_file"), "Abrir JSON...", QKeySequence::Open, this, &MainWindow::onOpenFile));
     menu_arquivo->addAction(ModernTheme::icon("save_file"), "Salvar JSON...", QKeySequence::Save, this, &MainWindow::onSaveFile);
-    menu_arquivo->addAction(ModernTheme::icon("example"), "Carregar Exemplo Padrão", this, &MainWindow::onLoadDefaultExample);
+    mutating_actions_.append(menu_arquivo->addAction(ModernTheme::icon("example"), "Carregar Exemplo Padrão", this, &MainWindow::onLoadDefaultExample));
     menu_arquivo->addSeparator();
     menu_arquivo->addAction(ModernTheme::icon("export_html"), "Exportar Grade HTML...", this, &MainWindow::onExportHtml);
     menu_arquivo->addAction(ModernTheme::icon("export_csv"), "Exportar Grade CSV...", this, &MainWindow::onExportCsv);
@@ -110,13 +198,16 @@ void MainWindow::setupMenuBar() {
 
     auto* menu_grade = menuBar()->addMenu("&Grade");
     auto* act_alocar = menu_grade->addAction(ModernTheme::icon("add"), "Alocar Disciplina Manualmente...", this, [this]() {
+        if (is_optimizing_) return;
         tab_widget_->setCurrentWidget(timetable_view_);
         timetable_view_->alocarAulaManual(-1, -1);
     });
     act_alocar->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_M));
+    mutating_actions_.append(act_alocar);
 
     menu_grade->addSeparator();
-    menu_grade->addAction(ModernTheme::icon("pin"), "Fixar Todas as Aulas da Grade", this, [this]() {
+    mutating_actions_.append(menu_grade->addAction(ModernTheme::icon("pin"), "Fixar Todas as Aulas da Grade", this, [this]() {
+        if (is_optimizing_) return;
         for (auto& aloc : data_.grade().alocacoes()) {
             auto* a_model = data_.findAula(aloc.aula_id);
             if (a_model) {
@@ -129,8 +220,9 @@ void MainWindow::setupMenuBar() {
         }
         timetable_view_->refreshView();
         updateKpiBanner();
-    });
-    menu_grade->addAction(ModernTheme::icon("unpin"), "Desafixar Todas as Aulas da Grade", this, [this]() {
+    }));
+    mutating_actions_.append(menu_grade->addAction(ModernTheme::icon("unpin"), "Desafixar Todas as Aulas da Grade", this, [this]() {
+        if (is_optimizing_) return;
         for (auto& aloc : data_.grade().alocacoes()) {
             auto* a_model = data_.findAula(aloc.aula_id);
             if (a_model) {
@@ -140,12 +232,15 @@ void MainWindow::setupMenuBar() {
         }
         timetable_view_->refreshView();
         updateKpiBanner();
-    });
+    }));
     menu_grade->addSeparator();
-    menu_grade->addAction(ModernTheme::icon("delete"), "Limpar Toda a Grade...", this, [this]() {
+    mutating_actions_.append(menu_grade->addAction(ModernTheme::icon("delete"), "Limpar Toda a Grade...", this, [this]() {
+        if (is_optimizing_) return;
         timetable_view_->limparGradeCompleta();
         updateKpiBanner();
-    });
+        refreshProfessoresTable();
+        refreshSalasTable();
+    }));
 
     auto* menu_exibir = menuBar()->addMenu("&Exibir");
     auto* menu_tema = menu_exibir->addMenu(ModernTheme::icon("theme"), "&Tema Visual");
@@ -173,6 +268,16 @@ void MainWindow::setupMenuBar() {
     add_theme_action("KDE Breeze Nativo", ModernTheme::ThemeMode::Breeze, false);
     add_theme_action("Qt Fusion", ModernTheme::ThemeMode::Fusion, false);
     add_theme_action("Escuro Moderno (Slate Dark)", ModernTheme::ThemeMode::ModernDark, false);
+
+    menu_exibir->addSeparator();
+    auto* act_kpi = menu_exibir->addAction("Exibir Barra de Indicadores (KPIs)");
+    act_kpi->setCheckable(true);
+    act_kpi->setChecked(true);
+    connect(act_kpi, &QAction::toggled, this, [this](bool checked) {
+        if (kpi_banner_card_) {
+            kpi_banner_card_->setVisible(checked);
+        }
+    });
 }
 
 /**
@@ -181,15 +286,16 @@ void MainWindow::setupMenuBar() {
 void MainWindow::setupToolBar() {
     auto* toolbar = addToolBar("Ações");
     toolbar->setMovable(false);
+    toolbar->setIconSize(QSize(18, 18));
 
-    auto* btn_optimize = new QToolButton(toolbar);
-    btn_optimize->setObjectName("btnOptimize");
-    btn_optimize->setIcon(ModernTheme::icon("optimize"));
-    btn_optimize->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-    btn_optimize->setText("OTIMIZAR GRADE");
-    btn_optimize->setToolTip("Selecionar algoritmo e otimizar grade horária escolar (Seção 4 & 7)");
-    connect(btn_optimize, &QToolButton::clicked, this, &MainWindow::onOptimize);
-    toolbar->addWidget(btn_optimize);
+    btn_optimize_ = new QToolButton(toolbar);
+    btn_optimize_->setObjectName("btnOptimize");
+    btn_optimize_->setIcon(ModernTheme::icon("optimize"));
+    btn_optimize_->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    btn_optimize_->setText("OTIMIZAR GRADE");
+    btn_optimize_->setToolTip("Selecionar algoritmo e otimizar grade horária escolar (Seção 4 & 7)");
+    connect(btn_optimize_, &QToolButton::clicked, this, &MainWindow::onOptimize);
+    toolbar->addWidget(btn_optimize_);
 
     toolbar->addSeparator();
 
@@ -199,6 +305,7 @@ void MainWindow::setupToolBar() {
     btn_new->setText("Novo Projeto");
     connect(btn_new, &QToolButton::clicked, this, &MainWindow::onNewProject);
     toolbar->addWidget(btn_new);
+    mutating_widgets_.append(btn_new);
 
     auto* btn_open = new QToolButton(toolbar);
     btn_open->setIcon(ModernTheme::icon("open_file"));
@@ -206,6 +313,7 @@ void MainWindow::setupToolBar() {
     btn_open->setText("Abrir JSON");
     connect(btn_open, &QToolButton::clicked, this, &MainWindow::onOpenFile);
     toolbar->addWidget(btn_open);
+    mutating_widgets_.append(btn_open);
 
     auto* btn_save = new QToolButton(toolbar);
     btn_save->setIcon(ModernTheme::icon("save_file"));
@@ -217,10 +325,11 @@ void MainWindow::setupToolBar() {
     auto* btn_example = new QToolButton(toolbar);
     btn_example->setIcon(ModernTheme::icon("example"));
     btn_example->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-    btn_example->setText("Carregar Exemplo Padrão");
+    btn_example->setText("Exemplo Padrão");
     btn_example->setToolTip("Carrega o cenário acadêmico completo com 45/50 min, turmas, laboratórios e preferências");
     connect(btn_example, &QToolButton::clicked, this, &MainWindow::onLoadDefaultExample);
     toolbar->addWidget(btn_example);
+    mutating_widgets_.append(btn_example);
 
     toolbar->addSeparator();
 
@@ -247,36 +356,36 @@ void MainWindow::setupKpiBanner() {
     kpi_banner_card_ = new QFrame(this);
     kpi_banner_card_->setFrameShape(QFrame::StyledPanel);
     kpi_banner_card_->setObjectName("kpiBannerCard");
+    kpi_banner_card_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
     updateKpiBannerTheme();
 
-    auto* layout = new QHBoxLayout(kpi_banner_card_);
-    layout->setContentsMargins(12, 6, 12, 6);
-    layout->setSpacing(20);
+    auto* layout = new FlowLayout(kpi_banner_card_, 6, 16, 4);
 
-    auto make_kpi = [](const QString& label, QLabel*& val_label, const QString& init_val, const QString& color = "") {
-        auto* box = new QVBoxLayout();
-        box->setSpacing(2);
-        val_label = new QLabel(init_val);
+    auto make_kpi = [this](const QString& label, QLabel*& val_label, const QString& init_val, const QString& color = "") {
+        auto* item = new QWidget(kpi_banner_card_);
+        auto* box = new QVBoxLayout(item);
+        box->setContentsMargins(4, 2, 4, 2);
+        box->setSpacing(1);
+        val_label = new QLabel(init_val, item);
         if (color.isEmpty()) {
-            val_label->setStyleSheet("font-size: 15px; font-weight: bold; color: palette(highlight);");
+            val_label->setStyleSheet("font-size: 14px; font-weight: bold; color: palette(highlight);");
         } else {
-            val_label->setStyleSheet(QString("font-size: 15px; font-weight: bold; color: %1;").arg(color));
+            val_label->setStyleSheet(QString("font-size: 14px; font-weight: bold; color: %1;").arg(color));
         }
-        auto* lbl = new QLabel(label);
+        auto* lbl = new QLabel(label, item);
         lbl->setStyleSheet("font-size: 11px; font-weight: 500;");
         box->addWidget(val_label);
         box->addWidget(lbl);
-        return box;
+        return item;
     };
 
-    layout->addLayout(make_kpi("Status do Solver", lbl_kpi_status_, "NÃO EXECUTADO", "#64748b"));
-    layout->addLayout(make_kpi("Tempo de Resolução", lbl_kpi_tempo_, "0.0 ms"));
-    layout->addLayout(make_kpi("Aulas Alocadas", lbl_kpi_aulas_, "0 / 0", "#16a34a"));
-    layout->addLayout(make_kpi("Janelas Professores (J)", lbl_kpi_janelas_, "0 min", "#d97706"));
-    layout->addLayout(make_kpi("Dias Trabalhados (D)", lbl_kpi_dias_, "0"));
-    layout->addLayout(make_kpi("Penalidade Pref. Dias (W)", lbl_kpi_pref_dias_, "0"));
-    layout->addLayout(make_kpi("Choques Ativos", lbl_kpi_choques_, "0", "#16a34a"));
-    layout->addStretch();
+    layout->addWidget(make_kpi("Status do Solver", lbl_kpi_status_, "NÃO EXECUTADO", "#64748b"));
+    layout->addWidget(make_kpi("Tempo de Resolução", lbl_kpi_tempo_, "0.0 ms"));
+    layout->addWidget(make_kpi("Aulas Alocadas", lbl_kpi_aulas_, "0 / 0", "#16a34a"));
+    layout->addWidget(make_kpi("Janelas Professores (J)", lbl_kpi_janelas_, "0 min", "#d97706"));
+    layout->addWidget(make_kpi("Dias Trabalhados (D)", lbl_kpi_dias_, "0"));
+    layout->addWidget(make_kpi("Penalidade Pref. Dias (W)", lbl_kpi_pref_dias_, "0"));
+    layout->addWidget(make_kpi("Choques Ativos", lbl_kpi_choques_, "0", "#16a34a"));
 }
 
 /**
@@ -306,13 +415,13 @@ void MainWindow::updateKpiBanner() {
     const auto& s = data_.grade().estatisticas();
     lbl_kpi_status_->setText(QString::fromStdString(s.status));
     if (s.status == "OPTIMAL") {
-        lbl_kpi_status_->setStyleSheet("font-size: 15px; font-weight: bold; color: #16a34a;");
+        lbl_kpi_status_->setStyleSheet("font-size: 14px; font-weight: bold; color: #16a34a;");
     } else if (s.status == "FEASIBLE") {
-        lbl_kpi_status_->setStyleSheet("font-size: 15px; font-weight: bold; color: #0284c7;");
+        lbl_kpi_status_->setStyleSheet("font-size: 14px; font-weight: bold; color: #0284c7;");
     } else if (s.status == "INFEASIBLE") {
-        lbl_kpi_status_->setStyleSheet("font-size: 15px; font-weight: bold; color: #dc2626;");
+        lbl_kpi_status_->setStyleSheet("font-size: 14px; font-weight: bold; color: #dc2626;");
     } else {
-        lbl_kpi_status_->setStyleSheet("font-size: 15px; font-weight: bold; color: #64748b;");
+        lbl_kpi_status_->setStyleSheet("font-size: 14px; font-weight: bold; color: #64748b;");
     }
 
     lbl_kpi_tempo_->setText(QString::number(s.tempo_execucao_ms, 'f', 1) + " ms");
@@ -324,12 +433,12 @@ void MainWindow::updateKpiBanner() {
     const auto conflitos = data_.verificarConflitosGradeDetalhado();
     if (conflitos.empty()) {
         lbl_kpi_choques_->setText("0");
-        lbl_kpi_choques_->setStyleSheet("font-size: 15px; font-weight: bold; color: #16a34a;");
+        lbl_kpi_choques_->setStyleSheet("font-size: 14px; font-weight: bold; color: #16a34a;");
         lbl_kpi_choques_->setToolTip("Nenhum choque de turma, professor, sala ou indisponibilidade detectado.");
     } else {
         int n = static_cast<int>(conflitos.size());
         lbl_kpi_choques_->setText(QString("⚠️ %1 %2").arg(n).arg(n == 1 ? "aula" : "aulas"));
-        lbl_kpi_choques_->setStyleSheet("font-size: 15px; font-weight: bold; color: #dc2626;");
+        lbl_kpi_choques_->setStyleSheet("font-size: 14px; font-weight: bold; color: #dc2626;");
         QStringList tip_lines;
         int shown = 0;
         for (const auto& [aid, infos] : conflitos) {
@@ -355,33 +464,40 @@ void MainWindow::updateKpiBanner() {
 QWidget* MainWindow::createProfessoresTab() {
     auto* widget = new QWidget(this);
     auto* layout = new QVBoxLayout(widget);
-    layout->setContentsMargins(10, 10, 10, 10);
+    layout->setContentsMargins(8, 8, 8, 8);
+    layout->setSpacing(8);
 
-    auto* btn_bar = new QHBoxLayout();
-    auto* btn_add = new QPushButton(ModernTheme::icon("add"), "Novo Professor", widget);
-    auto* btn_edit = new QPushButton(ModernTheme::icon("edit"), "Editar", widget);
+    auto* top_bar = new QWidget(widget);
+    top_bar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+    auto* btn_bar = new FlowLayout(top_bar, 0, 8, 6);
+    auto* btn_add = new QPushButton(ModernTheme::icon("add"), "Novo Professor", top_bar);
+    auto* btn_edit = new QPushButton(ModernTheme::icon("edit"), "Editar", top_bar);
     btn_edit->setObjectName("btnSecondary");
-    auto* btn_rem = new QPushButton(ModernTheme::icon("delete"), "Remover", widget);
+    auto* btn_rem = new QPushButton(ModernTheme::icon("delete"), "Remover", top_bar);
     btn_rem->setObjectName("btnDanger");
     btn_rem->setToolTip("Remover professor(es) selecionado(s) em massa (Delete)");
     btn_bar->addWidget(btn_add);
     btn_bar->addWidget(btn_edit);
     btn_bar->addWidget(btn_rem);
-    btn_bar->addStretch();
+    mutating_widgets_.append(btn_add);
+    mutating_widgets_.append(btn_edit);
+    mutating_widgets_.append(btn_rem);
 
     table_professores_ = new QTableWidget(widget);
-    table_professores_->setColumnCount(5);
-    table_professores_->setHorizontalHeaderLabels({"ID", "Nome", "Pesos Semanais (SEG..SEX)", "Carga Máx. Diária", "Disponibilidade"});
+    table_professores_->setColumnCount(6);
+    table_professores_->setHorizontalHeaderLabels({"ID", "Nome", "Pesos Semanais (SEG..SEX)", "Carga Máx. Diária", "Disponibilidade", "Carga Horária (S1 / S2)"});
     table_professores_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    table_professores_->horizontalHeader()->setMinimumSectionSize(75);
+    table_professores_->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     table_professores_->setSelectionBehavior(QAbstractItemView::SelectRows);
     table_professores_->setSelectionMode(QAbstractItemView::ExtendedSelection);
     table_professores_->setColumnHidden(0, true);
     layout->addWidget(table_professores_);
 
-    search_bar_professores_ = new TableSearchSortBar(widget);
+    search_bar_professores_ = new TableSearchSortBar(top_bar);
     search_bar_professores_->setupWithTable(table_professores_, "professor", "professores", 1 /* Nome */);
     btn_bar->addWidget(search_bar_professores_);
-    layout->insertLayout(0, btn_bar);
+    layout->insertWidget(0, top_bar);
 
     connect(btn_add, &QPushButton::clicked, this, &MainWindow::onAddProfessor);
     connect(btn_edit, &QPushButton::clicked, this, &MainWindow::onEditProfessor);
@@ -399,33 +515,40 @@ QWidget* MainWindow::createProfessoresTab() {
 QWidget* MainWindow::createTurmasTab() {
     auto* widget = new QWidget(this);
     auto* layout = new QVBoxLayout(widget);
-    layout->setContentsMargins(10, 10, 10, 10);
+    layout->setContentsMargins(8, 8, 8, 8);
+    layout->setSpacing(8);
 
-    auto* btn_bar = new QHBoxLayout();
-    auto* btn_add = new QPushButton(ModernTheme::icon("add"), "Nova Turma", widget);
-    auto* btn_edit = new QPushButton(ModernTheme::icon("edit"), "Editar", widget);
+    auto* top_bar = new QWidget(widget);
+    top_bar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+    auto* btn_bar = new FlowLayout(top_bar, 0, 8, 6);
+    auto* btn_add = new QPushButton(ModernTheme::icon("add"), "Nova Turma", top_bar);
+    auto* btn_edit = new QPushButton(ModernTheme::icon("edit"), "Editar", top_bar);
     btn_edit->setObjectName("btnSecondary");
-    auto* btn_rem = new QPushButton(ModernTheme::icon("delete"), "Remover", widget);
+    auto* btn_rem = new QPushButton(ModernTheme::icon("delete"), "Remover", top_bar);
     btn_rem->setObjectName("btnDanger");
     btn_rem->setToolTip("Remover turma(s) selecionada(s) em massa (Delete)");
     btn_bar->addWidget(btn_add);
     btn_bar->addWidget(btn_edit);
     btn_bar->addWidget(btn_rem);
-    btn_bar->addStretch();
+    mutating_widgets_.append(btn_add);
+    mutating_widgets_.append(btn_edit);
+    mutating_widgets_.append(btn_rem);
 
     table_turmas_ = new QTableWidget(widget);
     table_turmas_->setColumnCount(7);
     table_turmas_->setHorizontalHeaderLabels({"ID", "Nome", "Turno", "Jornada", "Intervalos Obrigatórios (2)", "Sala Teórica", "Carga Semanal (S1 / S2 / Disp)"});
     table_turmas_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    table_turmas_->horizontalHeader()->setMinimumSectionSize(75);
+    table_turmas_->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     table_turmas_->setSelectionBehavior(QAbstractItemView::SelectRows);
     table_turmas_->setSelectionMode(QAbstractItemView::ExtendedSelection);
     table_turmas_->setColumnHidden(0, true);
     layout->addWidget(table_turmas_);
 
-    search_bar_turmas_ = new TableSearchSortBar(widget);
+    search_bar_turmas_ = new TableSearchSortBar(top_bar);
     search_bar_turmas_->setupWithTable(table_turmas_, "turma", "turmas", 1 /* Nome */);
     btn_bar->addWidget(search_bar_turmas_);
-    layout->insertLayout(0, btn_bar);
+    layout->insertWidget(0, top_bar);
 
     connect(btn_add, &QPushButton::clicked, this, &MainWindow::onAddTurma);
     connect(btn_edit, &QPushButton::clicked, this, &MainWindow::onEditTurma);
@@ -443,33 +566,40 @@ QWidget* MainWindow::createTurmasTab() {
 QWidget* MainWindow::createSalasTab() {
     auto* widget = new QWidget(this);
     auto* layout = new QVBoxLayout(widget);
-    layout->setContentsMargins(10, 10, 10, 10);
+    layout->setContentsMargins(8, 8, 8, 8);
+    layout->setSpacing(8);
 
-    auto* btn_bar = new QHBoxLayout();
-    auto* btn_add = new QPushButton(ModernTheme::icon("add"), "Nova Sala", widget);
-    auto* btn_edit = new QPushButton(ModernTheme::icon("edit"), "Editar", widget);
+    auto* top_bar = new QWidget(widget);
+    top_bar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+    auto* btn_bar = new FlowLayout(top_bar, 0, 8, 6);
+    auto* btn_add = new QPushButton(ModernTheme::icon("add"), "Nova Sala", top_bar);
+    auto* btn_edit = new QPushButton(ModernTheme::icon("edit"), "Editar", top_bar);
     btn_edit->setObjectName("btnSecondary");
-    auto* btn_rem = new QPushButton(ModernTheme::icon("delete"), "Remover", widget);
+    auto* btn_rem = new QPushButton(ModernTheme::icon("delete"), "Remover", top_bar);
     btn_rem->setObjectName("btnDanger");
     btn_rem->setToolTip("Remover sala(s) selecionada(s) em massa (Delete)");
     btn_bar->addWidget(btn_add);
     btn_bar->addWidget(btn_edit);
     btn_bar->addWidget(btn_rem);
-    btn_bar->addStretch();
+    mutating_widgets_.append(btn_add);
+    mutating_widgets_.append(btn_edit);
+    mutating_widgets_.append(btn_rem);
 
     table_salas_ = new QTableWidget(widget);
-    table_salas_->setColumnCount(5);
-    table_salas_->setHorizontalHeaderLabels({"ID", "Nome", "Tipo", "Capacidade", "Recursos"});
+    table_salas_->setColumnCount(6);
+    table_salas_->setHorizontalHeaderLabels({"ID", "Nome", "Tipo", "Capacidade", "Recursos", "Carga Horária (S1 / S2)"});
     table_salas_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    table_salas_->horizontalHeader()->setMinimumSectionSize(75);
+    table_salas_->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     table_salas_->setSelectionBehavior(QAbstractItemView::SelectRows);
     table_salas_->setSelectionMode(QAbstractItemView::ExtendedSelection);
     table_salas_->setColumnHidden(0, true);
     layout->addWidget(table_salas_);
 
-    search_bar_salas_ = new TableSearchSortBar(widget);
+    search_bar_salas_ = new TableSearchSortBar(top_bar);
     search_bar_salas_->setupWithTable(table_salas_, "sala", "salas", 1 /* Nome */);
     btn_bar->addWidget(search_bar_salas_);
-    layout->insertLayout(0, btn_bar);
+    layout->insertWidget(0, top_bar);
 
     connect(btn_add, &QPushButton::clicked, this, &MainWindow::onAddSala);
     connect(btn_edit, &QPushButton::clicked, this, &MainWindow::onEditSala);
@@ -487,33 +617,40 @@ QWidget* MainWindow::createSalasTab() {
 QWidget* MainWindow::createDisciplinasTab() {
     auto* widget = new QWidget(this);
     auto* layout = new QVBoxLayout(widget);
-    layout->setContentsMargins(10, 10, 10, 10);
+    layout->setContentsMargins(8, 8, 8, 8);
+    layout->setSpacing(8);
 
-    auto* btn_bar = new QHBoxLayout();
-    auto* btn_add = new QPushButton(ModernTheme::icon("add"), "Nova Disciplina", widget);
-    auto* btn_edit = new QPushButton(ModernTheme::icon("edit"), "Editar", widget);
+    auto* top_bar = new QWidget(widget);
+    top_bar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+    auto* btn_bar = new FlowLayout(top_bar, 0, 8, 6);
+    auto* btn_add = new QPushButton(ModernTheme::icon("add"), "Nova Disciplina", top_bar);
+    auto* btn_edit = new QPushButton(ModernTheme::icon("edit"), "Editar", top_bar);
     btn_edit->setObjectName("btnSecondary");
-    auto* btn_rem = new QPushButton(ModernTheme::icon("delete"), "Remover", widget);
+    auto* btn_rem = new QPushButton(ModernTheme::icon("delete"), "Remover", top_bar);
     btn_rem->setObjectName("btnDanger");
     btn_rem->setToolTip("Remover disciplina(s) selecionada(s) em massa (Delete)");
     btn_bar->addWidget(btn_add);
     btn_bar->addWidget(btn_edit);
     btn_bar->addWidget(btn_rem);
-    btn_bar->addStretch();
+    mutating_widgets_.append(btn_add);
+    mutating_widgets_.append(btn_edit);
+    mutating_widgets_.append(btn_rem);
 
     table_disciplinas_ = new QTableWidget(widget);
     table_disciplinas_->setColumnCount(8);
     table_disciplinas_->setHorizontalHeaderLabels({"ID", "Nome", "Regime / Semestre", "Tipo", "Duração", "Aulas/Sem", "Professor", "Turma"});
     table_disciplinas_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    table_disciplinas_->horizontalHeader()->setMinimumSectionSize(75);
+    table_disciplinas_->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     table_disciplinas_->setSelectionBehavior(QAbstractItemView::SelectRows);
     table_disciplinas_->setSelectionMode(QAbstractItemView::ExtendedSelection);
     table_disciplinas_->setColumnHidden(0, true);
     layout->addWidget(table_disciplinas_);
 
-    search_bar_disciplinas_ = new TableSearchSortBar(widget);
+    search_bar_disciplinas_ = new TableSearchSortBar(top_bar);
     search_bar_disciplinas_->setupWithTable(table_disciplinas_, "disciplina", "disciplinas", 1 /* Nome */);
     btn_bar->addWidget(search_bar_disciplinas_);
-    layout->insertLayout(0, btn_bar);
+    layout->insertWidget(0, top_bar);
 
     connect(btn_add, &QPushButton::clicked, this, &MainWindow::onAddDisciplina);
     connect(btn_edit, &QPushButton::clicked, this, &MainWindow::onEditDisciplina);
@@ -550,6 +687,7 @@ QWidget* MainWindow::createLogsTab() {
  * @brief Reseta o estado atual e inicializa um novo projeto vazio.
  */
 void MainWindow::onNewProject() {
+    if (is_optimizing_) return;
     if (QMessageBox::question(this, "Novo Projeto", "Deseja iniciar um novo projeto limpo? Todos os dados não salvos serão perdidos.",
                               QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
         data_.clear();
@@ -564,20 +702,28 @@ void MainWindow::onNewProject() {
  * @brief Abre diálogo para carregar um arquivo JSON contendo dados da instituição.
  */
 void MainWindow::onOpenFile() {
+    if (is_optimizing_) return;
     QString path = QFileDialog::getOpenFileName(this, "Abrir Arquivo JSON", "", "Arquivos JSON (*.json)");
     if (path.isEmpty()) return;
+    loadProjectFile(path);
+}
 
+bool MainWindow::loadProjectFile(const QString& path) {
     std::string err;
     if (serialization::JsonSerialization::carregarArquivo(path.toStdString(), data_, err)) {
+        data_.gerarOcorrenciasAulas(true, model::EscopoSemestreOtimizacao::TODAS_SEM_FILTRO);
         refreshAllTables();
         config_widget_->loadConfig(data_.config());
         timetable_view_->refreshView();
         updateKpiBanner();
         txt_logs_->appendPlainText("[ARQUIVO] Carregado com sucesso: " + path);
         statusBar()->showMessage("Arquivo carregado com sucesso.", 4000);
-    } else {
+        return true;
+    }
+    if (isVisible()) {
         QMessageBox::critical(this, "Erro ao Abrir", QString::fromStdString(err));
     }
+    return false;
 }
 
 /**
@@ -601,6 +747,7 @@ void MainWindow::onSaveFile() {
  * @brief Carrega o cenário acadêmico demonstrativo padrão com 6 professores, 6 salas, 3 turmas e 19 disciplinas.
  */
 void MainWindow::onLoadDefaultExample() {
+    if (is_optimizing_) return;
     data_ = model::InstitutionData::criarExemploPadrao();
     refreshAllTables();
     config_widget_->loadConfig(data_.config());
@@ -610,10 +757,181 @@ void MainWindow::onLoadDefaultExample() {
     statusBar()->showMessage("Cenário de exemplo carregado. Clique em '⚡ OTIMIZAR GRADE' para executar.", 5000);
 }
 
+void MainWindow::setOptimizationUiState(bool running) {
+    is_optimizing_ = running;
+    stop_requested_ui_ = false;
+
+    if (btn_optimize_) {
+        if (running) {
+            btn_optimize_->setObjectName("btnStopOptimize");
+            btn_optimize_->setIcon(ModernTheme::icon("stop"));
+            btn_optimize_->setText("PARAR OTIMIZAÇÃO");
+            btn_optimize_->setToolTip("Interromper a otimização em andamento (aplica melhor solução viável encontrada)");
+        } else {
+            btn_optimize_->setObjectName("btnOptimize");
+            btn_optimize_->setIcon(ModernTheme::icon("optimize"));
+            btn_optimize_->setText("OTIMIZAR GRADE");
+            btn_optimize_->setToolTip("Selecionar algoritmo e otimizar grade horária escolar (Seção 4 & 7)");
+        }
+        btn_optimize_->setEnabled(true);
+        if (running) {
+            btn_optimize_->clearFocus();
+        }
+        btn_optimize_->style()->unpolish(btn_optimize_);
+        btn_optimize_->style()->polish(btn_optimize_);
+        btn_optimize_->update();
+    }
+
+    for (auto* w : mutating_widgets_) {
+        if (w) w->setEnabled(!running);
+    }
+    for (auto* a : mutating_actions_) {
+        if (a) a->setEnabled(!running);
+    }
+    if (timetable_view_) {
+        timetable_view_->setReadOnlyMode(running);
+    }
+
+    if (running) {
+        progress_bar_->setRange(0, 100);
+        progress_bar_->setValue(5);
+        progress_bar_->setVisible(true);
+        optimization_elapsed_.restart();
+        if (elapsed_timer_) elapsed_timer_->start();
+    } else {
+        if (elapsed_timer_) elapsed_timer_->stop();
+        progress_bar_->setVisible(false);
+    }
+}
+
+void MainWindow::updateOptimizationStatusBar() {
+    if (!is_optimizing_) return;
+    qint64 secs = optimization_elapsed_.isValid() ? (optimization_elapsed_.elapsed() / 1000) : 0;
+    if (stop_requested_ui_) {
+        statusBar()->showMessage(QString("[%1] Interrompendo otimização... (%2s)")
+            .arg(active_algo_name_).arg(secs));
+    } else {
+        statusBar()->showMessage(QString("[%1] %2 (%3s)")
+            .arg(active_algo_name_, last_solver_msg_).arg(secs));
+    }
+}
+
+void MainWindow::onOptimizationProgress(const QString& algo_name, const QString& msg, double ratio) {
+    if (!is_optimizing_) return;
+    active_algo_name_ = algo_name;
+    last_solver_msg_ = msg;
+    int pct = std::clamp(static_cast<int>(ratio * 100.0), 0, 100);
+    progress_bar_->setValue(pct);
+    txt_logs_->appendPlainText("[SOLVER] " + msg);
+    updateOptimizationStatusBar();
+}
+
+void MainWindow::onStopOptimization() {
+    if (!is_optimizing_ || stop_requested_ui_) return;
+    stop_requested_ui_ = true;
+    if (btn_optimize_) {
+        btn_optimize_->setEnabled(false);
+        btn_optimize_->setText("PARANDO...");
+    }
+    txt_logs_->appendPlainText("[OTIMIZAÇÃO] Solicitação de parada enviada ao solver...");
+    updateOptimizationStatusBar();
+    solver_.requestStop();
+}
+
+void MainWindow::onOptimizationFinished(model::Timetable tt,
+                                        bool was_stopped,
+                                        model::EscopoSemestreOtimizacao solved_scope) {
+    if (solver_thread_.joinable()) {
+        solver_thread_.join();
+    }
+
+    setOptimizationUiState(false);
+
+    const bool had_previous_grade = !data_.grade().alocacoes().empty();
+    const auto s = tt.estatisticas();
+    txt_logs_->appendPlainText(QString("[RESULTADO] Status: %1 | Tempo: %2 ms | Objetivo: %3")
+        .arg(QString::fromStdString(s.status))
+        .arg(s.tempo_execucao_ms, 0, 'f', 1)
+        .arg(s.valor_objetivo, 0, 'f', 1));
+
+    for (const auto& msg : tt.mensagensDiagnostico()) {
+        txt_logs_->appendPlainText(QString::fromStdString(msg));
+    }
+
+    if (s.status == "OPTIMAL" || s.status == "FEASIBLE") {
+        const bool applied = data_.aplicarResultadoOtimizacao(std::move(tt), solved_scope);
+        updateKpiBanner();
+        timetable_view_->refreshView();
+        if (applied) {
+            refreshProfessoresTable();
+            refreshSalasTable();
+            const int total_alocadas = data_.grade().estatisticas().total_aulas_alocadas;
+            if (was_stopped && s.status != "OPTIMAL") {
+                statusBar()->showMessage(
+                    QString("Otimização interrompida pelo usuário. Melhor solução viável aplicada (%1 aulas alocadas).")
+                        .arg(total_alocadas),
+                    8000);
+            } else {
+                statusBar()->showMessage(
+                    QString("Otimização concluída com sucesso (%1)! %2 aulas alocadas.")
+                        .arg(QString::fromStdString(s.status)).arg(total_alocadas),
+                    6000);
+            }
+            tab_widget_->setCurrentIndex(0); // Alterna para a visualização da grade
+        } else {
+            txt_logs_->appendPlainText("[SISTEMA] Solução retornada sem alocações. Grade anterior mantida.");
+            statusBar()->showMessage("Solução sem alocações. Grade anterior mantida.", 6000);
+        }
+    } else if (s.status == "CANCELLED" ||
+               (was_stopped && s.status != "INFEASIBLE" && s.status != "DADOS_INVALIDOS" && s.status != "MODEL_INVALID")) {
+        statusBar()->showMessage("Otimização interrompida pelo usuário. Grade anterior mantida.", 6000);
+    } else {
+        data_.aplicarResultadoOtimizacao(std::move(tt), solved_scope);
+        updateKpiBanner();
+        timetable_view_->refreshView();
+        if (had_previous_grade) {
+            txt_logs_->appendPlainText(
+                QString("[SISTEMA] A grade anterior (%1 aulas) foi mantida intacta.")
+                    .arg(data_.grade().alocacoes().size()));
+        }
+        const QString kept_suffix = had_previous_grade ? " A grade anterior foi mantida." : "";
+        const QString kept_modal = had_previous_grade
+            ? "\n\nA grade anterior com suas aulas fixadas foi mantida intacta."
+            : "";
+        if (s.status == "DADOS_INVALIDOS") {
+            statusBar()->showMessage("Falha na validação dos dados acadêmicos." + kept_suffix, 6000);
+            QMessageBox::warning(this, "Dados Inválidos",
+                "Foram encontrados problemas nos dados cadastrados que impedem a otimização.\n\n"
+                "Verifique os detalhes na aba '📝 Diagnóstico & Logs'." + kept_modal);
+        } else if (s.status == "INFEASIBLE") {
+            statusBar()->showMessage("Falha na otimização: Restrições inviáveis." + kept_suffix, 6000);
+            QMessageBox::warning(this, "Inviabilidade",
+                "O solver não encontrou solução viável que satisfaça todas as restrições obrigatórias.\n\n"
+                "Verifique os diagnósticos na aba '📝 Diagnóstico & Logs'." + kept_modal);
+        } else {
+            statusBar()->showMessage("Otimização encerrada sem encontrar solução viável." + kept_suffix, 6000);
+            QMessageBox::warning(this, "Otimização Sem Solução Viável",
+                "O solver encerrou a busca antes de encontrar uma solução viável completa "
+                "(possível limite de tempo, limite de memória RAM ou erro do modelo).\n\n"
+                "Verifique os detalhes e limites na aba '📝 Diagnóstico & Logs'." + kept_modal);
+        }
+        tab_widget_->setCurrentIndex(6); // Alterna para a aba de logs
+    }
+}
+
 /**
- * @brief Exibe o diálogo de seleção do algoritmo e parâmetros e executa a otimização da grade.
+ * @brief Exibe o diálogo de seleção do algoritmo e parâmetros e executa a otimização em background.
  */
 void MainWindow::onOptimize() {
+    if (is_optimizing_) {
+        onStopOptimization();
+        return;
+    }
+
+    if (solver_thread_.joinable()) {
+        solver_thread_.join();
+    }
+
     auto current_cfg = config_widget_->getConfig();
 
     // Apresenta a caixa para seleção do algoritmo para resolver o problema
@@ -626,7 +944,7 @@ void MainWindow::onOptimize() {
     data_.setConfig(current_cfg);
     config_widget_->loadConfig(current_cfg);
 
-    data_.gerarOcorrenciasAulas(true, current_cfg.escopo_semestre); // Preserva aulas fixadas e respeita escopo
+    data_.gerarOcorrenciasAulas(true, model::EscopoSemestreOtimizacao::TODAS_SEM_FILTRO);
 
     std::string algo_name = model::solverAlgorithmDisplayName(current_cfg.algoritmo);
     txt_logs_->appendPlainText("--------------------------------------------------");
@@ -646,44 +964,38 @@ void MainWindow::onOptimize() {
         txt_logs_->appendPlainText(QString("[ENTRADA] Distribuição atual da tela (%1 aulas) fornecida como entrada / Warm Start.")
             .arg(data_.grade().alocacoes().size()));
     }
-    txt_logs_->appendPlainText("[OTIMIZAÇÃO] Iniciando resolução: " + QDateTime::currentDateTime().toString("dd/MM/yyyy HH:mm:ss"));
+    txt_logs_->appendPlainText("[OTIMIZAÇÃO] Iniciando resolução em segundo plano: " + QDateTime::currentDateTime().toString("dd/MM/yyyy HH:mm:ss"));
 
-    progress_bar_->setVisible(true);
-    progress_bar_->setValue(10);
-    statusBar()->showMessage("Executando " + QString::fromStdString(algo_name) + "...");
+    model::InstitutionData data_snapshot = data_;
+    data_snapshot.gerarOcorrenciasAulas(true, current_cfg.escopo_semestre);
+    const auto solved_scope = current_cfg.escopo_semestre;
+    QString algo_q = QString::fromStdString(algo_name);
+    active_algo_name_ = algo_q;
+    last_solver_msg_ = "Iniciando resolução...";
+    solver_.resetStop();
+    setOptimizationUiState(true);
+    updateOptimizationStatusBar();
 
-    auto tt = solver_.solve(data_, [this, algo_name](const std::string& msg, double ratio) {
-        progress_bar_->setValue(static_cast<int>(ratio * 100));
-        statusBar()->showMessage(QString("[%1] %2").arg(QString::fromStdString(algo_name), QString::fromStdString(msg)));
-        txt_logs_->appendPlainText("[SOLVER] " + QString::fromStdString(msg));
+    QPointer<MainWindow> self(this);
+    solver_thread_ = std::thread([this, self, data_snapshot = std::move(data_snapshot), algo_q, solved_scope]() mutable {
+        auto tt = solver_.solve(data_snapshot, [self, algo_q](const std::string& msg, double ratio) {
+            if (!self) return;
+            QString msg_q = QString::fromStdString(msg);
+            QMetaObject::invokeMethod(self, [self, algo_q, msg_q, ratio]() {
+                if (self) {
+                    self->onOptimizationProgress(algo_q, msg_q, ratio);
+                }
+            }, Qt::QueuedConnection);
+        }, /*reset_stop=*/false);
+        bool was_stopped = solver_.isStopRequested();
+        if (self) {
+            QMetaObject::invokeMethod(self, [self, tt = std::move(tt), was_stopped, solved_scope]() mutable {
+                if (self) {
+                    self->onOptimizationFinished(std::move(tt), was_stopped, solved_scope);
+                }
+            }, Qt::QueuedConnection);
+        }
     });
-
-    data_.setGrade(tt);
-    progress_bar_->setVisible(false);
-    updateKpiBanner();
-    timetable_view_->refreshView();
-
-    const auto& s = tt.estatisticas();
-    txt_logs_->appendPlainText(QString("[RESULTADO] Status: %1 | Tempo: %2 ms | Objetivo: %3")
-        .arg(QString::fromStdString(s.status))
-        .arg(s.tempo_execucao_ms, 0, 'f', 1)
-        .arg(s.valor_objetivo, 0, 'f', 1));
-
-    for (const auto& msg : tt.mensagensDiagnostico()) {
-        txt_logs_->appendPlainText(QString::fromStdString(msg));
-    }
-
-    if (s.status == "OPTIMAL" || s.status == "FEASIBLE") {
-        statusBar()->showMessage(QString("Otimização concluída com sucesso (%1)! %2 aulas alocadas.")
-            .arg(QString::fromStdString(s.status)).arg(s.total_aulas_alocadas), 6000);
-        tab_widget_->setCurrentIndex(0); // Alterna para a visualização da grade
-    } else {
-        statusBar()->showMessage("Falha na otimização: Restrições inviáveis.", 6000);
-        QMessageBox::warning(this, "Inviabilidade",
-            "O solver não encontrou solução viável que satisfaça todas as restrições obrigatórias.\n\n"
-            "Verifique os diagnósticos na aba '📝 Diagnóstico & Logs'.");
-        tab_widget_->setCurrentIndex(6); // Alterna para a aba de logs
-    }
 }
 
 /**
@@ -742,6 +1054,9 @@ void MainWindow::refreshAllTables() {
 void MainWindow::refreshProfessoresTable() {
     table_professores_->setSortingEnabled(false);
     table_professores_->setRowCount(0);
+    const bool is_dark = ModernTheme::isDarkTheme();
+    const bool has_grade = !data_.grade().alocacoes().empty();
+
     for (const auto& p : data_.professores()) {
         int r = table_professores_->rowCount();
         table_professores_->insertRow(r);
@@ -757,14 +1072,93 @@ void MainWindow::refreshProfessoresTable() {
             .arg(p.pesoDia(model::DayOfWeek::SEX));
         table_professores_->setItem(r, 2, new SmartTableWidgetItem(pesos));
 
-        QString carga = (p.cargaMaximaDiariaMinutos() > 0)
+        QString carga_max = (p.cargaMaximaDiariaMinutos() > 0)
             ? QString::number(p.cargaMaximaDiariaMinutos()) + " min"
             : "Sem limite";
-        table_professores_->setItem(r, 3, new SmartTableWidgetItem(carga));
+        table_professores_->setItem(r, 3, new SmartTableWidgetItem(carga_max));
+
+        const auto carga = data_.calcularCargaProfessor(p.id());
 
         int total_inters = 0;
-        for (const auto& [d, inters] : p.todasDisponibilidades()) total_inters += static_cast<int>(inters.size());
-        table_professores_->setItem(r, 4, new SmartTableWidgetItem(QString("%1 turnos cadastrados").arg(total_inters)));
+        QStringList disp_lines;
+        for (auto d : model::allDays()) {
+            const auto& inters = p.disponibilidade(d);
+            total_inters += static_cast<int>(inters.size());
+            if (!inters.empty()) {
+                QStringList day_parts;
+                for (const auto& inter : inters) {
+                    day_parts << QString::fromStdString(inter.toString());
+                }
+                disp_lines << QString("• <b>%1</b>: %2")
+                                  .arg(QString::fromStdString(model::dayToString(d)),
+                                       day_parts.join(", "));
+            }
+        }
+        const QString disp_text = (total_inters == 0)
+            ? QString("Sem disponibilidade")
+            : QString("%1 %2 (%3/sem)")
+                  .arg(total_inters)
+                  .arg(total_inters == 1 ? "turno" : "turnos",
+                       formatHorasMin(carga.minutos_disponiveis));
+        auto* item_disp = new SmartTableWidgetItem(disp_text);
+        item_disp->setData(SmartTableWidgetItem::SortKeyRole, static_cast<qlonglong>(carga.minutos_disponiveis));
+        QString disp_tip = QString("<b>Disponibilidade Semanal:</b> %1 min (%2)")
+                               .arg(carga.minutos_disponiveis)
+                               .arg(formatHorasMin(carga.minutos_disponiveis));
+        if (!disp_lines.isEmpty()) {
+            disp_tip += "<br>" + disp_lines.join("<br>");
+        }
+        item_disp->setToolTip(disp_tip);
+        table_professores_->setItem(r, 4, item_disp);
+
+        const QString carga_str = (carga.minutos_s1 == 0 && carga.minutos_s2 == 0)
+            ? QString("0h00 (0a)")
+            : QString("1º: %1 (%2a) | 2º: %3 (%4a)")
+                  .arg(formatHorasMin(carga.minutos_s1))
+                  .arg(carga.aulas_s1)
+                  .arg(formatHorasMin(carga.minutos_s2))
+                  .arg(carga.aulas_s2);
+        auto* item_carga = new SmartTableWidgetItem(carga_str);
+        item_carga->setData(SmartTableWidgetItem::SortKeyRole,
+                            static_cast<qlonglong>(std::max(carga.minutos_s1, carga.minutos_s2)));
+
+        QString tip_carga = QString(
+            "<b>Carga Horária Semanal (Disciplinas Marcadas):</b><br>"
+            "• <b>1º Semestre:</b> %1 aula(s) — %2 min (%3)<br>"
+            "• <b>2º Semestre:</b> %4 aula(s) — %5 min (%6)<br>"
+            "• <b>Disponibilidade Semanal:</b> %7 min (%8) em %9 dia(s)")
+            .arg(carga.aulas_s1).arg(carga.minutos_s1).arg(formatHorasMin(carga.minutos_s1))
+            .arg(carga.aulas_s2).arg(carga.minutos_s2).arg(formatHorasMin(carga.minutos_s2))
+            .arg(carga.minutos_disponiveis).arg(formatHorasMin(carga.minutos_disponiveis))
+            .arg(carga.dias_com_disponibilidade);
+
+        if (carga.excedeDisponibilidade()) {
+            tip_carga += "<br><span style='color:#ef4444;'><b>⚠️ Atenção:</b> A carga semanal em ao menos um semestre excede a disponibilidade cadastrada!</span>";
+            item_carga->setForeground(QBrush(QColor(239, 68, 68)));
+        } else if (carga.minutos_s1 > 0 || carga.minutos_s2 > 0) {
+            item_carga->setForeground(QBrush(is_dark ? QColor(52, 211, 153) : QColor(22, 163, 74)));
+            if (p.cargaMaximaDiariaMinutos() > 0 && carga.dias_com_disponibilidade > 0) {
+                const int cap_diaria_sem = p.cargaMaximaDiariaMinutos() * carga.dias_com_disponibilidade;
+                if (carga.minutos_s1 > cap_diaria_sem || carga.minutos_s2 > cap_diaria_sem) {
+                    tip_carga += QString("<br><span style='color:#f59e0b;'><b>⚠️ Aviso:</b> Carga excede o limite diário (%1 min × %2 dias = %3 min).</span>")
+                                     .arg(p.cargaMaximaDiariaMinutos())
+                                     .arg(carga.dias_com_disponibilidade)
+                                     .arg(cap_diaria_sem);
+                }
+            }
+        } else {
+            item_carga->setForeground(QBrush(is_dark ? QColor(148, 163, 184) : QColor(100, 116, 139)));
+        }
+
+        if (has_grade) {
+            tip_carga += QString("<br>• <b>Alocado na Grade Atual:</b> 1º: %1a (%2) | 2º: %3a (%4)")
+                             .arg(carga.alocado_aulas_s1).arg(formatHorasMin(carga.alocado_minutos_s1))
+                             .arg(carga.alocado_aulas_s2).arg(formatHorasMin(carga.alocado_minutos_s2));
+        }
+
+        tip_carga += "<br><br><b>Disciplinas Marcadas:</b><br>" + formatDisciplinasTooltip(carga.disciplinas);
+        item_carga->setToolTip(tip_carga);
+        table_professores_->setItem(r, 5, item_carga);
     }
     table_professores_->setSortingEnabled(true);
     if (search_bar_professores_) {
@@ -899,6 +1293,9 @@ void MainWindow::refreshTurmasTable() {
 void MainWindow::refreshSalasTable() {
     table_salas_->setSortingEnabled(false);
     table_salas_->setRowCount(0);
+    const bool is_dark = ModernTheme::isDarkTheme();
+    const bool has_grade = !data_.grade().alocacoes().empty();
+
     for (const auto& s : data_.salas()) {
         int r = table_salas_->rowCount();
         table_salas_->insertRow(r);
@@ -914,6 +1311,81 @@ void MainWindow::refreshSalasTable() {
             recs += QString::fromStdString(s.recursos()[i]);
         }
         table_salas_->setItem(r, 4, new SmartTableWidgetItem(recs));
+
+        const auto carga = data_.calcularCargaSala(s.id());
+        const bool has_fixo = (carga.fixo_minutos_s1 > 0 || carga.fixo_minutos_s2 > 0);
+        const bool has_alt = (carga.alt_minutos_s1 > 0 || carga.alt_minutos_s2 > 0);
+
+        QString carga_str;
+        if (!has_fixo && !has_alt) {
+            carga_str = "0h00 (0a)";
+        } else if (has_fixo) {
+            carga_str = QString("1º: %1 (%2a) | 2º: %3 (%4a)")
+                            .arg(formatHorasMin(carga.fixo_minutos_s1))
+                            .arg(carga.fixo_aulas_s1)
+                            .arg(formatHorasMin(carga.fixo_minutos_s2))
+                            .arg(carga.fixo_aulas_s2);
+            if (has_alt) {
+                carga_str += " (+alt)";
+            }
+        } else {
+            carga_str = QString("Alt: 1º: %1 (%2a) | 2º: %3 (%4a)")
+                            .arg(formatHorasMin(carga.alt_minutos_s1))
+                            .arg(carga.alt_aulas_s1)
+                            .arg(formatHorasMin(carga.alt_minutos_s2))
+                            .arg(carga.alt_aulas_s2);
+        }
+
+        auto* item_carga = new SmartTableWidgetItem(carga_str);
+        const qlonglong sort_key =
+            static_cast<qlonglong>(std::max(carga.fixo_minutos_s1, carga.fixo_minutos_s2)) * 100000LL +
+            static_cast<qlonglong>(std::max(carga.alt_minutos_s1, carga.alt_minutos_s2));
+        item_carga->setData(SmartTableWidgetItem::SortKeyRole, sort_key);
+
+        if (has_fixo) {
+            item_carga->setForeground(QBrush(is_dark ? QColor(52, 211, 153) : QColor(22, 163, 74)));
+        } else if (has_alt) {
+            item_carga->setForeground(QBrush(is_dark ? QColor(56, 189, 248) : QColor(2, 132, 199)));
+        } else {
+            item_carga->setForeground(QBrush(is_dark ? QColor(148, 163, 184) : QColor(100, 116, 139)));
+        }
+
+        QString tip_carga = QString(
+            "<b>Carga Horária Semanal da Sala / Laboratório:</b><br>"
+            "• <b>Fixa / Exclusiva — 1º Sem:</b> %1 aula(s) — %2 min (%3)<br>"
+            "• <b>Fixa / Exclusiva — 2º Sem:</b> %4 aula(s) — %5 min (%6)")
+            .arg(carga.fixo_aulas_s1).arg(carga.fixo_minutos_s1).arg(formatHorasMin(carga.fixo_minutos_s1))
+            .arg(carga.fixo_aulas_s2).arg(carga.fixo_minutos_s2).arg(formatHorasMin(carga.fixo_minutos_s2));
+
+        if (has_alt) {
+            tip_carga += QString(
+                "<br>• <b>Alternativa / Compartilhada — 1º Sem:</b> %1 aula(s) — %2 min (%3)<br>"
+                "• <b>Alternativa / Compartilhada — 2º Sem:</b> %4 aula(s) — %5 min (%6)<br>"
+                "<i>(Disciplinas em que esta sala é uma entre múltiplas opções admissíveis.)</i>")
+                .arg(carga.alt_aulas_s1).arg(carga.alt_minutos_s1).arg(formatHorasMin(carga.alt_minutos_s1))
+                .arg(carga.alt_aulas_s2).arg(carga.alt_minutos_s2).arg(formatHorasMin(carga.alt_minutos_s2));
+        }
+
+        if (has_grade) {
+            tip_carga += QString("<br>• <b>Alocado na Grade Atual:</b> 1º: %1a (%2) | 2º: %3a (%4)")
+                             .arg(carga.alocado_aulas_s1).arg(formatHorasMin(carga.alocado_minutos_s1))
+                             .arg(carga.alocado_aulas_s2).arg(formatHorasMin(carga.alocado_minutos_s2));
+        }
+
+        if (!carga.disciplinas_fixas.empty()) {
+            tip_carga += "<br><br><b>Disciplinas Fixas / Exclusivas:</b><br>" +
+                         formatDisciplinasTooltip(carga.disciplinas_fixas);
+        }
+        if (!carga.disciplinas_alternativas.empty()) {
+            tip_carga += "<br><br><b>Disciplinas Alternativas / Compartilhadas:</b><br>" +
+                         formatDisciplinasTooltip(carga.disciplinas_alternativas);
+        }
+        if (carga.disciplinas_fixas.empty() && carga.disciplinas_alternativas.empty()) {
+            tip_carga += "<br><br><i>Nenhuma disciplina vinculada a esta sala.</i>";
+        }
+
+        item_carga->setToolTip(tip_carga);
+        table_salas_->setItem(r, 5, item_carga);
     }
     table_salas_->setSortingEnabled(true);
     if (search_bar_salas_) {
@@ -975,6 +1447,7 @@ void MainWindow::refreshDisciplinasTable() {
  * @brief Abre o diálogo de cadastro para adicionar um novo professor à instituição.
  */
 void MainWindow::onAddProfessor() {
+    if (is_optimizing_) return;
     ProfessorEditorDialog dlg(this, nullptr, data_.nextProfessorId());
     if (dlg.exec() == QDialog::Accepted) {
         data_.addProfessor(dlg.getProfessor());
@@ -988,6 +1461,7 @@ void MainWindow::onAddProfessor() {
  * @brief Abre o diálogo de edição para o professor atualmente selecionado na tabela.
  */
 void MainWindow::onEditProfessor() {
+    if (is_optimizing_) return;
     int r = table_professores_->currentRow();
     if (r < 0 || !table_professores_->item(r, 0)) return;
     std::string id = table_professores_->item(r, 0)->text().toStdString();
@@ -1007,6 +1481,7 @@ void MainWindow::onEditProfessor() {
  * @brief Solicita confirmação e remove o(s) professor(es) selecionado(s) da instituição.
  */
 void MainWindow::onRemoveProfessor() {
+    if (is_optimizing_) return;
     auto selected_rows = table_professores_->selectionModel()->selectedRows();
     if (selected_rows.isEmpty()) {
         int r = table_professores_->currentRow();
@@ -1067,10 +1542,12 @@ void MainWindow::onRemoveProfessor() {
  * @brief Abre o diálogo de cadastro para adicionar uma nova turma.
  */
 void MainWindow::onAddTurma() {
+    if (is_optimizing_) return;
     TurmaEditorDialog dlg(data_.salas(), this, nullptr, data_.nextTurmaId(), data_.slotTemplates());
     if (dlg.exec() == QDialog::Accepted) {
         data_.addTurma(dlg.getTurma());
         refreshTurmasTable();
+        refreshSalasTable();
         timetable_view_->refreshView();
         updateKpiBanner();
     }
@@ -1080,6 +1557,7 @@ void MainWindow::onAddTurma() {
  * @brief Abre o diálogo de edição para a turma atualmente selecionada.
  */
 void MainWindow::onEditTurma() {
+    if (is_optimizing_) return;
     int r = table_turmas_->currentRow();
     if (r < 0 || !table_turmas_->item(r, 0)) return;
     std::string id = table_turmas_->item(r, 0)->text().toStdString();
@@ -1089,6 +1567,7 @@ void MainWindow::onEditTurma() {
         if (dlg.exec() == QDialog::Accepted) {
             data_.addTurma(dlg.getTurma());
             refreshTurmasTable();
+            refreshSalasTable();
             timetable_view_->refreshView();
             updateKpiBanner();
         }
@@ -1099,6 +1578,7 @@ void MainWindow::onEditTurma() {
  * @brief Solicita confirmação e remove a(s) turma(s) selecionada(s).
  */
 void MainWindow::onRemoveTurma() {
+    if (is_optimizing_) return;
     auto selected_rows = table_turmas_->selectionModel()->selectedRows();
     if (selected_rows.isEmpty()) {
         int r = table_turmas_->currentRow();
@@ -1149,6 +1629,7 @@ void MainWindow::onRemoveTurma() {
             data_.removeTurma(id);
         }
         refreshTurmasTable();
+        refreshSalasTable();
         refreshDisciplinasTable();
         timetable_view_->refreshView();
         updateKpiBanner();
@@ -1159,6 +1640,7 @@ void MainWindow::onRemoveTurma() {
  * @brief Abre o diálogo de cadastro para adicionar uma nova sala ou laboratório.
  */
 void MainWindow::onAddSala() {
+    if (is_optimizing_) return;
     RoomEditorDialog dlg(this, nullptr, data_.nextSalaId());
     if (dlg.exec() == QDialog::Accepted) {
         data_.addSala(dlg.getRoom());
@@ -1172,6 +1654,7 @@ void MainWindow::onAddSala() {
  * @brief Abre o diálogo de edição para a sala atualmente selecionada.
  */
 void MainWindow::onEditSala() {
+    if (is_optimizing_) return;
     int r = table_salas_->currentRow();
     if (r < 0 || !table_salas_->item(r, 0)) return;
     std::string id = table_salas_->item(r, 0)->text().toStdString();
@@ -1191,6 +1674,7 @@ void MainWindow::onEditSala() {
  * @brief Solicita confirmação e remove a(s) sala(s) selecionada(s).
  */
 void MainWindow::onRemoveSala() {
+    if (is_optimizing_) return;
     auto selected_rows = table_salas_->selectionModel()->selectedRows();
     if (selected_rows.isEmpty()) {
         int r = table_salas_->currentRow();
@@ -1241,6 +1725,7 @@ void MainWindow::onRemoveSala() {
             data_.removeSala(id);
         }
         refreshSalasTable();
+        refreshTurmasTable();
         refreshDisciplinasTable();
         timetable_view_->refreshView();
         updateKpiBanner();
@@ -1251,11 +1736,12 @@ void MainWindow::onRemoveSala() {
  * @brief Abre o diálogo de cadastro para adicionar uma nova disciplina curricular.
  */
 void MainWindow::onAddDisciplina() {
+    if (is_optimizing_) return;
     LessonEditorDialog dlg(data_.professores(), data_.turmas(), data_.salas(), this, nullptr, data_.nextDisciplinaId());
     if (dlg.exec() == QDialog::Accepted) {
         data_.addDisciplina(dlg.getDisciplina());
-        data_.gerarOcorrenciasAulas(true, data_.config().escopo_semestre);
-        refreshDisciplinasTable();
+        data_.gerarOcorrenciasAulas(true, model::EscopoSemestreOtimizacao::TODAS_SEM_FILTRO);
+        refreshAllTables();
     }
 }
 
@@ -1263,6 +1749,7 @@ void MainWindow::onAddDisciplina() {
  * @brief Abre o diálogo de edição para a disciplina atualmente selecionada.
  */
 void MainWindow::onEditDisciplina() {
+    if (is_optimizing_) return;
     int r = table_disciplinas_->currentRow();
     if (r < 0 || !table_disciplinas_->item(r, 0)) return;
     std::string id = table_disciplinas_->item(r, 0)->text().toStdString();
@@ -1271,8 +1758,8 @@ void MainWindow::onEditDisciplina() {
         LessonEditorDialog dlg(data_.professores(), data_.turmas(), data_.salas(), this, d);
         if (dlg.exec() == QDialog::Accepted) {
             data_.addDisciplina(dlg.getDisciplina());
-            data_.gerarOcorrenciasAulas(true, data_.config().escopo_semestre);
-            refreshDisciplinasTable();
+            data_.gerarOcorrenciasAulas(true, model::EscopoSemestreOtimizacao::TODAS_SEM_FILTRO);
+            refreshAllTables();
         }
     }
 }
@@ -1281,6 +1768,7 @@ void MainWindow::onEditDisciplina() {
  * @brief Solicita confirmação e remove a(s) disciplina(s) selecionada(s).
  */
 void MainWindow::onRemoveDisciplina() {
+    if (is_optimizing_) return;
     auto selected_rows = table_disciplinas_->selectionModel()->selectedRows();
     if (selected_rows.isEmpty()) {
         int r = table_disciplinas_->currentRow();
@@ -1330,8 +1818,8 @@ void MainWindow::onRemoveDisciplina() {
         for (const auto& id : ids_to_remove) {
             data_.removeDisciplina(id);
         }
-        data_.gerarOcorrenciasAulas(true, data_.config().escopo_semestre);
-        refreshDisciplinasTable();
+        data_.gerarOcorrenciasAulas(true, model::EscopoSemestreOtimizacao::TODAS_SEM_FILTRO);
+        refreshAllTables();
         timetable_view_->refreshView();
         updateKpiBanner();
     }

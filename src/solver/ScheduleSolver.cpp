@@ -18,7 +18,11 @@ namespace scheduler::solver {
  * @return Grade horária gerada (Timetable) com as alocações e estatísticas.
  */
 model::Timetable ScheduleSolver::solve(const model::InstitutionData& data,
-                                       ProgressCallback callback) {
+                                       ProgressCallback callback,
+                                       bool reset_stop) {
+    if (reset_stop) {
+        resetStop();
+    }
     switch (data.config().algoritmo) {
         case model::SolverAlgorithm::GREEDY_HEURISTIC:
             return solveGreedyHeuristic(data, callback);

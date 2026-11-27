@@ -6,6 +6,7 @@
 #include "ui/TableSearchSortBar.h"
 #include "ui/SmartTableWidgetItem.h"
 #include "ui/ModernTheme.h"
+#include "ui/ResponsiveUi.h"
 #include <QHBoxLayout>
 #include <QHeaderView>
 
@@ -26,8 +27,8 @@ TableSearchSortBar::TableSearchSortBar(QWidget* parent)
     search_edit_->addAction(ModernTheme::icon("search"), QLineEdit::LeadingPosition);
     search_edit_->setPlaceholderText("Buscar...");
     search_edit_->setClearButtonEnabled(true);
-    search_edit_->setMinimumWidth(180);
-    search_edit_->setMaximumWidth(260);
+    search_edit_->setMinimumWidth(140);
+    search_edit_->setMaximumWidth(240);
     search_edit_->setToolTip("Digite para filtrar os registros por qualquer campo em tempo real");
     layout->addWidget(search_edit_);
 
@@ -38,7 +39,7 @@ TableSearchSortBar::TableSearchSortBar(QWidget* parent)
         "border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: 500;");
     layout->addWidget(lbl_count_);
 
-    layout->addSpacing(8);
+    layout->addSpacing(4);
 
     // Label de ordenação
     auto* lbl_sort = new QLabel("Ordenar:", this);
@@ -47,7 +48,8 @@ TableSearchSortBar::TableSearchSortBar(QWidget* parent)
 
     // Dropdown de coluna para ordenação
     combo_sort_column_ = new QComboBox(this);
-    combo_sort_column_->setMinimumWidth(120);
+    makeComboResponsive(combo_sort_column_, 12, 100);
+    combo_sort_column_->setMaximumWidth(200);
     combo_sort_column_->setToolTip("Selecione a coluna desejada para ordenar");
     layout->addWidget(combo_sort_column_);
 

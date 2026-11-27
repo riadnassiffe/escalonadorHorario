@@ -314,3 +314,71 @@ async def test_disciplina_without_turnos_permitidos_legacy_import_and_afternoon_
     assert tt["conflitos"] == {}
     for aloc in tt["alocacoes"]:
         assert aloc["inicio"] in ("13:30", "14:20")
+
+
+@pytest.mark.asyncio
+async def test_copy_turma_with_selected_disciplinas_and_validation(client: AsyncClient):
+    auth = await register_and_login(client, email="turma-select-copy@inst.br")
+    headers = {"Authorization": f"Bearer {auth['access_token']}"}
+
+    resp_p = await client.post(
+        "/api/v1/projects",
+        headers=headers,
+        json={"name": "Projeto Cópia Seletiva", "load_default_example": True},
+    )
+    assert resp_p.status_code == 201
+    pid = resp_p.json()["id"]
+
+    # 1. Cópia seletiva de apenas 2 disciplinas de T01
+    sel_resp = await client.post(
+        f"/api/v1/projects/{pid}/turmas/T01/copy",
+        headers=headers,
+        json={
+            "code": "T04",
+            "nome": "1º Ano B - Seletivo",
+            "copy_disciplinas": True,
+            "disciplina_codes": ["T01_MAT", "T01_FIS"],
+        },
+    )
+    assert sel_resp.status_code == 201, sel_resp.text
+    sel_data = sel_resp.json()
+    assert sel_data["turma"]["code"] == "T04"
+    assert sel_data["copied_disciplinas_count"] == 2
+    copied_codes = {d["code"] for d in sel_data["copied_disciplinas"]}
+    assert copied_codes == {"T04_MAT", "T04_FIS"}
+    for disc in sel_data["copied_disciplinas"]:
+        assert disc["turmas"] == ["T04"]
+
+    all_discs = (await client.get(f"/api/v1/projects/{pid}/disciplinas", headers=headers)).json()
+    assert [d["code"] for d in all_discs if "T04" in d["turmas"]] == ["T04_FIS", "T04_MAT"]
+
+    # 2. Cópia com disciplina_codes=[] cria apenas a turma
+    empty_resp = await client.post(
+        f"/api/v1/projects/{pid}/turmas/T01/copy",
+        headers=headers,
+        json={
+            "code": "T05",
+            "nome": "1º Ano C - Sem Disciplinas",
+            "copy_disciplinas": True,
+            "disciplina_codes": [],
+        },
+    )
+    assert empty_resp.status_code == 201, empty_resp.text
+    assert empty_resp.json()["copied_disciplinas_count"] == 0
+
+    # 3. Cópia com disciplina de outra turma ou inexistente retorna 400 e não cria T06
+    for bad_codes in (["T01_MAT", "T02_MAT"], ["NAO_EXISTE"]):
+        bad_resp = await client.post(
+            f"/api/v1/projects/{pid}/turmas/T01/copy",
+            headers=headers,
+            json={
+                "code": "T06",
+                "nome": "1º Ano D - Inválida",
+                "copy_disciplinas": True,
+                "disciplina_codes": bad_codes,
+            },
+        )
+        assert bad_resp.status_code == 400
+
+    turmas_after = (await client.get(f"/api/v1/projects/{pid}/turmas", headers=headers)).json()
+    assert all(t["code"] != "T06" for t in turmas_after)

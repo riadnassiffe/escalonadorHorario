@@ -193,7 +193,7 @@ bool buildMilpProblem(const model::InstitutionData& data,
 
     // Vinculação sum_{c in C_a : sala(c)={r}} x_{a,c} - z_{g,r} <= 0 (agrupado por aula e sala)
     for (const auto& aula : data.aulas()) {
-        if (!aula.isTeorica() || aula.temSalasAlternativasExplicitas() || aula.turmas().size() != 1) continue;
+        if (aula.isPinned() || !aula.isTeorica() || aula.temSalasAlternativasExplicitas() || aula.turmas().size() != 1) continue;
         std::string g_id = aula.turmas().front();
         std::map<std::string, std::vector<int>> cols_por_sala;
         for (const auto& item : milp.vars_por_aula[aula.id()]) {
@@ -273,50 +273,6 @@ bool buildMilpProblem(const model::InstitutionData& data,
         add_no_overlap_cliques(vars_turma_dia, "noov_t");
     }
 
-    // 5.4b Início obrigatório da primeira aula no início da jornada da turma (T_ini)
-    auto add_turma_inicio_obrigatorio = [&](const std::map<std::pair<std::string, model::DayOfWeek>, std::vector<MilpCandItem>>& map_vars) {
-        for (const auto& turma : data.turmas()) {
-            for (auto dia : turma.diasLetivos()) {
-                auto it = map_vars.find({turma.id(), dia});
-                if (it == map_vars.end() || it->second.empty()) continue;
-
-                auto jornada = turma.jornadaParaDia(dia);
-                if (jornada.slots_letivos.empty()) continue;
-                int t_ini = jornada.slots_letivos.front().start_min;
-
-                std::vector<int> start_cols;
-                std::map<std::string, std::vector<int>> later_cols_by_aula;
-                for (const auto& item : it->second) {
-                    if (item.cand->start_min == t_ini) {
-                        start_cols.push_back(item.col);
-                    } else if (item.cand->start_min > t_ini) {
-                        later_cols_by_aula[item.cand->aula_id].push_back(item.col);
-                    }
-                }
-
-                for (const auto& [aula_id, cols_later] : later_cols_by_aula) {
-                    (void)aula_id;
-                    std::vector<std::pair<int, double>> terms;
-                    terms.reserve(cols_later.size() + start_cols.size());
-                    for (int col_l : cols_later) {
-                        terms.push_back({col_l, 1.0});
-                    }
-                    for (int col_s : start_cols) {
-                        terms.push_back({col_s, -1.0});
-                    }
-                    milp.addRow("t_ini_" + std::to_string(row_id++), std::move(terms), -kMilpInf, 0.0);
-                }
-            }
-        }
-    };
-
-    if (is_multi_sem) {
-        add_turma_inicio_obrigatorio(vars_turma_dia_s1);
-        add_turma_inicio_obrigatorio(vars_turma_dia_s2);
-    } else {
-        add_turma_inicio_obrigatorio(vars_turma_dia);
-    }
-
     // 5.5 Carga máxima diária do professor
     auto add_prof_carga_max = [&](const std::map<std::pair<std::string, model::DayOfWeek>, std::vector<MilpCandItem>>& map_vars) {
         for (const auto& prof : data.professores()) {
@@ -326,11 +282,17 @@ bool buildMilpProblem(const model::InstitutionData& data,
                     if (it == map_vars.end() || it->second.empty()) continue;
                     std::vector<std::pair<int, double>> terms;
                     terms.reserve(it->second.size());
+                    int pinned_min = 0;
                     for (const auto& item : it->second) {
                         terms.push_back({item.col, static_cast<double>(item.cand->duration_minutes)});
+                        const auto* a_ptr = data.findAula(item.cand->aula_id);
+                        if (a_ptr && a_ptr->isPinned()) {
+                            pinned_min += item.cand->duration_minutes;
+                        }
                     }
+                    int limite_dia = std::max(prof.cargaMaximaDiariaMinutos(), pinned_min);
                     milp.addRow("p_maxmin_" + std::to_string(row_id++),
-                                std::move(terms), -kMilpInf, static_cast<double>(prof.cargaMaximaDiariaMinutos()));
+                                std::move(terms), -kMilpInf, static_cast<double>(limite_dia));
                 }
             }
         }
@@ -347,6 +309,21 @@ bool buildMilpProblem(const model::InstitutionData& data,
     if (data.config().preenchimento_integral_jornada) {
         auto add_preenchimento_integral = [&](const std::map<std::pair<std::string, model::DayOfWeek>, std::vector<MilpCandItem>>& map_vars) {
             for (const auto& turma : data.turmas()) {
+                bool has_unpinned = false;
+                for (auto dia : turma.diasLetivos()) {
+                    auto it_chk = map_vars.find({turma.id(), dia});
+                    if (it_chk == map_vars.end()) continue;
+                    for (const auto& item : it_chk->second) {
+                        const auto* a_ptr = data.findAula(item.cand->aula_id);
+                        if (!a_ptr || !a_ptr->isPinned()) {
+                            has_unpinned = true;
+                            break;
+                        }
+                    }
+                    if (has_unpinned) break;
+                }
+                if (!has_unpinned) continue;
+
                 for (auto dia : turma.diasLetivos()) {
                     auto jornada = turma.jornadaParaDia(dia);
                     auto it = map_vars.find({turma.id(), dia});
@@ -383,19 +360,25 @@ bool buildMilpProblem(const model::InstitutionData& data,
                     (void)t_id;
                     for (auto dia : model::allDays()) {
                         std::vector<std::pair<int, double>> terms;
+                        int pinned_on_day = 0;
                         for (int i = 1; i <= disc.aulasSemanais(); ++i) {
                             std::string aula_id = disc.id() + "_" + std::to_string(i);
                             auto it_v = milp.vars_por_aula.find(aula_id);
                             if (it_v == milp.vars_por_aula.end()) continue;
+                            const auto* a_ptr = data.findAula(aula_id);
                             for (const auto& item : it_v->second) {
                                 if (item.cand->dia == dia) {
                                     terms.push_back({item.col, 1.0});
+                                    if (a_ptr && a_ptr->isPinned()) {
+                                        pinned_on_day++;
+                                    }
                                 }
                             }
                         }
                         if (!terms.empty()) {
+                            int limite_dia = std::max(max_por_dia, pinned_on_day);
                             milp.addRow("dist_" + std::to_string(row_id++),
-                                        std::move(terms), -kMilpInf, static_cast<double>(max_por_dia));
+                                        std::move(terms), -kMilpInf, static_cast<double>(limite_dia));
                         }
                     }
                 }
@@ -421,6 +404,28 @@ bool buildMilpProblem(const model::InstitutionData& data,
         }
         if (block_size < 2) continue;
         int num_days = n_aulas / block_size;
+
+        int pinned_total = 0;
+        std::map<model::DayOfWeek, int> pinned_per_day;
+        for (int i = 1; i <= n_aulas; ++i) {
+            std::string aula_id = disc.id() + "_" + std::to_string(i);
+            const auto* a_ptr = data.findAula(aula_id);
+            if (a_ptr && a_ptr->isPinned()) {
+                pinned_total++;
+                pinned_per_day[a_ptr->pinnedDay()]++;
+            }
+        }
+        bool pin_incompatible = (pinned_total == n_aulas) || (static_cast<int>(pinned_per_day.size()) > num_days);
+        if (!pin_incompatible) {
+            for (const auto& [d_pin, cnt_pin] : pinned_per_day) {
+                (void)d_pin;
+                if (cnt_pin > block_size) {
+                    pin_incompatible = true;
+                    break;
+                }
+            }
+        }
+        if (pin_incompatible) continue;
 
         std::vector<std::pair<int, double>> sum_dias_terms;
         for (auto dia : model::allDays()) {

@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   computeDisciplinaRoomOptions,
   describeDisciplinaRooms,
+  filterUnallocatedByViewContext,
   flattenSalasAlternativas,
+  getAllowedRoomsForLesson,
   toggleRoomInSalasAlternativas,
 } from "../disciplinaRooms";
-import type { Disciplina, Room, Turma } from "../../types";
+import type { Disciplina, Room, Turma, UnallocatedLesson } from "../../types";
 
 const SALAS: Room[] = [
   { id: "S101", code: "S101", nome: "Sala 101", tipo: "TEORICA", capacidade: 40, recursos: [] },
@@ -125,5 +127,172 @@ describe("disciplinaRooms", () => {
       label: "Qualquer lab/especial",
       isExplicit: false,
     });
+  });
+
+  it("filters unallocated lessons by active timetable view context", () => {
+    const lessons: UnallocatedLesson[] = [
+      {
+        aula_id: "MAT_1",
+        disciplina_id: "MAT",
+        disciplina_nome: "Matemática",
+        tipo: "TEORICA",
+        duracao_minutos: 50,
+        regime: "ANUAL",
+        semestre: "AMBOS",
+        professores: ["P01"],
+        turmas: ["T01"],
+      },
+      {
+        aula_id: "EDF_1",
+        disciplina_id: "EDF",
+        disciplina_nome: "Educação Física",
+        tipo: "ESPECIAL",
+        duracao_minutos: 50,
+        regime: "ANUAL",
+        semestre: "AMBOS",
+        professores: ["P02"],
+        turmas: ["T01", "T02"],
+      },
+      {
+        aula_id: "QUI_1",
+        disciplina_id: "QUI",
+        disciplina_nome: "Química",
+        tipo: "LABORATORIO",
+        duracao_minutos: 50,
+        regime: "ANUAL",
+        semestre: "AMBOS",
+        professores: ["P02"],
+        turmas: ["T02"],
+      },
+    ];
+
+    expect(
+      filterUnallocatedByViewContext(lessons, { viewType: "TURMA", targetId: "T01" }).map((l) => l.aula_id)
+    ).toEqual(["MAT_1", "EDF_1"]);
+
+    expect(
+      filterUnallocatedByViewContext(lessons, { viewType: "PROFESSOR", targetId: "P02" }).map((l) => l.aula_id)
+    ).toEqual(["EDF_1", "QUI_1"]);
+
+    expect(
+      filterUnallocatedByViewContext(lessons, { viewType: "GERAL", targetId: "T02" }).map((l) => l.aula_id)
+    ).toEqual(["EDF_1", "QUI_1"]);
+
+    expect(
+      filterUnallocatedByViewContext(lessons, { viewType: "GERAL", targetId: "" }).map((l) => l.aula_id)
+    ).toEqual(["MAT_1", "EDF_1", "QUI_1"]);
+
+    expect(
+      filterUnallocatedByViewContext(lessons, { viewType: "SALA", targetId: "S101" }).map((l) => l.aula_id)
+    ).toEqual(["MAT_1", "EDF_1", "QUI_1"]);
+  });
+
+  it("resolves allowed rooms for a lesson according to explicit, turma, and type rules", () => {
+    const turmasByCode = Object.fromEntries(TURMAS.map((t) => [t.code, t]));
+    const salasByCode = Object.fromEntries(SALAS.map((r) => [r.code, r]));
+
+    const makeDisc = (partial: Partial<Disciplina> & { code: string; nome: string }): Disciplina => ({
+      id: partial.code,
+      tipo: "TEORICA",
+      duracao_minutos: 50,
+      aulas_semanais: 2,
+      regime: "ANUAL",
+      semestre: "AMBOS",
+      professores: ["P01"],
+      turmas: ["T01"],
+      salas_alternativas: [],
+      exigir_aulas_consecutivas: false,
+      max_aulas_por_dia_turma: 2,
+      ...partial,
+    });
+
+    const disciplinasByCode: Record<string, Disciplina> = {
+      D_FIXED: makeDisc({ code: "D_FIXED", nome: "Português", turmas: ["T01"] }),
+      D_PERM: makeDisc({ code: "D_PERM", nome: "História", turmas: ["T02"] }),
+      D_FALLBACK: makeDisc({ code: "D_FALLBACK", nome: "Geografia", turmas: ["T03"] }),
+      D_EXPLICIT: makeDisc({
+        code: "D_EXPLICIT",
+        nome: "Robótica",
+        tipo: "TEORICA",
+        turmas: ["T01"],
+        salas_alternativas: [["LAB01"], ["LAB01", "QUADRA"], ["INEXISTENTE"]],
+      }),
+      D_LAB: makeDisc({ code: "D_LAB", nome: "Química Lab", tipo: "LABORATORIO", turmas: ["T01"] }),
+      D_ESP: makeDisc({ code: "D_ESP", nome: "Ed. Física", tipo: "ESPECIAL", turmas: ["T01"] }),
+    };
+
+    // 1. Explicit rooms on disciplina override turma fixed room and support multi-room combos
+    const explicitRes = getAllowedRoomsForLesson(
+      { disciplina_id: "D_EXPLICIT", tipo: "TEORICA", turmas: ["T01"] },
+      disciplinasByCode,
+      turmasByCode,
+      salasByCode
+    );
+    expect(explicitRes.source).toBe("EXPLICIT_DISCIPLINA");
+    expect(explicitRes.options.map((o) => o.salas)).toEqual([["LAB01"], ["LAB01", "QUADRA"]]);
+
+    // 2. Theoretical with fixed room on turma
+    const fixedRes = getAllowedRoomsForLesson(
+      { disciplina_id: "D_FIXED", tipo: "TEORICA", turmas: ["T01"] },
+      disciplinasByCode,
+      turmasByCode,
+      salasByCode
+    );
+    expect(fixedRes.source).toBe("TURMA_FIXED");
+    expect(fixedRes.options.map((o) => o.salas)).toEqual([["S101"]]);
+
+    // 3. Theoretical with permitted rooms and designated room suggestion
+    const permRes = getAllowedRoomsForLesson(
+      { disciplina_id: "D_PERM", tipo: "TEORICA", turmas: ["T02"] },
+      disciplinasByCode,
+      turmasByCode,
+      salasByCode,
+      { T02: "S201" }
+    );
+    expect(permRes.source).toBe("TURMA_PERMITTED");
+    expect(permRes.options.map((o) => `${o.key}:${Boolean(o.isSuggested)}`)).toEqual([
+      "S102:false",
+      "S201:true",
+    ]);
+
+    // 4. Theoretical without turma room restriction falls back to all theoretical rooms only
+    const fallbackRes = getAllowedRoomsForLesson(
+      { disciplina_id: "D_FALLBACK", tipo: "TEORICA", turmas: ["T03"] },
+      disciplinasByCode,
+      turmasByCode,
+      salasByCode
+    );
+    expect(fallbackRes.source).toBe("ALL_THEORETICAL_FALLBACK");
+    expect(fallbackRes.options.map((o) => o.key)).toEqual(["S101", "S102", "S201"]);
+
+    // 5. Lab and Special filter out theoretical rooms and order exact type first
+    const labRes = getAllowedRoomsForLesson(
+      { disciplina_id: "D_LAB", tipo: "LABORATORIO", turmas: ["T01"] },
+      disciplinasByCode,
+      turmasByCode,
+      salasByCode
+    );
+    expect(labRes.source).toBe("LAB_OR_SPECIAL");
+    expect(labRes.options.map((o) => o.key)).toEqual(["LAB01", "QUADRA"]);
+
+    const espRes = getAllowedRoomsForLesson(
+      { disciplina_id: "D_ESP", tipo: "ESPECIAL", turmas: ["T01"] },
+      disciplinasByCode,
+      turmasByCode,
+      salasByCode
+    );
+    expect(espRes.options.map((o) => o.key)).toEqual(["QUADRA", "LAB01"]);
+
+    // 6. Lab without any non-theoretical rooms available returns empty
+    const onlyTheoreticalSalas = Object.fromEntries(
+      SALAS.filter((r) => r.tipo === "TEORICA").map((r) => [r.code, r])
+    );
+    const noLabRes = getAllowedRoomsForLesson(
+      { disciplina_id: "D_LAB", tipo: "LABORATORIO", turmas: ["T01"] },
+      disciplinasByCode,
+      turmasByCode,
+      onlyTheoreticalSalas
+    );
+    expect(noLabRes.options).toEqual([]);
   });
 });

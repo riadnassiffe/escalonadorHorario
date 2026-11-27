@@ -36,7 +36,7 @@ export function TimetableView({ projectId, snapshot, timetable }: Props) {
   } = useTimetableStore();
   const { transposeGrid, toggleTransposeGrid } = useUiStore();
   const mutations = useTimetableMutations(projectId);
-  const { data: unallocatedData } = useUnallocated(projectId);
+  const { data: unallocatedData, isLoading: isLoadingUnallocated } = useUnallocated(projectId);
 
   const [moveModalLesson, setMoveModalLesson] = useState<AllocatedLesson | null>(null);
   const [swapModalLesson, setSwapModalLesson] = useState<AllocatedLesson | null>(null);
@@ -71,8 +71,11 @@ export function TimetableView({ projectId, snapshot, timetable }: Props) {
   }, [snapshot, viewType]);
 
   useEffect(() => {
-    if (viewType !== "GERAL" && !targetId && targetOptions.length > 0) {
-      setTargetId(targetOptions[0].id);
+    if (viewType !== "GERAL" && targetOptions.length > 0) {
+      const exists = targetOptions.some((opt) => opt.id === targetId);
+      if (!targetId || !exists) {
+        setTargetId(targetOptions[0].id);
+      }
     }
   }, [setTargetId, targetId, targetOptions, viewType]);
 
@@ -359,7 +362,11 @@ export function TimetableView({ projectId, snapshot, timetable }: Props) {
       {addModalInit && (
         <AddLessonManualModal
           unallocated={unallocatedData?.unallocated || []}
+          isLoadingUnallocated={isLoadingUnallocated}
           snapshot={snapshot}
+          viewType={viewType}
+          targetId={targetId}
+          designatedTheoreticalRooms={timetable?.salas_teoricas_designadas}
           initialDia={addModalInit.dia}
           initialStartMin={addModalInit.startMin}
           initialEndMin={addModalInit.endMin}

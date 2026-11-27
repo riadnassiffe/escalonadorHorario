@@ -5,6 +5,7 @@
 
 #include "ui/OptimizeDialog.h"
 #include "ui/ModernTheme.h"
+#include "ui/ResponsiveUi.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -31,23 +32,36 @@ OptimizeDialog::OptimizeDialog(const model::OptimizationConfig& current_config, 
 void OptimizeDialog::setupUi() {
     setWindowTitle("Otimizar Grade - Seleção de Algoritmo");
     setWindowIcon(ModernTheme::icon("optimize"));
-    setMinimumWidth(560);
+    setMinimumSize(460, 380);
     setModal(true);
 
-    auto* main_layout = new QVBoxLayout(this);
-    main_layout->setSpacing(16);
-    main_layout->setContentsMargins(20, 20, 20, 20);
+    auto* root_layout = new QVBoxLayout(this);
+    root_layout->setSpacing(10);
+    root_layout->setContentsMargins(12, 12, 12, 12);
+
+    auto* body_widget = new QWidget(this);
+    auto* main_layout = new QVBoxLayout(body_widget);
+    main_layout->setSpacing(12);
+    main_layout->setContentsMargins(2, 2, 2, 2);
+
+    const bool is_dark = ModernTheme::isDarkTheme();
 
     // 1. Banner Superior
-    auto* banner_card = new QFrame(this);
+    auto* banner_card = new QFrame(body_widget);
+    banner_card->setObjectName("optimizeBannerCard");
     banner_card->setFrameShape(QFrame::StyledPanel);
-    banner_card->setStyleSheet(
-        "QFrame { background-color: palette(base); border: 1px solid palette(highlight); border-radius: 8px; padding: 10px; }");
+    banner_card->setStyleSheet(QString(
+        "QFrame#optimizeBannerCard { background-color: %1; border: 1px solid %2; border-radius: 8px; }"
+        "QFrame#optimizeBannerCard QLabel { background-color: transparent; }")
+        .arg(is_dark ? "#1e293b" : "palette(base)",
+             is_dark ? "#38bdf8" : "palette(highlight)"));
     auto* lay_banner = new QVBoxLayout(banner_card);
+    lay_banner->setContentsMargins(10, 8, 10, 8);
     lay_banner->setSpacing(4);
 
     auto* lbl_title = new QLabel("⚡ OTIMIZAÇÃO DA GRADE ESCOLAR", banner_card);
-    lbl_title->setStyleSheet("font-size: 15px; font-weight: bold; color: palette(highlight);");
+    lbl_title->setStyleSheet(QString("font-size: 14px; font-weight: bold; color: %1;")
+        .arg(is_dark ? "#38bdf8" : "palette(highlight)"));
     auto* lbl_subtitle = new QLabel("Selecione o algoritmo desejado para resolver o problema de alocação de horários e configure os parâmetros de busca.", banner_card);
     lbl_subtitle->setWordWrap(true);
     lbl_subtitle->setStyleSheet("font-size: 12px;");
@@ -57,13 +71,13 @@ void OptimizeDialog::setupUi() {
     main_layout->addWidget(banner_card);
 
     // 2. Grupo de Seleção de Algoritmo
-    auto* grp_algo = new QGroupBox("Algoritmo de Resolução", this);
+    auto* grp_algo = new QGroupBox("Algoritmo de Resolução", body_widget);
     auto* lay_algo = new QVBoxLayout(grp_algo);
-    lay_algo->setSpacing(12);
+    lay_algo->setSpacing(10);
 
     auto* lay_combo = new QHBoxLayout();
     auto* lbl_combo_title = new QLabel("Algoritmo:", grp_algo);
-    lbl_combo_title->setStyleSheet("font-weight: bold; font-size: 13px; min-width: 80px;");
+    lbl_combo_title->setStyleSheet("font-weight: bold; font-size: 13px; min-width: 75px;");
     
     combo_algorithm_ = new QComboBox(grp_algo);
     combo_algorithm_->addItem("Google OR-Tools CP-SAT (Restrições / Exato) [Recomendado]",
@@ -76,6 +90,7 @@ void OptimizeDialog::setupUi() {
                               static_cast<int>(model::SolverAlgorithm::HIGHS));
     combo_algorithm_->addItem("Heurística Construtiva Gulosa (Greedy Search) [Rápido]",
                               static_cast<int>(model::SolverAlgorithm::GREEDY_HEURISTIC));
+    makeComboResponsive(combo_algorithm_, 24, 200);
     
     int target_algo = static_cast<int>(initial_config_.algoritmo);
     if (initial_config_.algoritmo == model::SolverAlgorithm::MILP) {
@@ -92,59 +107,68 @@ void OptimizeDialog::setupUi() {
 
     // Card de Detalhes do Algoritmo Selecionado
     auto* card_details = new QFrame(grp_algo);
+    card_details->setObjectName("optimizeDetailsCard");
     card_details->setFrameShape(QFrame::StyledPanel);
-    card_details->setStyleSheet(
-        "QFrame { background-color: palette(base); border: 1px solid palette(mid); border-radius: 6px; padding: 10px; }");
+    card_details->setStyleSheet(QString(
+        "QFrame#optimizeDetailsCard { background-color: %1; border: 1px solid %2; border-radius: 6px; }"
+        "QFrame#optimizeDetailsCard QLabel { background-color: transparent; }")
+        .arg(is_dark ? "#0f172a" : "palette(base)",
+             is_dark ? "#334155" : "palette(mid)"));
     auto* lay_details = new QVBoxLayout(card_details);
+    lay_details->setContentsMargins(10, 8, 10, 8);
     lay_details->setSpacing(6);
 
     lbl_algo_desc_ = new QLabel(card_details);
     lbl_algo_desc_->setWordWrap(true);
-    lbl_algo_desc_->setStyleSheet("font-size: 12px; line-height: 1.4;");
+    lbl_algo_desc_->setStyleSheet("font-size: 12px;");
 
-    auto* lay_badges = new QHBoxLayout();
-    lay_badges->setSpacing(8);
+    auto* badges_widget = new QWidget(card_details);
+    badges_widget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+    auto* lay_badges = new FlowLayout(badges_widget, 0, 10, 6);
 
-    auto make_badge = [](const QString& title, QLabel*& lbl_val, const QString& bg_color, const QString& text_color) {
-        auto* box = new QHBoxLayout();
-        auto* tag = new QLabel(title + ": ");
+    auto make_badge = [badges_widget](const QString& title, QLabel*& lbl_val, const QString& bg_color, const QString& text_color) {
+        auto* wrap = new QWidget(badges_widget);
+        auto* box = new QHBoxLayout(wrap);
+        box->setContentsMargins(0, 0, 0, 0);
+        box->setSpacing(4);
+        auto* tag = new QLabel(title + ":", wrap);
         tag->setStyleSheet("font-size: 11px; font-weight: 500;");
-        lbl_val = new QLabel();
+        lbl_val = new QLabel(wrap);
         lbl_val->setStyleSheet(QString("background-color: %1; color: %2; font-size: 11px; font-weight: bold; border-radius: 4px; padding: 2px 6px;")
                                .arg(bg_color, text_color));
         box->addWidget(tag);
         box->addWidget(lbl_val);
-        return box;
+        return wrap;
     };
 
-    bool is_dark = ModernTheme::isDarkTheme();
-    lay_badges->addLayout(make_badge("Abordagem", lbl_algo_type_,
+    lay_badges->addWidget(make_badge("Abordagem", lbl_algo_type_,
                                      is_dark ? "#1e293b" : "rgba(2, 132, 199, 0.15)",
                                      is_dark ? "#38bdf8" : "#0284c7"));
-    lay_badges->addLayout(make_badge("Garantia", lbl_algo_guarantee_,
+    lay_badges->addWidget(make_badge("Garantia", lbl_algo_guarantee_,
                                      is_dark ? "#14532d" : "rgba(22, 163, 74, 0.15)",
                                      is_dark ? "#4ade80" : "#16a34a"));
-    lay_badges->addLayout(make_badge("Desempenho", lbl_algo_speed_,
+    lay_badges->addWidget(make_badge("Desempenho", lbl_algo_speed_,
                                      is_dark ? "#312e81" : "rgba(109, 40, 217, 0.15)",
                                      is_dark ? "#a5b4fc" : "#6d28d9"));
-    lay_badges->addStretch();
 
     lay_details->addWidget(lbl_algo_desc_);
-    lay_details->addLayout(lay_badges);
+    lay_details->addWidget(badges_widget);
     lay_algo->addWidget(card_details);
 
     main_layout->addWidget(grp_algo);
 
     // 3. Parâmetros Rápidos de Execução
-    auto* grp_params = new QGroupBox("Parâmetros da Execução Atual", this);
+    auto* grp_params = new QGroupBox("Parâmetros da Execução Atual", body_widget);
     auto* form_params = new QFormLayout(grp_params);
-    form_params->setSpacing(10);
+    form_params->setSpacing(8);
+    form_params->setFieldGrowthPolicy(QFormLayout::ExpandingFieldsGrow);
 
     combo_escopo_semestre_ = new QComboBox(grp_params);
     combo_escopo_semestre_->addItem("Todas as Disciplinas (Geral)", static_cast<int>(model::EscopoSemestreOtimizacao::TODAS_SEM_FILTRO));
     combo_escopo_semestre_->addItem("1º Semestre (Anuais + 1º Sem)", static_cast<int>(model::EscopoSemestreOtimizacao::SEMESTRE_1));
     combo_escopo_semestre_->addItem("2º Semestre (Anuais + 2º Sem)", static_cast<int>(model::EscopoSemestreOtimizacao::SEMESTRE_2));
     combo_escopo_semestre_->addItem("Ambos os Semestres (Multi-Semestre Integrado)", static_cast<int>(model::EscopoSemestreOtimizacao::AMBOS_INTEGRADO));
+    makeComboResponsive(combo_escopo_semestre_, 22, 200);
     int idx_esc = combo_escopo_semestre_->findData(static_cast<int>(initial_config_.escopo_semestre));
     if (idx_esc >= 0) combo_escopo_semestre_->setCurrentIndex(idx_esc);
     form_params->addRow("Escopo de Semestre:", combo_escopo_semestre_);
@@ -154,13 +178,13 @@ void OptimizeDialog::setupUi() {
     form_params->addRow("", chk_sincronizar_anuais_);
 
     auto* lay_time = new QHBoxLayout();
-    lay_time->setSpacing(12);
+    lay_time->setSpacing(10);
 
     spin_time_limit_ = new QDoubleSpinBox(grp_params);
     spin_time_limit_->setRange(1.0, 3600.0);
     spin_time_limit_->setValue(initial_config_.tempo_limite_segundos);
     spin_time_limit_->setSuffix(" segundos");
-    spin_time_limit_->setFixedWidth(140);
+    spin_time_limit_->setFixedWidth(148);
 
     chk_sem_limite_tempo_ = new QCheckBox("Sem restrição de tempo", grp_params);
     chk_sem_limite_tempo_->setChecked(initial_config_.sem_limite_tempo);
@@ -179,14 +203,14 @@ void OptimizeDialog::setupUi() {
     form_params->addRow("Tempo Limite:", lay_time);
 
     auto* lay_mem = new QHBoxLayout();
-    lay_mem->setSpacing(12);
+    lay_mem->setSpacing(10);
 
     spin_mem_limit_ = new QSpinBox(grp_params);
     spin_mem_limit_->setRange(256, 131072);
     spin_mem_limit_->setSingleStep(256);
     spin_mem_limit_->setValue(initial_config_.max_memoria_mb > 0 ? initial_config_.max_memoria_mb : 2048);
     spin_mem_limit_->setSuffix(" MB");
-    spin_mem_limit_->setFixedWidth(140);
+    spin_mem_limit_->setFixedWidth(148);
 
     chk_sem_limite_memoria_ = new QCheckBox("Sem restrição de memória", grp_params);
     chk_sem_limite_memoria_->setChecked(initial_config_.sem_limite_memoria);
@@ -215,7 +239,7 @@ void OptimizeDialog::setupUi() {
     chk_log_->setChecked(initial_config_.log_search_progress);
     form_params->addRow("", chk_log_);
 
-    chk_usar_grade_atual_ = new QCheckBox("Usar distribuição de disciplinas atual em tela como entrada (Warm Start)", grp_params);
+    chk_usar_grade_atual_ = new QCheckBox("Usar grade atual em tela como entrada (Warm Start)", grp_params);
     chk_usar_grade_atual_->setChecked(initial_config_.usar_distribuicao_como_entrada && num_aulas_em_tela_ > 0);
     chk_usar_grade_atual_->setEnabled(num_aulas_em_tela_ > 0);
     chk_usar_grade_atual_->setStyleSheet("font-weight: bold; color: palette(highlight);");
@@ -233,8 +257,11 @@ void OptimizeDialog::setupUi() {
     form_params->addRow("", lbl_grade_atual_info_);
 
     main_layout->addWidget(grp_params);
+    main_layout->addStretch();
 
-    // 4. Botões de Ação
+    root_layout->addWidget(wrapInScrollArea(body_widget, this), 1);
+
+    // 4. Botões de Ação (fixos no rodapé)
     auto* lay_buttons = new QHBoxLayout();
     lay_buttons->addStretch();
 
@@ -249,12 +276,13 @@ void OptimizeDialog::setupUi() {
 
     lay_buttons->addWidget(btn_cancel);
     lay_buttons->addWidget(btn_start);
-    main_layout->addLayout(lay_buttons);
+    root_layout->addLayout(lay_buttons);
 
     connect(combo_algorithm_, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &OptimizeDialog::onAlgorithmChanged);
 
     onAlgorithmChanged(combo_algorithm_->currentIndex());
+    fitWindowToScreen(this, QSize(620, 580));
 }
 
 /**

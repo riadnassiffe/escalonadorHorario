@@ -10,6 +10,7 @@
 #include "solver/Preprocessor.h"
 #include <atomic>
 #include <functional>
+#include <mutex>
 #include <string>
 
 namespace scheduler::solver {
@@ -42,13 +43,33 @@ public:
      * @return Timetable contendo a grade horária gerada e as métricas de qualidade.
      */
     model::Timetable solve(const model::InstitutionData& data,
-                           ProgressCallback callback = nullptr);
+                           ProgressCallback callback = nullptr,
+                           bool reset_stop = true);
+
+    /**
+     * @brief Limpa qualquer solicitação de interrupção pendente antes de iniciar nova busca.
+     */
+    void resetStop() {
+        stop_requested_.store(false);
+        clearInterruptHandler();
+    }
 
     /**
      * @brief Solicita interrupção antecipada da execução do algoritmo de otimização.
      */
     void requestStop() {
         stop_requested_.store(true);
+        std::lock_guard<std::mutex> lock(interrupt_mutex_);
+        if (active_interrupt_fn_) {
+            active_interrupt_fn_();
+        }
+    }
+
+    /**
+     * @brief Indica se foi solicitada interrupção antecipada para a execução atual.
+     */
+    bool isStopRequested() const noexcept {
+        return stop_requested_.load();
     }
 
 private:
@@ -100,7 +121,19 @@ private:
      */
     model::Timetable solveCuOpt(const model::InstitutionData& data, ProgressCallback callback);
 
+    void setInterruptHandler(std::function<void()> fn) {
+        std::lock_guard<std::mutex> lock(interrupt_mutex_);
+        active_interrupt_fn_ = std::move(fn);
+    }
+
+    void clearInterruptHandler() {
+        std::lock_guard<std::mutex> lock(interrupt_mutex_);
+        active_interrupt_fn_ = nullptr;
+    }
+
     std::atomic<bool> stop_requested_{false};
+    std::mutex interrupt_mutex_;
+    std::function<void()> active_interrupt_fn_;
 };
 
 } // namespace scheduler::solver

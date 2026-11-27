@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, Copy, Layers, Pencil, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Copy, Layers, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
 import { apiFetch } from "../../api/client";
 import { useSlotTemplates } from "../../api/hooks";
-import { filterAndSortItems } from "../../domain/searchSort";
+import { filterAndSortItems, normalizeText } from "../../domain/searchSort";
 import {
   ALL_DAYS,
   computeImplicitBreaks,
@@ -24,7 +24,7 @@ import {
   weeklyScheduleToTurmaFields,
   type WeeklyScheduleMap,
 } from "../../domain/turmaSchedule";
-import type { DayOfWeek, Disciplina, Room, TimeSlot, Turma, TurmaCopyResponse } from "../../types";
+import type { DayOfWeek, Disciplina, Professor, Room, TimeSlot, Turma, TurmaCopyResponse } from "../../types";
 import { SearchSortTableBar } from "../common/SearchSortTableBar";
 
 interface Props {
@@ -32,6 +32,7 @@ interface Props {
   turmas: Turma[];
   salas: Room[];
   disciplinas: Disciplina[];
+  professores?: Professor[];
 }
 
 const SHIFT_PRESETS: Array<{ key: "MANHA" | "TARDE" | "INTEGRAL" | "NOITE"; label: string }> = [
@@ -41,7 +42,7 @@ const SHIFT_PRESETS: Array<{ key: "MANHA" | "TARDE" | "INTEGRAL" | "NOITE"; labe
   { key: "NOITE", label: "Noite" },
 ];
 
-export function TurmasTab({ projectId, turmas, salas, disciplinas }: Props) {
+export function TurmasTab({ projectId, turmas, salas, disciplinas, professores = [] }: Props) {
   const qc = useQueryClient();
   const { data: slotTemplatesData } = useSlotTemplates(projectId);
   const [search, setSearch] = useState("");
@@ -53,6 +54,11 @@ export function TurmasTab({ projectId, turmas, salas, disciplinas }: Props) {
   const [copying, setCopying] = useState<{ source: Turma; nextCode: string } | null>(null);
   const [copyError, setCopyError] = useState("");
   const [feedbackMsg, setFeedbackMsg] = useState("");
+
+  const professoresByCode = useMemo(
+    () => Object.fromEntries(professores.map((p) => [p.code, p])) as Record<string, Professor>,
+    [professores]
+  );
 
   const slotTemplates = useMemo<Record<string, TimeSlot[]>>(
     () => ({
@@ -90,6 +96,7 @@ export function TurmasTab({ projectId, turmas, salas, disciplinas }: Props) {
       code: string;
       nome: string;
       copy_disciplinas: boolean;
+      disciplina_codes?: string[];
       sala_teorica_id: string | null;
     }) =>
       apiFetch<TurmaCopyResponse>(
@@ -100,6 +107,9 @@ export function TurmasTab({ projectId, turmas, salas, disciplinas }: Props) {
             code: payload.code,
             nome: payload.nome,
             copy_disciplinas: payload.copy_disciplinas,
+            ...(payload.disciplina_codes !== undefined
+              ? { disciplina_codes: payload.disciplina_codes }
+              : {}),
             sala_teorica_id: payload.sala_teorica_id,
           }),
         }
@@ -243,6 +253,7 @@ export function TurmasTab({ projectId, turmas, salas, disciplinas }: Props) {
                   <td className="px-4 py-2.5 text-right whitespace-nowrap">
                     <button
                       type="button"
+                      aria-label={`Copiar ${t.nome}`}
                       title="Copiar turma"
                       onClick={() => openCopy(t)}
                       className="mr-1.5 rounded p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950"
@@ -301,7 +312,8 @@ export function TurmasTab({ projectId, turmas, salas, disciplinas }: Props) {
           source={copying.source}
           nextCode={copying.nextCode}
           salas={salas}
-          linkedDisciplinasCount={disciplinas.filter((d) => d.turmas.includes(copying.source.code)).length}
+          linkedDisciplinas={disciplinas.filter((d) => d.turmas.includes(copying.source.code))}
+          professoresByCode={professoresByCode}
           saving={copyMutation.isPending}
           error={copyError}
           onClose={() => {
@@ -954,7 +966,8 @@ function CopyTurmaModal({
   source,
   nextCode,
   salas,
-  linkedDisciplinasCount,
+  linkedDisciplinas,
+  professoresByCode,
   saving,
   error,
   onClose,
@@ -963,7 +976,8 @@ function CopyTurmaModal({
   source: Turma;
   nextCode: string;
   salas: Room[];
-  linkedDisciplinasCount: number;
+  linkedDisciplinas: Disciplina[];
+  professoresByCode: Record<string, Professor>;
   saving: boolean;
   error: string;
   onClose: () => void;
@@ -971,6 +985,7 @@ function CopyTurmaModal({
     code: string;
     nome: string;
     copy_disciplinas: boolean;
+    disciplina_codes?: string[];
     sala_teorica_id: string | null;
   }) => void;
 }) {
@@ -978,13 +993,32 @@ function CopyTurmaModal({
   const [nome, setNome] = useState(`${source.nome} (Cópia)`);
   const [salaTeoricaId, setSalaTeoricaId] = useState<string>("");
   const [copyDisciplinas, setCopyDisciplinas] = useState(false);
+  const [selectedDiscCodes, setSelectedDiscCodes] = useState<string[]>(() =>
+    linkedDisciplinas.map((d) => d.code)
+  );
+  const [discSearch, setDiscSearch] = useState("");
 
   const teoricas = salas.filter((s) => s.tipo.toUpperCase() === "TEORICA");
   const summary = summarizeTurmaSchedule(source);
 
+  const visibleDisciplinas = useMemo(() => {
+    const q = normalizeText(discSearch.trim());
+    if (!q) return linkedDisciplinas;
+    return linkedDisciplinas.filter((d) => {
+      const profNames = d.professores.map((c) => professoresByCode[c]?.nome || c).join(" ");
+      return normalizeText(`${d.code} ${d.nome} ${d.professores.join(" ")} ${profNames}`).includes(q);
+    });
+  }, [discSearch, linkedDisciplinas, professoresByCode]);
+
+  const toggleDisciplina = (discCode: string) => {
+    setSelectedDiscCodes((prev) =>
+      prev.includes(discCode) ? prev.filter((c) => c !== discCode) : [...prev, discCode]
+    );
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow-2xl dark:bg-slate-900">
+      <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-xl bg-white p-5 shadow-2xl dark:bg-slate-900">
         <div className="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
           <h3 className="text-base font-bold">Copiar Turma</h3>
           <button type="button" onClick={onClose}>
@@ -1040,25 +1074,114 @@ function CopyTurmaModal({
 
           <label
             className={`flex items-start gap-2.5 rounded-lg border border-slate-200 p-3 text-xs dark:border-slate-800 ${
-              linkedDisciplinasCount === 0 ? "opacity-60" : "cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40"
+              linkedDisciplinas.length === 0 ? "opacity-60" : "cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40"
             }`}
           >
             <input
               type="checkbox"
-              disabled={linkedDisciplinasCount === 0}
+              disabled={linkedDisciplinas.length === 0}
               checked={copyDisciplinas}
               onChange={(e) => setCopyDisciplinas(e.target.checked)}
               className="mt-0.5 h-4 w-4 rounded"
             />
             <div>
               <span className="font-semibold">
-                Copiar também as disciplinas vinculadas a esta turma ({linkedDisciplinasCount} disciplina(s))
+                Copiar também as disciplinas vinculadas a esta turma ({linkedDisciplinas.length} disciplina(s))
               </span>
               <p className="mt-0.5 text-slate-500">
-                Quando marcado, duplica as disciplinas vinculadas a {source.code} associando-as à nova turma.
+                Quando marcado, permite escolher quais disciplinas vinculadas a {source.code} serão duplicadas para a nova turma.
               </p>
             </div>
           </label>
+
+          {copyDisciplinas && linkedDisciplinas.length > 0 && (
+            <div
+              data-testid="copy-disciplinas-selector"
+              className="space-y-2.5 rounded-lg border border-slate-200 bg-slate-50/70 p-3 text-xs dark:border-slate-800 dark:bg-slate-800/30"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-semibold text-slate-700 dark:text-slate-200">
+                  Selecionadas: {selectedDiscCodes.length} de {linkedDisciplinas.length} disciplina(s)
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDiscCodes(linkedDisciplinas.map((d) => d.code))}
+                    className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    Selecionar todas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDiscCodes([])}
+                    className="font-medium text-slate-600 hover:underline dark:text-slate-400"
+                  >
+                    Limpar seleção
+                  </button>
+                </div>
+              </div>
+
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  value={discSearch}
+                  onChange={(e) => setDiscSearch(e.target.value)}
+                  placeholder="Filtrar disciplinas por nome ou ID..."
+                  className="w-full rounded border border-slate-300 bg-white py-1 pl-8 pr-2.5 text-xs dark:border-slate-700 dark:bg-slate-800"
+                />
+              </div>
+
+              <div className="max-h-56 space-y-1.5 overflow-y-auto pr-1">
+                {visibleDisciplinas.length === 0 ? (
+                  <p className="py-2 text-center text-slate-400">Nenhuma disciplina encontrada.</p>
+                ) : (
+                  visibleDisciplinas.map((d) => {
+                    const checked = selectedDiscCodes.includes(d.code);
+                    const profText = d.professores
+                      .map((c) => professoresByCode[c]?.nome || c)
+                      .join(", ");
+                    return (
+                      <label
+                        key={d.code}
+                        className={`flex cursor-pointer items-start gap-2.5 rounded border px-2.5 py-2 transition ${
+                          checked
+                            ? "border-blue-300 bg-blue-50/70 dark:border-blue-800 dark:bg-blue-950/30"
+                            : "border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleDisciplina(d.code)}
+                          className="mt-0.5 h-3.5 w-3.5 rounded"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="font-semibold text-slate-800 dark:text-slate-100">{d.nome}</span>
+                            <span className="rounded bg-slate-200/80 px-1.5 py-0.2 font-mono text-[10px] text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                              {d.code}
+                            </span>
+                          </div>
+                          <div className="mt-0.5 text-[11px] text-slate-500">
+                            {d.aulas_semanais} aulas/sem • {d.duracao_minutos}m •{" "}
+                            {d.regime === "ANUAL" ? "Anual" : `Semestral (${d.semestre}º)`}
+                            {profText ? ` • Prof.: ${profText}` : ""}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+
+              {selectedDiscCodes.length === 0 && (
+                <div className="rounded bg-amber-50 px-2.5 py-1.5 text-[11px] font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                  Nenhuma disciplina selecionada — apenas a turma será copiada.
+                </div>
+              )}
+            </div>
+          )}
 
           {error && (
             <div className="rounded bg-rose-100 p-2 text-xs text-rose-700 dark:bg-rose-950 dark:text-rose-300">
@@ -1082,7 +1205,8 @@ function CopyTurmaModal({
               onSubmit({
                 code: code.trim(),
                 nome: nome.trim(),
-                copy_disciplinas: copyDisciplinas,
+                copy_disciplinas: copyDisciplinas && selectedDiscCodes.length > 0,
+                disciplina_codes: copyDisciplinas ? selectedDiscCodes : undefined,
                 sala_teorica_id: salaTeoricaId || null,
               })
             }

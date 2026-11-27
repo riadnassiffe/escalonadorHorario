@@ -5,6 +5,7 @@
 
 #include "ui/AddLessonToScheduleDialog.h"
 #include "ui/ModernTheme.h"
+#include "ui/ResponsiveUi.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -37,6 +38,7 @@ AddLessonToScheduleDialog::AddLessonToScheduleDialog(model::InstitutionData& dat
 
     setupUi();
     populateDisciplinas();
+    fitWindowToScreen(this, QSize(640, 540));
 }
 
 std::string AddLessonToScheduleDialog::aulaId() const {
@@ -47,95 +49,104 @@ std::string AddLessonToScheduleDialog::aulaId() const {
 void AddLessonToScheduleDialog::setupUi() {
     setWindowTitle("Alocar Disciplina na Grade Semanal");
     setWindowIcon(ModernTheme::icon("add"));
-    setMinimumWidth(600);
-    resize(640, 560);
+    setMinimumSize(460, 380);
 
-    auto* main_layout = new QVBoxLayout(this);
-    main_layout->setSpacing(12);
-    main_layout->setContentsMargins(16, 16, 16, 16);
+    auto* root_layout = new QVBoxLayout(this);
+    root_layout->setSpacing(10);
+    root_layout->setContentsMargins(12, 12, 12, 12);
+
+    auto* body_widget = new QWidget(this);
+    auto* main_layout = new QVBoxLayout(body_widget);
+    main_layout->setSpacing(10);
+    main_layout->setContentsMargins(2, 2, 2, 2);
 
     // Título e Descrição
-    auto* lbl_title = new QLabel("<h3>➕ Alocar Disciplina Manualmente</h3>", this);
+    auto* lbl_title = new QLabel("<h3>➕ Alocar Disciplina Manualmente</h3>", body_widget);
     main_layout->addWidget(lbl_title);
 
     auto* lbl_sub = new QLabel(
         "Selecione a disciplina, a ocorrência semanal e o horário para compor sua grade inicial.<br>"
-        "As aulas fixadas serão preservadas durante a execução do otimizador automático.", this);
+        "As aulas fixadas serão preservadas durante a execução do otimizador automático.", body_widget);
+    lbl_sub->setWordWrap(true);
     lbl_sub->setStyleSheet("color: palette(window-text); font-size: 11px; margin-bottom: 4px;");
     main_layout->addWidget(lbl_sub);
 
     // Painel de Filtros
-    auto* filter_box = new QHBoxLayout();
-    filter_box->setSpacing(12);
+    auto* filter_wrap = new QWidget(body_widget);
+    filter_wrap->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+    auto* filter_box = new FlowLayout(filter_wrap, 0, 12, 4);
 
-    chk_filtro_turma_ = new QCheckBox("Apenas disciplinas da turma selecionada", this);
+    chk_filtro_turma_ = new QCheckBox("Apenas disciplinas da turma selecionada", filter_wrap);
     chk_filtro_turma_->setChecked(!default_turma_id_.empty());
     chk_filtro_turma_->setEnabled(!default_turma_id_.empty());
     filter_box->addWidget(chk_filtro_turma_);
 
-    chk_apenas_pendentes_ = new QCheckBox("Apenas com aulas pendentes de alocação", this);
+    chk_apenas_pendentes_ = new QCheckBox("Apenas com aulas pendentes de alocação", filter_wrap);
     chk_apenas_pendentes_->setChecked(true);
     filter_box->addWidget(chk_apenas_pendentes_);
 
-    filter_box->addStretch();
-    main_layout->addLayout(filter_box);
+    main_layout->addWidget(filter_wrap);
 
     connect(chk_filtro_turma_, &QCheckBox::toggled, this, &AddLessonToScheduleDialog::onFiltrosChanged);
     connect(chk_apenas_pendentes_, &QCheckBox::toggled, this, &AddLessonToScheduleDialog::onFiltrosChanged);
 
     // Formulário de Seleção
-    auto* form_group = new QGroupBox("Dados da Alocação", this);
+    auto* form_group = new QGroupBox("Dados da Alocação", body_widget);
     auto* form = new QFormLayout(form_group);
-    form->setSpacing(10);
+    form->setSpacing(8);
     form->setLabelAlignment(Qt::AlignRight);
+    form->setFieldGrowthPolicy(QFormLayout::ExpandingFieldsGrow);
 
     // Disciplina
-    combo_disciplina_ = new QComboBox(this);
-    combo_disciplina_->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    combo_disciplina_->setMinimumWidth(380);
+    combo_disciplina_ = new QComboBox(form_group);
+    makeComboResponsive(combo_disciplina_, 24, 220);
     form->addRow("Disciplina:", combo_disciplina_);
 
     // Card informativo da disciplina selecionada
-    lbl_disciplina_info_ = new QLabel(this);
+    lbl_disciplina_info_ = new QLabel(form_group);
+    lbl_disciplina_info_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     lbl_disciplina_info_->setStyleSheet(
-        "background-color: palette(base); border: 1px solid palette(mid); border-radius: 6px; "
-        "padding: 8px; font-size: 11px;");
+        ModernTheme::isDarkTheme()
+            ? "background-color: #0f172a; color: #f8fafc; border: 1px solid #334155; border-radius: 6px; padding: 8px; font-size: 11px;"
+            : "background-color: palette(base); border: 1px solid palette(mid); border-radius: 6px; padding: 8px; font-size: 11px;");
     lbl_disciplina_info_->setWordWrap(true);
     form->addRow("", lbl_disciplina_info_);
 
     // Ocorrência da Aula
-    combo_ocorrencia_ = new QComboBox(this);
-    combo_ocorrencia_->setMinimumWidth(380);
+    combo_ocorrencia_ = new QComboBox(form_group);
+    makeComboResponsive(combo_ocorrencia_, 24, 220);
     form->addRow("Ocorrência:", combo_ocorrencia_);
 
     // Dia da Semana
-    combo_dia_ = new QComboBox(this);
+    combo_dia_ = new QComboBox(form_group);
     for (auto d : model::allDays()) {
         combo_dia_->addItem(QString::fromStdString(model::dayToLongString(d)), static_cast<int>(d));
     }
     int def_day_idx = combo_dia_->findData(static_cast<int>(default_day_));
     if (def_day_idx >= 0) combo_dia_->setCurrentIndex(def_day_idx);
+    makeComboResponsive(combo_dia_, 16, 160);
     form->addRow("Dia da Semana:", combo_dia_);
 
     // Horário / Intervalo
-    combo_horario_ = new QComboBox(this);
-    combo_horario_->setMinimumWidth(380);
+    combo_horario_ = new QComboBox(form_group);
+    makeComboResponsive(combo_horario_, 20, 220);
     form->addRow("Horário:", combo_horario_);
 
     // Sala de Aula
-    combo_sala_ = new QComboBox(this);
-    combo_sala_->setMinimumWidth(380);
+    combo_sala_ = new QComboBox(form_group);
+    makeComboResponsive(combo_sala_, 20, 220);
     form->addRow("Sala de Aula:", combo_sala_);
 
     // Semestre de Vigência
-    combo_semestre_ = new QComboBox(this);
+    combo_semestre_ = new QComboBox(form_group);
     combo_semestre_->addItem("Ambos os Semestres (Ano Todo)", 3);
     combo_semestre_->addItem("1º Semestre", 1);
     combo_semestre_->addItem("2º Semestre", 2);
+    makeComboResponsive(combo_semestre_, 20, 180);
     form->addRow("Semestre:", combo_semestre_);
 
     // Checkbox de Fixação (Pin)
-    chk_fixar_ = new QCheckBox("Fixar aula na grade (bloquear para o otimizador automático)", this);
+    chk_fixar_ = new QCheckBox("Fixar aula na grade (bloquear para o otimizador automático)", form_group);
     chk_fixar_->setIcon(ModernTheme::icon("pin"));
     chk_fixar_->setChecked(true);
     chk_fixar_->setStyleSheet("font-weight: 600; color: palette(highlight); margin-top: 4px;");
@@ -144,16 +155,19 @@ void AddLessonToScheduleDialog::setupUi() {
     main_layout->addWidget(form_group);
 
     // Banner de Auditoria de Conflitos
-    lbl_conflito_status_ = new QLabel(this);
+    lbl_conflito_status_ = new QLabel(body_widget);
     lbl_conflito_status_->setWordWrap(true);
     lbl_conflito_status_->setStyleSheet(
-        "background-color: palette(base); border: 1px solid palette(mid); border-radius: 6px; "
-        "padding: 8px 12px; font-size: 11px;");
+        ModernTheme::isDarkTheme()
+            ? "background-color: #0f172a; color: #f8fafc; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 11px;"
+            : "background-color: palette(base); border: 1px solid palette(mid); border-radius: 6px; padding: 8px 12px; font-size: 11px;");
     main_layout->addWidget(lbl_conflito_status_);
 
     main_layout->addStretch();
 
-    // Botões de Ação
+    root_layout->addWidget(wrapInScrollArea(body_widget, this), 1);
+
+    // Botões de Ação (fixos no rodapé)
     auto* btn_layout = new QHBoxLayout();
     btn_layout->addStretch();
 
@@ -167,7 +181,7 @@ void AddLessonToScheduleDialog::setupUi() {
     btn_alocar_->setDefault(true);
     btn_layout->addWidget(btn_alocar_);
 
-    main_layout->addLayout(btn_layout);
+    root_layout->addLayout(btn_layout);
 
     // Conexões internas
     connect(combo_disciplina_, QOverload<int>::of(&QComboBox::currentIndexChanged),

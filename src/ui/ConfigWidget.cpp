@@ -4,6 +4,7 @@
  */
 
 #include "ui/ConfigWidget.h"
+#include "ui/ResponsiveUi.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -46,23 +47,27 @@ void ConfigWidget::setupUi() {
     auto make_slider_row = [this, grp_pesos](const QString& title, const QString& tooltip,
                                              QSlider*& slider, QLabel*& lbl_val, int initial) {
         auto* row = new QHBoxLayout();
+        row->setSpacing(10);
         auto* lbl = new QLabel(title, grp_pesos);
         lbl->setToolTip(tooltip);
-        lbl->setFixedWidth(300);
+        lbl->setMinimumWidth(200);
+        lbl->setMaximumWidth(320);
+        lbl->setWordWrap(true);
         lbl->setStyleSheet("font-weight: 500;");
-        row->addWidget(lbl);
+        row->addWidget(lbl, 4);
 
         slider = new QSlider(Qt::Horizontal, grp_pesos);
         slider->setRange(0, 20);
         slider->setValue(initial);
         slider->setTickInterval(2);
         slider->setTickPosition(QSlider::TicksBelow);
-        row->addWidget(slider);
+        slider->setMinimumWidth(140);
+        row->addWidget(slider, 5);
 
         lbl_val = new QLabel(QString::number(initial), grp_pesos);
         lbl_val->setFixedWidth(35);
         lbl_val->setStyleSheet("font-weight: bold; color: palette(highlight); font-size: 14px;");
-        row->addWidget(lbl_val);
+        row->addWidget(lbl_val, 0);
 
         connect(slider, &QSlider::valueChanged, this, &ConfigWidget::updateSliderLabels);
         return row;
@@ -98,12 +103,14 @@ void ConfigWidget::setupUi() {
     auto* grp_regras = new QGroupBox("Semântica da Preferência e Regras Acadêmicas (Seção 4.4 & 5)", content_widget);
     auto* form_regras = new QFormLayout(grp_regras);
     form_regras->setSpacing(10);
+    form_regras->setFieldGrowthPolicy(QFormLayout::ExpandingFieldsGrow);
 
     combo_modelo_dias_ = new QComboBox(grp_regras);
     combo_modelo_dias_->addItem("Por Dia Trabalhado [Padrão: W = sum (10 - ω_p,d) * y_p,d]",
                                 static_cast<int>(model::ModeloPreferenciaDias::POR_DIA_TRABALHADO));
     combo_modelo_dias_->addItem("Por Minuto de Aula [Alternativa: W_min = sum (10 - ω_p,d) * m_p,d]",
                                 static_cast<int>(model::ModeloPreferenciaDias::POR_MINUTO_AULA));
+    makeComboResponsive(combo_modelo_dias_, 24, 180);
     form_regras->addRow("Modelo de Preferência Diária:", combo_modelo_dias_);
 
     chk_preenchimento_integral_ = new QCheckBox("Preenchimento integral dos slots letivos da turma (R10)", grp_regras);
@@ -128,6 +135,7 @@ void ConfigWidget::setupUi() {
     auto* grp_solver = new QGroupBox("Configurações do Algoritmo e Parâmetros de Execução", content_widget);
     auto* form_solver = new QFormLayout(grp_solver);
     form_solver->setSpacing(12);
+    form_solver->setFieldGrowthPolicy(QFormLayout::ExpandingFieldsGrow);
 
     combo_algoritmo_ = new QComboBox(grp_solver);
     combo_algoritmo_->addItem("Google OR-Tools CP-SAT (Restrições / Exato - Recomendado)",
@@ -140,7 +148,7 @@ void ConfigWidget::setupUi() {
                               static_cast<int>(model::SolverAlgorithm::HIGHS));
     combo_algoritmo_->addItem("Heurística Construtiva Gulosa (Rápido / Prioridade)",
                               static_cast<int>(model::SolverAlgorithm::GREEDY_HEURISTIC));
-    combo_algoritmo_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    makeComboResponsive(combo_algoritmo_, 24, 180);
     form_solver->addRow("Algoritmo de Otimização Padrão:", combo_algoritmo_);
 
     combo_escopo_semestre_ = new QComboBox(grp_solver);
@@ -148,7 +156,7 @@ void ConfigWidget::setupUi() {
     combo_escopo_semestre_->addItem("1º Semestre (Anuais + 1º Sem)", static_cast<int>(model::EscopoSemestreOtimizacao::SEMESTRE_1));
     combo_escopo_semestre_->addItem("2º Semestre (Anuais + 2º Sem)", static_cast<int>(model::EscopoSemestreOtimizacao::SEMESTRE_2));
     combo_escopo_semestre_->addItem("Ambos os Semestres (Multi-Semestre Integrado)", static_cast<int>(model::EscopoSemestreOtimizacao::AMBOS_INTEGRADO));
-    combo_escopo_semestre_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    makeComboResponsive(combo_escopo_semestre_, 22, 180);
     form_solver->addRow("Escopo de Semestre Padrão:", combo_escopo_semestre_);
 
     chk_sincronizar_anuais_ = new QCheckBox("Sincronizar horários de disciplinas anuais entre semestres", grp_solver);
@@ -156,13 +164,13 @@ void ConfigWidget::setupUi() {
     form_solver->addRow("", chk_sincronizar_anuais_);
 
     auto* lay_tempo = new QHBoxLayout();
-    lay_tempo->setSpacing(12);
+    lay_tempo->setSpacing(10);
 
     spin_tempo_limite_ = new QDoubleSpinBox(grp_solver);
     spin_tempo_limite_->setRange(1.0, 3600.0);
     spin_tempo_limite_->setValue(30.0);
     spin_tempo_limite_->setSuffix(" segundos");
-    spin_tempo_limite_->setFixedWidth(140);
+    spin_tempo_limite_->setFixedWidth(148);
 
     chk_sem_limite_tempo_ = new QCheckBox("Sem restrição de tempo", grp_solver);
     chk_sem_limite_tempo_->setToolTip("Executa o solver sem tempo limite máximo.");
@@ -177,14 +185,14 @@ void ConfigWidget::setupUi() {
     form_solver->addRow("Tempo Limite de Otimização:", lay_tempo);
 
     auto* lay_mem = new QHBoxLayout();
-    lay_mem->setSpacing(12);
+    lay_mem->setSpacing(10);
 
     spin_max_memoria_ = new QSpinBox(grp_solver);
     spin_max_memoria_->setRange(256, 131072);
     spin_max_memoria_->setSingleStep(256);
     spin_max_memoria_->setValue(2048);
     spin_max_memoria_->setSuffix(" MB");
-    spin_max_memoria_->setFixedWidth(140);
+    spin_max_memoria_->setFixedWidth(148);
 
     chk_sem_limite_memoria_ = new QCheckBox("Sem restrição de memória", grp_solver);
     chk_sem_limite_memoria_->setToolTip("Executa o solver sem impor limite máximo explícito de memória RAM.");

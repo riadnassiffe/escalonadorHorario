@@ -50,7 +50,7 @@ Na tabela abaixo estão sintetizados os conjuntos e índices do modelo:
 | $\mathcal{Q}^{consec} \subseteq \mathcal{Q}$ | Disciplinas configuradas para exigir agrupamento em bloco |
 | $\mathcal{A},\ a$ | Ocorrências semanais de aulas a serem alocadas |
 | $\mathcal{A}_q \subseteq \mathcal{A}$ | Ocorrências de aula pertencentes à disciplina $q$ |
-| $\mathcal{A}^{teo},\ \mathcal{A}^{anual},\ \mathcal{A}^{fix}$ | Subconjuntos de aulas teóricas, anuais e fixadas manualmente (*pinned*) |
+| $\mathcal{A}^{teo},\ \mathcal{A}^{anual},\ \mathcal{A}^{fix},\ \mathcal{A}^{exp}$ | Subconjuntos de aulas teóricas, anuais, fixadas manualmente (*pinned*) e com salas alternativas explícitas |
 | $\mathcal{D},\ d$ | Dias letivos da semana (`SEG` a `SEX`) |
 | $\mathcal{S},\ s$ | Semestres ativos na otimização ($\{1\}$, $\{2\}$ ou $\{1, 2\}$) |
 | $\mathcal{H},\ h$ | Turnos de trabalho (`MANHA`: $< 12\text{h}30$; `TARDE`: $12\text{h}30\text{–}18\text{h}00$; `NOITE`: $\ge 18\text{h}00$) |
@@ -95,15 +95,15 @@ Cada candidato $c \in \mathcal{C}_a$ representa uma tupla admissível $(d_c, t^{
 
 ## 4. Geração de Horários Candidatos ($\mathcal{C}_a$)
 
-Para uma aula $a$, um candidato $c = (d_c, t^{ini}_c, t^{fim}_c, b_c)$ só é gerado se satisfizer **todas** as regras abaixo (pré-filtragem de domínio implementada em [`Preprocessor::gerarCandidatosParaAula`](src/solver/Preprocessor.cpp#L223-L444)):
+Para uma aula $a$, um candidato $c = (d_c, t^{ini}_c, t^{fim}_c, b_c)$ só é gerado se satisfizer **todas** as regras abaixo (pré-filtragem de domínio implementada em [`Preprocessor::gerarCandidatosParaAula`](src/solver/Preprocessor.cpp#L213-L433)):
 
 1. **Correspondência exata de slot e duração:** Todas as turmas $g \in \mathcal{G}_a$ funcionam no dia $d_c$ ($d_c \in \mathcal{D}_g$), possuem o **mesmo slot cadastrado** $[t^{ini}_c, t^{fim}_c) = [t^{ini}_{g,d_c,k}, t^{fim}_{g,d_c,k})$ para algum $k \in \mathcal{K}_{g,d_c}$, e a duração do slot coincide exatamente com a da aula:
 $$
 t^{fim}_c - t^{ini}_c = \ell_a.
 $$
-2. **Disponibilidade docente:** Todos os professores $p \in \mathcal{P}_a$ estão disponíveis em todo o intervalo ($[t^{ini}_c, t^{fim}_c) \subseteq \mathcal{V}_{p,d_c}$) ([`Preprocessor.cpp`](src/solver/Preprocessor.cpp#L375-L384)).
-3. **Salas compatíveis:** A combinação $b_c \in \mathcal{B}_a$ é válida para o tipo da aula; em aulas teóricas, $b_c = \{r\}$ pertence às salas teóricas elegíveis da turma ([Daskalaki et al., 2004](#14-referências-bibliográficas); [`Preprocessor.cpp`](src/solver/Preprocessor.cpp#L297-L318)).
-4. **Fixação manual (*Pinned*):** Para $a \in \mathcal{A}^{fix}$, gera-se exclusivamente o candidato correspondente ao dia, intervalo e sala fixados pelo usuário ([`Preprocessor.cpp`](src/solver/Preprocessor.cpp#L328-L339)).
+2. **Disponibilidade docente:** Todos os professores $p \in \mathcal{P}_a$ estão disponíveis em todo o intervalo ($[t^{ini}_c, t^{fim}_c) \subseteq \mathcal{V}_{p,d_c}$) ([`Preprocessor.cpp`](src/solver/Preprocessor.cpp#L368-L377)).
+3. **Salas compatíveis:** Quando a aula possui combinações de salas alternativas explicitamente configuradas ($a \in \mathcal{A}^{exp}$), essas combinações têm precedência para qualquer tipo de aula (incluindo aulas teóricas); apenas quando não há salas explícitas é que aulas teóricas ($a \in \mathcal{A}^{teo} \setminus \mathcal{A}^{exp}$) utilizam a sala teórica predefinida ou as salas teóricas elegíveis da turma, enquanto aulas práticas/de laboratório utilizam salas compatíveis com o tipo ou não teóricas ([Daskalaki et al., 2004](#14-referências-bibliográficas); [`Preprocessor.cpp`](src/solver/Preprocessor.cpp#L266-L291)).
+4. **Fixação manual (*Pinned*):** Para $a \in \mathcal{A}^{fix}$, gera-se exclusivamente o candidato correspondente ao dia, intervalo (preservando a duração fixada quando $> 0$) e salas fixadas pelo usuário, mesmo que a lista padrão de salas admissíveis da aula esteja vazia; caso nenhuma sala fixada tenha sido informada, utiliza-se a primeira combinação admissível ([`Preprocessor.cpp`](src/solver/Preprocessor.cpp#L293-L317)).
 
 ---
 
@@ -161,7 +161,7 @@ $$
 \sum_{c \in \mathcal{C}_a} x_{a,c} = 1 \qquad \forall a \in \mathcal{A}.
 $$
 - **Literatura:** Alocação única de evento e recurso [[Daskalaki et al., 2004](#14-referências-bibliográficas)].
-- **Código:** CP-SAT [`CpSatSolver.cpp` (L187–L195)](src/solver/CpSatSolver.cpp#L187-L195); MILP [`MilpSolver.cpp` (L216–L225)](src/solver/MilpSolver.cpp#L216-L225).
+- **Código:** CP-SAT [`CpSatSolver.cpp` (L195–L203)](src/solver/CpSatSolver.cpp#L195-L203); MILP [`MilpSolver.cpp` (L216–L225)](src/solver/MilpSolver.cpp#L216-L225).
 
 ### R2. Não sobreposição de professores (interseção real em minutos)
 $$
@@ -169,89 +169,81 @@ o^P_{p,d,t,s} \le 1 \qquad \forall p \in \mathcal{P},\ d \in \mathcal{D},\ t \in
 $$
 onde $\mathcal{T}^{ini}_{p,d,s} = \{t^{ini}_c : (a,c) \in \mathcal{X}_{p,d,s}\}$ é o conjunto finito dos instantes de início dos candidatos. Pelo Teorema das Cliques em Grafos de Intervalo, impor a não sobreposição sobre $\mathcal{T}^{ini}_{p,d,s}$ garante exatamente não sobreposição em todo $t \in [0, 1440)$, mesmo quando o professor atende turmas com horários desalinhados.
 - **Literatura:** Cliques de não sobreposição em grafos de intervalo [[Sousa & Wolsey, 1992](#14-referências-bibliográficas); [Santos et al., 2012](#14-referências-bibliográficas)].
-- **Código:** CP-SAT (`NewOptionalIntervalVar(start_min, dur, end_min)` + `AddNoOverlap`) [`CpSatSolver.cpp` (L197–L226)](src/solver/CpSatSolver.cpp#L197-L226); MILP (`add_no_overlap_cliques` por pontos de início) [`MilpSolver.cpp` (L227–L274)](src/solver/MilpSolver.cpp#L227-L274); Gulosa [`GreedyHeuristicSolver.cpp` (L94–L101, L142–L148)](src/solver/GreedyHeuristicSolver.cpp#L94-L101).
+- **Código:** CP-SAT (`NewOptionalIntervalVar(start_min, dur, end_min)` + `AddNoOverlap`) [`CpSatSolver.cpp` (L205–L234)](src/solver/CpSatSolver.cpp#L205-L234); MILP (`add_no_overlap_cliques` por pontos de início) [`MilpSolver.cpp` (L227–L274)](src/solver/MilpSolver.cpp#L227-L274); Gulosa [`GreedyHeuristicSolver.cpp` (L94–L101, L145–L152)](src/solver/GreedyHeuristicSolver.cpp#L94-L101).
 
 ### R3. Não sobreposição de turmas
 $$
 o^G_{g,d,t,s} \le 1 \qquad \forall g \in \mathcal{G},\ d \in \mathcal{D},\ t \in \mathcal{T}^{ini}_{g,d,s},\ s \in \mathcal{S}.
 $$
 - **Literatura:** Prevenção de conflitos de turmas [[Santos et al., 2012](#14-referências-bibliográficas)].
-- **Código:** CP-SAT [`CpSatSolver.cpp` (L257–L284)](src/solver/CpSatSolver.cpp#L257-L284); MILP [`MilpSolver.cpp` (L227–L274)](src/solver/MilpSolver.cpp#L227-L274); Gulosa [`GreedyHeuristicSolver.cpp` (L150–L154)](src/solver/GreedyHeuristicSolver.cpp#L150-L154).
+- **Código:** CP-SAT [`CpSatSolver.cpp` (L265–L292)](src/solver/CpSatSolver.cpp#L265-L292); MILP [`MilpSolver.cpp` (L227–L274)](src/solver/MilpSolver.cpp#L227-L274); Gulosa [`GreedyHeuristicSolver.cpp` (L154–L158)](src/solver/GreedyHeuristicSolver.cpp#L154-L158).
 
 ### R4. Não sobreposição de salas (interseção real em minutos)
 $$
 \sum_{a \in \mathcal{A}:\, s \in \mathcal{S}_a} \sum_{c \in \mathcal{C}_a:\, r \in b_c} H_{a,c,d,t}\, x_{a,c} \le 1 \qquad \forall r \in \mathcal{R},\ d \in \mathcal{D},\ t \in \mathcal{T}^{ini}_{r,d,s},\ s \in \mathcal{S}.
 $$
 - **Literatura:** Prevenção de conflitos de salas físicas [[Daskalaki et al., 2004](#14-referências-bibliográficas)].
-- **Código:** CP-SAT [`CpSatSolver.cpp` (L228–L255)](src/solver/CpSatSolver.cpp#L228-L255); MILP [`MilpSolver.cpp` (L227–L274)](src/solver/MilpSolver.cpp#L227-L274); Gulosa [`GreedyHeuristicSolver.cpp` (L205–L211)](src/solver/GreedyHeuristicSolver.cpp#L205-L211).
+- **Código:** CP-SAT [`CpSatSolver.cpp` (L236–L263)](src/solver/CpSatSolver.cpp#L236-L263); MILP [`MilpSolver.cpp` (L227–L274)](src/solver/MilpSolver.cpp#L227-L274); Gulosa [`GreedyHeuristicSolver.cpp` (L181–L187)](src/solver/GreedyHeuristicSolver.cpp#L181-L187).
 
 ### R5. Sala teórica fixa por turma
-Cada turma $g$ utiliza uma única sala teórica fixa durante a semana para suas aulas teóricas de turma única ($|\mathcal{G}_a|=1$, $|b_c|=1$):
+Cada turma $g$ utiliza uma única sala teórica fixa durante a semana para suas aulas teóricas de turma única que não estejam fixadas manualmente nem possuam salas alternativas explícitas ($|\mathcal{G}_a|=1$, $|b_c|=1$, $a \notin \mathcal{A}^{fix} \cup \mathcal{A}^{exp}$):
 $$
 \sum_{r \in \mathcal{R}_g^{teo}} z_{g,r} = 1 \quad \forall g \in \mathcal{G}, \qquad
-\sum_{c \in \mathcal{C}_a:\, b_c = \{r\}} x_{a,c} \le z_{g,r} \quad \forall a \in \mathcal{A}^{teo}\ (|\mathcal{G}_a|=1),\ g \in \mathcal{G}_a,\ r \in \mathcal{R}_g^{teo}.
+\sum_{c \in \mathcal{C}_a:\, b_c = \{r\}} x_{a,c} \le z_{g,r} \quad \forall a \in \mathcal{A}^{teo} \setminus (\mathcal{A}^{fix} \cup \mathcal{A}^{exp})\ (|\mathcal{G}_a|=1),\ g \in \mathcal{G}_a,\ r \in \mathcal{R}_g^{teo}.
 $$
-Se a turma possuir sala predefinida $\bar{r}_g$, impõe-se $z_{g,\bar{r}_g} = 1$. Aulas práticas ou de laboratório não estão sujeitas a esta regra.
+Se a turma possuir sala predefinida $\bar{r}_g$, impõe-se $z_{g,\bar{r}_g} = 1$. Aulas práticas ou de laboratório, aulas fixadas manualmente ($a \in \mathcal{A}^{fix}$) e aulas com salas alternativas explícitas ($a \in \mathcal{A}^{exp}$) não estão sujeitas a esta vinculação.
 - **Literatura:** Estabilidade e particionamento de salas teóricas vs. laboratórios [[Daskalaki et al., 2004](#14-referências-bibliográficas)].
-- **Código:** Pré-processador [`Preprocessor.cpp` (L278–L289)](src/solver/Preprocessor.cpp#L278-L289); CP-SAT [`CpSatSolver.cpp` (L150–L183)](src/solver/CpSatSolver.cpp#L150-L183); MILP [`MilpSolver.cpp` (L176–L214)](src/solver/MilpSolver.cpp#L176-L214).
+- **Código:** Pré-processador [`Preprocessor.cpp` (L266–L291)](src/solver/Preprocessor.cpp#L266-L291); CP-SAT [`CpSatSolver.cpp` (L153–L191)](src/solver/CpSatSolver.cpp#L153-L191); MILP [`MilpSolver.cpp` (L176–L214)](src/solver/MilpSolver.cpp#L176-L214); Gulosa [`GreedyHeuristicSolver.cpp` (L222–L233, L271–L275)](src/solver/GreedyHeuristicSolver.cpp#L222-L233).
 
 ### R6. Limite diário de minutos por professor
-Para todo professor com teto $M_{p,d} > 0$:
+Para todo professor com teto $M_{p,d} > 0$, seja $M^{fix}_{p,d,s} = \sum_{(a,c) \in \mathcal{X}_{p,d,s}:\, a \in \mathcal{A}^{fix}} \ell_a$ a soma dos minutos das aulas manualmente fixadas do professor $p$ no dia $d$ e semestre $s$:
 $$
-m_{p,d,s} = \sum_{(a,c) \in \mathcal{X}_{p,d,s}} \ell_a\, x_{a,c} \le M_{p,d} \qquad \forall p \in \mathcal{P},\ d \in \mathcal{D},\ s \in \mathcal{S}.
+m_{p,d,s} = \sum_{(a,c) \in \mathcal{X}_{p,d,s}} \ell_a\, x_{a,c} \le \max\!\left(M_{p,d},\, M^{fix}_{p,d,s}\right) \qquad \forall p \in \mathcal{P},\ d \in \mathcal{D},\ s \in \mathcal{S}.
 $$
+Caso as aulas fixadas manualmente já ultrapassem $M_{p,d}$, o teto diário é relaxado para $M^{fix}_{p,d,s}$ a fim de preservar a viabilidade sem permitir novas aulas não fixadas no mesmo dia.
 - **Literatura:** Limite diário de carga horária docente [[Santos et al., 2012](#14-referências-bibliográficas); [Daskalaki et al., 2004](#14-referências-bibliográficas)].
-- **Código:** CP-SAT [`CpSatSolver.cpp` (L326–L347)](src/solver/CpSatSolver.cpp#L326-L347); MILP [`MilpSolver.cpp` (L320–L344)](src/solver/MilpSolver.cpp#L320-L344).
+- **Código:** CP-SAT [`CpSatSolver.cpp` (L294–L321)](src/solver/CpSatSolver.cpp#L294-L321); MILP [`MilpSolver.cpp` (L276–L306)](src/solver/MilpSolver.cpp#L276-L306).
 
 ### R7. Aulas fixadas manualmente (*Pinned*)
 Para aulas fixadas pelo usuário ($a \in \mathcal{A}^{fix}$), $\mathcal{C}_a = \mathcal{C}_a^{fix}$ contém apenas o candidato fixado, garantindo por R1:
 $$
 \sum_{c \in \mathcal{C}_a^{fix}} x_{a,c} = 1 \qquad \forall a \in \mathcal{A}^{fix}.
 $$
+As fixações manuais têm precedência sobre restrições auxiliares e opcionais (são isentas de R5, relaxam tetos em R6 e R10 e desativam R9 ou R11 quando todas as aulas estão fixadas ou as fixações são incompatíveis com o agrupamento em bloco), evitando inviabilidades artificiais decorrentes de travas do usuário.
 - **Literatura:** Pré-alocações (*preassignments*) [[Daskalaki et al., 2004](#14-referências-bibliográficas)].
-- **Código:** Pré-processador [`Preprocessor.cpp` (L308–L319)](src/solver/Preprocessor.cpp#L308-L319); Gulosa [`GreedyHeuristicSolver.cpp` (L79)](src/solver/GreedyHeuristicSolver.cpp#L79).
+- **Código:** Pré-processador [`Preprocessor.cpp` (L293–L317)](src/solver/Preprocessor.cpp#L293-L317); Gulosa [`GreedyHeuristicSolver.cpp` (L79)](src/solver/GreedyHeuristicSolver.cpp#L79).
 
 ### R8. Sincronização de disciplinas anuais entre semestres
 Para $a \in \mathcal{A}^{anual}$, tem-se $\mathcal{S}_a = \mathcal{S}$ e a mesma variável $x_{a,c}$ participa simultaneamente das restrições de ambos os semestres.
 - **Literatura:** Acoplamento multi-período por compartilhamento de variáveis [[Daskalaki et al., 2004](#14-referências-bibliográficas)].
-- **Código:** CP-SAT [`CpSatSolver.cpp` (L84–L148)](src/solver/CpSatSolver.cpp#L84-L148); MILP [`MilpSolver.cpp` (L96–L174)](src/solver/MilpSolver.cpp#L96-L174).
+- **Código:** CP-SAT [`CpSatSolver.cpp` (L87–L151)](src/solver/CpSatSolver.cpp#L87-L151); MILP [`MilpSolver.cpp` (L96–L174)](src/solver/MilpSolver.cpp#L96-L174).
 
-### R9. Primeira aula do dia deve começar no primeiro slot letivo
-Se uma turma $g$ tem aula no dia $d$ e semestre $s$, alguma aula deve ocupar o primeiro slot cadastrado da turma no dia ($t^{ini}_{g,d,1}$). Seja:
+### R9. Preenchimento integral dos slots letivos *(opcional)*
+Quando `preenchimento_integral_jornada` está ativo, para o subconjunto $\mathcal{G}^{livre}_s = \{g \in \mathcal{G} : \exists a \in \mathcal{A} \setminus \mathcal{A}^{fix} \text{ com } g \in \mathcal{G}_a,\ s \in \mathcal{S}_a\}$ de turmas com ao menos uma aula não fixada no semestre $s$, todos os slots letivos cadastrados $k \in \mathcal{K}_{g,d}$ (nos dias com variáveis candidatas para $(g,d)$) devem estar ocupados:
 $$
-B_{g,d,s} = \sum_{a \in \mathcal{A}:\, g \in \mathcal{G}_a,\ s \in \mathcal{S}_a} \sum_{c \in \mathcal{C}_a:\, d_c = d,\ t^{ini}_c = t^{ini}_{g,d,1}} x_{a,c}.
+\tilde{o}^G_{g,d,k,s} = 1 \qquad \forall g \in \mathcal{G}^{livre}_s,\ d \in \mathcal{D}_g,\ k \in \mathcal{K}_{g,d},\ s \in \mathcal{S}.
 $$
-Para cada aula $a$ da turma no dia que inicie após $t^{ini}_{g,d,1}$:
-$$
-\sum_{c \in \mathcal{C}_a:\, d_c = d,\ t^{ini}_c > t^{ini}_{g,d,1}} x_{a,c} \le B_{g,d,s} \qquad \forall g \in \mathcal{G},\ d \in \mathcal{D}_g,\ s \in \mathcal{S},\ \forall a \text{ com } g \in \mathcal{G}_a,\ s \in \mathcal{S}_a.
-$$
-- **Literatura:** Quebra de simetria temporal e eliminação de ociosidade inicial [[Santos et al., 2012](#14-referências-bibliográficas)].
-- **Código:** CP-SAT [`CpSatSolver.cpp` (L286–L324)](src/solver/CpSatSolver.cpp#L286-L324); MILP [`MilpSolver.cpp` (L276–L318)](src/solver/MilpSolver.cpp#L276-L318); Gulosa [`GreedyHeuristicSolver.cpp` (L178–L203)](src/solver/GreedyHeuristicSolver.cpp#L178-L203).
-
-### R10. Preenchimento integral dos slots letivos *(opcional)*
-Quando `preenchimento_integral_jornada` está ativo, todos os slots letivos cadastrados $k \in \mathcal{K}_{g,d}$ da turma devem estar ocupados:
-$$
-\tilde{o}^G_{g,d,k,s} = 1 \qquad \forall g \in \mathcal{G},\ d \in \mathcal{D}_g,\ k \in \mathcal{K}_{g,d},\ s \in \mathcal{S}.
-$$
+Turmas cujas aulas no semestre estejam integralmente fixadas manualmente são dispensadas desta exigência para não inviabilizar grades congeladas pelo usuário.
 - **Literatura:** *Complete / Compact Class Timetables* [[Santos et al., 2012](#14-referências-bibliográficas)].
-- **Código:** Validação por duração [`Preprocessor.cpp` (L117–L194)](src/solver/Preprocessor.cpp#L117-L194); CP-SAT [`CpSatSolver.cpp` (L349–L377)](src/solver/CpSatSolver.cpp#L349-L377); MILP [`MilpSolver.cpp` (L346–L374)](src/solver/MilpSolver.cpp#L346-L374).
+- **Código:** Validação por duração [`Preprocessor.cpp` (L124–L202)](src/solver/Preprocessor.cpp#L124-L202); CP-SAT [`CpSatSolver.cpp` (L323–L366)](src/solver/CpSatSolver.cpp#L323-L366); MILP [`MilpSolver.cpp` (L308–L351)](src/solver/MilpSolver.cpp#L308-L351).
 
-### R11. Limite máximo de aulas da mesma disciplina por dia *(opcional)*
-Quando `distribuir_disciplinas_na_semana` está ativo:
+### R10. Limite máximo de aulas da mesma disciplina por dia *(opcional)*
+Quando `distribuir_disciplinas_na_semana` está ativo, seja $P^{fix}_{q,d} = \left|\{a \in \mathcal{A}_q \cap \mathcal{A}^{fix} : d^{fix}_a = d\}\right|$ o número de ocorrências da disciplina $q$ fixadas manualmente no dia $d$:
 $$
-\sum_{a \in \mathcal{A}_q} \sum_{c \in \mathcal{C}_a:\, d_c = d} x_{a,c} \le U_{q,g} \qquad \forall q \in \mathcal{Q},\ g \in \mathcal{G}_q,\ d \in \mathcal{D}.
+\sum_{a \in \mathcal{A}_q} \sum_{c \in \mathcal{C}_a:\, d_c = d} x_{a,c} \le \max\!\left(U_{q,g},\, P^{fix}_{q,d}\right) \qquad \forall q \in \mathcal{Q},\ g \in \mathcal{G}_q,\ d \in \mathcal{D}.
 $$
+Quando as fixações manuais de $q$ no dia $d$ já superam $U_{q,g}$, o limite efetivo é elevado para $P^{fix}_{q,d}$ (e, na heurística gulosa, aulas fixadas ignoram essa verificação).
 - **Literatura:** Distribuição semanal de aulas da mesma disciplina [[Santos et al., 2012](#14-referências-bibliográficas)].
-- **Código:** CP-SAT [`CpSatSolver.cpp` (L379–L403)](src/solver/CpSatSolver.cpp#L379-L403); MILP [`MilpSolver.cpp` (L376–L402)](src/solver/MilpSolver.cpp#L376-L402); Gulosa [`GreedyHeuristicSolver.cpp` (L155–L165)](src/solver/GreedyHeuristicSolver.cpp#L155-L165).
+- **Código:** CP-SAT [`CpSatSolver.cpp` (L368–L404)](src/solver/CpSatSolver.cpp#L368-L404); MILP [`MilpSolver.cpp` (L353–L387)](src/solver/MilpSolver.cpp#L353-L387); Gulosa [`GreedyHeuristicSolver.cpp` (L159–L167)](src/solver/GreedyHeuristicSolver.cpp#L159-L167).
 
-### R12. Agrupamento de aulas em bloco *(opcional)*
-Para disciplinas com `exigirAulasConsecutivas = true`, define-se o tamanho do bloco diário como o maior divisor $B_q \in \{2, 3, 4\}$ de $|\mathcal{A}_q|$ compatível com o limite diário $U_{q,g}$ ($B_q \le U_{q,g}$ quando R11 está ativa) e com a quantidade de dias letivos ($N_q = |\mathcal{A}_q| / B_q \le |\mathcal{D}|$) — por exemplo, $(B_q, N_q) = (2,1)$ para $2$ aulas, $(2,2)$ para $4$ aulas com $U_{q,g}=2$, $(4,1)$ para $4$ aulas com $U_{q,g}\ge 4$, e $(4,2)$ para $8$ aulas com $U_{q,g}\ge 4$ —, impondo-se o agrupamento em $N_q$ dias com exatamente $B_q$ aulas no mesmo dia:
+### R11. Agrupamento de aulas em bloco *(opcional)*
+Para disciplinas com `exigirAulasConsecutivas = true`, define-se o tamanho do bloco diário como o maior divisor $B_q \in \{2, 3, 4\}$ de $|\mathcal{A}_q|$ compatível com o limite diário $U_{q,g}$ ($B_q \le U_{q,g}$ quando R10 está ativa) e com a quantidade de dias letivos ($N_q = |\mathcal{A}_q| / B_q \le |\mathcal{D}|$) — por exemplo, $(B_q, N_q) = (2,1)$ para $2$ aulas, $(2,2)$ para $4$ aulas com $U_{q,g}=2$, $(4,1)$ para $4$ aulas com $U_{q,g}\ge 4$, e $(4,2)$ para $8$ aulas com $U_{q,g}\ge 4$. Seja $\mathcal{Q}^{consec}_{ativ} \subseteq \mathcal{Q}^{consec}$ o subconjunto de disciplinas com $B_q \ge 2$ cujas aulas fixadas manualmente não violam nem esgotam a estrutura de blocos — isto é, omite-se a restrição caso todas as ocorrências estejam fixadas ($|\mathcal{A}_q \cap \mathcal{A}^{fix}| = |\mathcal{A}_q|$), haja aulas fixadas em mais de $N_q$ dias distintos ($|\{d \in \mathcal{D} : P^{fix}_{q,d} > 0\}| > N_q$) ou algum dia possua mais de $B_q$ aulas fixadas ($\exists d \in \mathcal{D}$ com $P^{fix}_{q,d} > B_q$). Para $q \in \mathcal{Q}^{consec}_{ativ}$, impõe-se o agrupamento em $N_q$ dias com exatamente $B_q$ aulas no mesmo dia:
 $$
 \sum_{a \in \mathcal{A}_q} \sum_{c \in \mathcal{C}_a:\, d_c = d} x_{a,c} = B_q\, w_{q,d} \quad \forall d \in \mathcal{D}, \qquad
-\sum_{d \in \mathcal{D}} w_{q,d} = N_q \qquad \forall q \in \mathcal{Q}^{consec}.
+\sum_{d \in \mathcal{D}} w_{q,d} = N_q \qquad \forall q \in \mathcal{Q}^{consec}_{ativ}.
 $$
 - **Literatura:** *Double Lessons* e agrupamento diário [[Santos et al., 2012](#14-referências-bibliográficas); [Daskalaki et al., 2004](#14-referências-bibliográficas)].
-- **Código:** CP-SAT [`CpSatSolver.cpp` (L417–L457)](src/solver/CpSatSolver.cpp#L417-L457); MILP [`MilpSolver.cpp` (L406–L448)](src/solver/MilpSolver.cpp#L406-L448); Gulosa [`GreedyHeuristicSolver.cpp` (L167–L175)](src/solver/GreedyHeuristicSolver.cpp#L167-L175).
+- **Código:** CP-SAT [`CpSatSolver.cpp` (L406–L468)](src/solver/CpSatSolver.cpp#L406-L468); MILP [`MilpSolver.cpp` (L389–L453)](src/solver/MilpSolver.cpp#L389-L453); Gulosa [`GreedyHeuristicSolver.cpp` (L171–L179)](src/solver/GreedyHeuristicSolver.cpp#L171-L179).
 
 ---
 
@@ -270,7 +262,7 @@ $$
 > **Nota de escopo multi-semestral:** Assim como na versão anterior, esses indicadores operam sobre $\mathcal{X}_{p,d}$ e $\mathcal{X}_{p,d,h}$ agregando os semestres. Uma futura extensão multi-semestral para os termos suaves pode indexar $y_{p,d,s}$ e $v_{p,d,h,s}$ por semestre $s$.
 
 - **Literatura:** Concentração de dias e turnos docentes [[Santos et al., 2012](#14-referências-bibliográficas)].
-- **Código:** $y_{p,d}$ em [`CpSatSolver.cpp` (L491–L526)](src/solver/CpSatSolver.cpp#L491-L526) e [`MilpSolver.cpp` (L440–L476)](src/solver/MilpSolver.cpp#L440-L476); $v_{p,d,h}$ (`y_shift`) em [`CpSatSolver.cpp` (L535–L569)](src/solver/CpSatSolver.cpp#L535-L569) e [`MilpSolver.cpp` (L478–L515)](src/solver/MilpSolver.cpp#L478-L515).
+- **Código:** $y_{p,d}$ em [`CpSatSolver.cpp` (L482–L517)](src/solver/CpSatSolver.cpp#L482-L517) e [`MilpSolver.cpp` (L457–L493)](src/solver/MilpSolver.cpp#L457-L493); $v_{p,d,h}$ (`y_shift`) em [`CpSatSolver.cpp` (L526–L560)](src/solver/CpSatSolver.cpp#L526-L560) e [`MilpSolver.cpp` (L495–L532)](src/solver/MilpSolver.cpp#L495-L532).
 
 ---
 
@@ -300,7 +292,7 @@ u^-_{i,m-1} \le u^-_{i,m}, \qquad u^+_{i,m+1} \le u^+_{i,m}.
 $$
 
 - **Literatura:** Minimização e linearização de janelas [[Santos et al., 2012](#14-referências-bibliográficas)].
-- **Código:** Janelas docentes ($J$) em [`CpSatSolver.cpp` (L571–L620)](src/solver/CpSatSolver.cpp#L571-L620) e [`MilpSolver.cpp` (L517–L617)](src/solver/MilpSolver.cpp#L517-L617); Lacunas de turmas ($J_G$) em [`CpSatSolver.cpp` (L622–L664)](src/solver/CpSatSolver.cpp#L622-L664) e [`MilpSolver.cpp` (L619–L711)](src/solver/MilpSolver.cpp#L619-L711).
+- **Código:** Janelas docentes ($J$) em [`CpSatSolver.cpp` (L562–L611)](src/solver/CpSatSolver.cpp#L562-L611) e [`MilpSolver.cpp` (L534–L634)](src/solver/MilpSolver.cpp#L534-L634); Lacunas de turmas ($J_G$) em [`CpSatSolver.cpp` (L613–L655)](src/solver/CpSatSolver.cpp#L613-L655) e [`MilpSolver.cpp` (L636–L728)](src/solver/MilpSolver.cpp#L636-L728).
 
 ---
 
@@ -338,7 +330,7 @@ $$
 
 ### 10.6. Expressão Global da Função Objetivo
 
-Implementada identicamente em CP-SAT ([`CpSatSolver.cpp` (L666–L675)](src/solver/CpSatSolver.cpp#L666-L675)) e nos motores MILP — SCIP, HiGHS e cuOpt ([`MilpSolver.cpp` (L135–L711)](src/solver/MilpSolver.cpp#L135-L711)):
+Implementada identicamente em CP-SAT ([`CpSatSolver.cpp` (L657–L666)](src/solver/CpSatSolver.cpp#L657-L666)) e nos motores MILP — SCIP, HiGHS e cuOpt ([`MilpSolver.cpp` (L135–L728)](src/solver/MilpSolver.cpp#L135-L728)):
 $$
 \boxed{\min Z = \lambda_J\, J_{min} + \lambda_D\, D_{prof} + \lambda_P\, P_{hora} + \lambda_W\, W + 10\,\lambda_T\, T_{prof} + \lambda_G\, J_{G,min}}
 $$
@@ -351,7 +343,7 @@ onde tanto $J_{min}$ quanto $J_{G,min}$ já são expressos diretamente em **minu
 Suponha duas turmas com grades distintas informadas pelo usuário na segunda-feira:
 - **Turma A:** Slot 1 = `07:30–08:12` (42 min), Slot 2 = `08:12–09:02` (50 min), *[lacuna implícita de recreio `09:02–09:17` (15 min)]*, Slot 3 = `09:17–10:02` (45 min).
   - Uma disciplina de **42 min** recebe candidatos apenas no Slot 1; uma de **50 min**, apenas no Slot 2; uma de **45 min**, apenas no Slot 3.
-  - Se as três aulas forem alocadas, o preenchimento integral (R10) é satisfeito com **0 minutos** de lacuna da turma ($J_{G,min} = 0$), pois o recreio `09:02–09:17` não é um slot letivo.
+  - Se as três aulas forem alocadas, o preenchimento integral (R9) é satisfeito com **0 minutos** de lacuna da turma ($J_{G,min} = 0$), pois o recreio `09:02–09:17` não é um slot letivo.
 - **Turma B (desalinhada):** Slot 1 = `07:45–08:30` (45 min), Slot 2 = `09:10–09:55` (45 min).
   - Se o mesmo professor lecionar na Turma A às `07:30–08:12` (Slot 1) e na Turma B, o Slot 1 da Turma B (`07:45–08:30`) é impedido por R2 pois $[450, 492) \cap [465, 510) = [465, 492) \ne \emptyset$. A aula da Turma B é alocada no Slot 2 (`09:10–09:55`), gerando ao docente apenas a janela correspondente aos minutos ociosos entre `08:12` e `09:10`.
 
@@ -379,13 +371,12 @@ o^P_{p,d,t,s} &\le 1 && \forall p, d,\ t \in \mathcal{T}^{ini}_{p,d,s},\ s \\
 o^G_{g,d,t,s} &\le 1 && \forall g, d,\ t \in \mathcal{T}^{ini}_{g,d,s},\ s \\
 \sum_{a \in \mathcal{A}:\, s \in \mathcal{S}_a} \sum_{c \in \mathcal{C}_a:\, r \in b_c} H_{a,c,d,t}\, x_{a,c} &\le 1 && \forall r, d,\ t \in \mathcal{T}^{ini}_{r,d,s},\ s \\
 \sum_{r \in \mathcal{R}_g^{teo}} z_{g,r} &= 1 && \forall g \in \mathcal{G} \\
-\sum_{c \in \mathcal{C}_a:\, b_c = \{r\}} x_{a,c} &\le z_{g,r} && \forall a \in \mathcal{A}^{teo}\ (|\mathcal{G}_a|=1),\ g \in \mathcal{G}_a,\ r \in \mathcal{R}_g^{teo} \\
+\sum_{c \in \mathcal{C}_a:\, b_c = \{r\}} x_{a,c} &\le z_{g,r} && \forall a \in \mathcal{A}^{teo} \setminus (\mathcal{A}^{fix} \cup \mathcal{A}^{exp})\ (|\mathcal{G}_a|=1),\ g \in \mathcal{G}_a,\ r \in \mathcal{R}_g^{teo} \\
 z_{g,\bar{r}_g} &= 1 && \forall g \in \mathcal{G} \text{ com sala predefinida } \bar{r}_g \\
-m_{p,d,s} &\le M_{p,d} && \forall p \text{ com } M_{p,d}>0,\ d, s \\
-\sum_{c \in \mathcal{C}_a:\, d_c = d,\ t^{ini}_c > t^{ini}_{g,d,1}} x_{a,c} &\le \sum_{a' \in \mathcal{A}:\, g \in \mathcal{G}_{a'},\, s \in \mathcal{S}_{a'}} \sum_{c' \in \mathcal{C}_{a'}:\, d_{c'}=d,\ t^{ini}_{c'}=t^{ini}_{g,d,1}} x_{a',c'} && \forall g, d \in \mathcal{D}_g, s,\ \forall a \text{ com } g \in \mathcal{G}_a,\ s \in \mathcal{S}_a \\[6pt]
-\tilde{o}^G_{g,d,k,s} &= 1 && \forall g, d \in \mathcal{D}_g, k \in \mathcal{K}_{g,d}, s \quad \text{(se R10 ativa)} \\
-\sum_{a \in \mathcal{A}_q} \sum_{c \in \mathcal{C}_a:\, d_c = d} x_{a,c} &\le U_{q,g} && \forall q, g \in \mathcal{G}_q, d \quad \text{(se R11 ativa)} \\
-\sum_{a \in \mathcal{A}_q} \sum_{c \in \mathcal{C}_a:\, d_c = d} x_{a,c} &= B_q\, w_{q,d},\quad \sum_{d \in \mathcal{D}} w_{q,d} = N_q && \forall q \in \mathcal{Q}^{consec},\ d \in \mathcal{D} \quad \text{(se R12 ativa)} \\[6pt]
+m_{p,d,s} &\le \max\!\left(M_{p,d},\, M^{fix}_{p,d,s}\right) && \forall p \text{ com } M_{p,d}>0,\ d, s \\[6pt]
+\tilde{o}^G_{g,d,k,s} &= 1 && \forall g \in \mathcal{G}^{livre}_s, d \in \mathcal{D}_g, k \in \mathcal{K}_{g,d}, s \quad \text{(se R9 ativa)} \\
+\sum_{a \in \mathcal{A}_q} \sum_{c \in \mathcal{C}_a:\, d_c = d} x_{a,c} &\le \max\!\left(U_{q,g},\, P^{fix}_{q,d}\right) && \forall q, g \in \mathcal{G}_q, d \quad \text{(se R10 ativa)} \\
+\sum_{a \in \mathcal{A}_q} \sum_{c \in \mathcal{C}_a:\, d_c = d} x_{a,c} &= B_q\, w_{q,d},\quad \sum_{d \in \mathcal{D}} w_{q,d} = N_q && \forall q \in \mathcal{Q}^{consec}_{ativ},\ d \in \mathcal{D} \quad \text{(se R11 ativa)} \\[6pt]
 x_{a,c} \le y_{p,d}, \quad y_{p,d} &\le \sum_{(a',c') \in \mathcal{X}_{p,d}} x_{a',c'} && \forall p, d,\ \forall (a,c) \in \mathcal{X}_{p,d} \\
 x_{a,c} \le v_{p,d,h}, \quad v_{p,d,h} &\le \sum_{(a',c') \in \mathcal{X}_{p,d,h}} x_{a',c'} && \forall p, d, h,\ \forall (a,c) \in \mathcal{X}_{p,d,h} \\
 u^-_{i,m} \ge o_{i,l}\ (\forall l < m), \quad u^+_{i,m} &\ge o_{i,l}\ (\forall l > m), \quad j_{i,m} \ge u^-_{i,m} + u^+_{i,m} - o_{i,m} - 1 && \forall i,\ \forall m \in \mathcal{E}_i \\[6pt]
@@ -399,28 +390,27 @@ $$
 
 | Elemento / Restrição | Literatura Base | Pré-processador (`Preprocessor.cpp` / Modelo) | CP-SAT (`CpSatSolver.cpp`) | MILP — SCIP, HiGHS e cuOpt (`MilpSolver.cpp`) |
 | :--- | :--- | :--- | :--- | :--- |
-| **Tempo contínuo ($[0, 1440)$) e slots configuráveis** | Slots heterogêneos por turma [[Daskalaki et al., 2004](#14-referências-bibliográficas)] | [`TimeSlot.h` (L15–L185)](include/model/TimeSlot.h#L15-L185), [`Turma.h` (L24–L115)](include/model/Turma.h#L24-L115) | [`L101–L148`](src/solver/CpSatSolver.cpp#L101-L148) | [`L114–L174`](src/solver/MilpSolver.cpp#L114-L174) |
-| **Filtro $\mathcal{C}_a$ — Slot exato e duração ($\Delta_k = \ell_a$)** | Pré-filtragem de domínio [[Daskalaki et al., 2004](#14-referências-bibliográficas)] | [`Preprocessor.cpp` (L199–L203, L347–L363)](src/solver/Preprocessor.cpp#L199-L203) | Implícito em $\mathcal{C}_a$ | Implícito em $\mathcal{C}_a$ |
-| **Filtro $\mathcal{C}_a$ — Disponibilidade docente** | Restrição rígida de horário [[Santos et al., 2012](#14-referências-bibliográficas)] | [`Preprocessor.cpp` (L375–L384)](src/solver/Preprocessor.cpp#L375-L384) | Implícito em $\mathcal{C}_a$ | Implícito em $\mathcal{C}_a$ |
-| **Filtro $\mathcal{C}_a$ — Salas compatíveis** | Compatibilidade de recursos [[Daskalaki et al., 2004](#14-referências-bibliográficas)] | [`Preprocessor.cpp` (L297–L318)](src/solver/Preprocessor.cpp#L297-L318) | Implícito em $\mathcal{C}_a$ | Implícito em $\mathcal{C}_a$ |
-| **R1. Alocação única de cada aula** | Alocação única de evento [[Daskalaki et al., 2004](#14-referências-bibliográficas)] | — | [`L187–L195`](src/solver/CpSatSolver.cpp#L187-L195) | [`L216–L225`](src/solver/MilpSolver.cpp#L216-L225) |
-| **R2. Não sobreposição de professores** | Cliques de não sobreposição [[Sousa & Wolsey, 1992](#14-referências-bibliográficas); [Santos et al., 2012](#14-referências-bibliográficas)] | — | [`L197–L226`](src/solver/CpSatSolver.cpp#L197-L226) (`AddNoOverlap`) | [`L227–L274`](src/solver/MilpSolver.cpp#L227-L274) (Cliques em $\mathcal{T}^{ini}$) |
-| **R3. Não sobreposição de turmas** | Prevenção de conflitos [[Santos et al., 2012](#14-referências-bibliográficas)] | — | [`L257–L284`](src/solver/CpSatSolver.cpp#L257-L284) (`AddNoOverlap`) | [`L227–L274`](src/solver/MilpSolver.cpp#L227-L274) (Cliques em $\mathcal{T}^{ini}$) |
-| **R4. Não sobreposição de salas** | Prevenção de conflitos de salas [[Daskalaki et al., 2004](#14-referências-bibliográficas)] | — | [`L228–L255`](src/solver/CpSatSolver.cpp#L228-L255) (`AddNoOverlap`) | [`L227–L274`](src/solver/MilpSolver.cpp#L227-L274) (Cliques em $\mathcal{T}^{ini}$) |
-| **R5. Sala teórica fixa ($z_{g,r}$)** | *Room Stability* [[Daskalaki et al., 2004](#14-referências-bibliográficas)] | [`Preprocessor.cpp` (L278–L289)](src/solver/Preprocessor.cpp#L278-L289) | [`L150–L183`](src/solver/CpSatSolver.cpp#L150-L183) | [`L176–L214`](src/solver/MilpSolver.cpp#L176-L214) |
-| **R6. Carga máxima diária ($M_{p,d}$)** | Limite diário de carga [[Santos et al., 2012](#14-referências-bibliográficas); [Daskalaki et al., 2004](#14-referências-bibliográficas)] | — | [`L326–L347`](src/solver/CpSatSolver.cpp#L326-L347) | [`L320–L344`](src/solver/MilpSolver.cpp#L320-L344) |
-| **R7. Aulas fixadas (*Pinned*)** | Pré-alocações (*preassignments*) [[Daskalaki et al., 2004](#14-referências-bibliográficas)] | [`Preprocessor.cpp` (L308–L319)](src/solver/Preprocessor.cpp#L308-L319) | Garantido por $\lvert\mathcal{C}_a\rvert = 1$ + R1 | Garantido por $\lvert\mathcal{C}_a\rvert = 1$ + R1 |
-| **R8. Sincronização anual** | Acoplamento multi-período [[Daskalaki et al., 2004](#14-referências-bibliográficas)] | — | [`L84–L148`](src/solver/CpSatSolver.cpp#L84-L148) | [`L96–L174`](src/solver/MilpSolver.cpp#L96-L174) |
-| **R9. Início no 1º slot ($t^{ini}_{g,d,1}$)** | Quebra de simetria [[Santos et al., 2012](#14-referências-bibliográficas)] | — | [`L286–L324`](src/solver/CpSatSolver.cpp#L286-L324) | [`L276–L318`](src/solver/MilpSolver.cpp#L276-L318) |
-| **R10. Preenchimento integral dos slots** | *Compact Class Schedules* [[Santos et al., 2012](#14-referências-bibliográficas)] | [`Preprocessor.cpp` (L117–L194)](src/solver/Preprocessor.cpp#L117-L194) | [`L349–L377`](src/solver/CpSatSolver.cpp#L349-L377) | [`L346–L374`](src/solver/MilpSolver.cpp#L346-L374) |
-| **R11. Limite diário ($U_{q,g}$)** | Distribuição semanal [[Santos et al., 2012](#14-referências-bibliográficas)] | — | [`L379–L403`](src/solver/CpSatSolver.cpp#L379-L403) | [`L376–L402`](src/solver/MilpSolver.cpp#L376-L402) |
-| **R12. Agrupamento em bloco ($w_{q,d}$)** | *Double Lessons* [[Santos et al., 2012](#14-referências-bibliográficas); [Daskalaki et al., 2004](#14-referências-bibliográficas)] | — | [`L417–L457`](src/solver/CpSatSolver.cpp#L417-L457) | [`L406–L448`](src/solver/MilpSolver.cpp#L406-L448) |
-| **Seção 8 & 10.1. Dias ($y_{p,d}, D_{prof}$)** | Concentração de dias [[Santos et al., 2012](#14-referências-bibliográficas)] | — | [`L491–L526`](src/solver/CpSatSolver.cpp#L491-L526) | [`L440–L476`](src/solver/MilpSolver.cpp#L440-L476) |
-| **Seção 10.2. Preferência horária ($P_{hora}$)** | Preferência horária (Soft) [[Santos et al., 2012](#14-referências-bibliográficas)] | [`Preprocessor.cpp` (L386–L392)](src/solver/Preprocessor.cpp#L386-L392) | [`L528–L533`](src/solver/CpSatSolver.cpp#L528-L533) | [`L135–L156`](src/solver/MilpSolver.cpp#L135-L156) |
-| **Seção 10.3. Preferência de dias ($W$)** | Preferências docentes [[Santos et al., 2012](#14-referências-bibliográficas)] | — | [`L512–L525`](src/solver/CpSatSolver.cpp#L512-L525) | [`L139–L147, L449–L451`](src/solver/MilpSolver.cpp#L139-L147) |
-| **Seção 10.4. Turnos ($v_{p,d,h}, T_{prof}$)** | Preferência por turno [[Santos et al., 2012](#14-referências-bibliográficas)] | — | [`L535–L569`](src/solver/CpSatSolver.cpp#L535-L569) | [`L478–L515`](src/solver/MilpSolver.cpp#L478-L515) |
-| **Seção 9 & 10.5. Janelas ($J_{min}, J_{G,min}$)** | Linearização de janelas [[Santos et al., 2012](#14-referências-bibliográficas)] | — | [`L571–L664`](src/solver/CpSatSolver.cpp#L571-L664) | [`L517–L711`](src/solver/MilpSolver.cpp#L517-L711) |
-| **Warm Start (grade atual em tela)** | Solução inicial primal | — | [`L677–L744`](src/solver/CpSatSolver.cpp#L677-L744) (`AddHint`) | [`L713–L837`](src/solver/MilpSolver.cpp#L713-L837) (`warm_start_vals`) |
+| **Tempo contínuo ($[0, 1440)$) e slots configuráveis** | Slots heterogêneos por turma [[Daskalaki et al., 2004](#14-referências-bibliográficas)] | [`TimeSlot.h` (L15–L185)](include/model/TimeSlot.h#L15-L185), [`Turma.h` (L24–L115)](include/model/Turma.h#L24-L115) | [`L104–L151`](src/solver/CpSatSolver.cpp#L104-L151) | [`L113–L174`](src/solver/MilpSolver.cpp#L113-L174) |
+| **Filtro $\mathcal{C}_a$ — Slot exato e duração ($\Delta_k = \ell_a$)** | Pré-filtragem de domínio [[Daskalaki et al., 2004](#14-referências-bibliográficas)] | [`Preprocessor.cpp` (L207–L211, L350–L366)](src/solver/Preprocessor.cpp#L207-L211) | Implícito em $\mathcal{C}_a$ | Implícito em $\mathcal{C}_a$ |
+| **Filtro $\mathcal{C}_a$ — Disponibilidade docente** | Restrição rígida de horário [[Santos et al., 2012](#14-referências-bibliográficas)] | [`Preprocessor.cpp` (L368–L377)](src/solver/Preprocessor.cpp#L368-L377) | Implícito em $\mathcal{C}_a$ | Implícito em $\mathcal{C}_a$ |
+| **Filtro $\mathcal{C}_a$ — Salas compatíveis** | Compatibilidade de recursos [[Daskalaki et al., 2004](#14-referências-bibliográficas)] | [`Preprocessor.cpp` (L266–L291)](src/solver/Preprocessor.cpp#L266-L291) | Implícito em $\mathcal{C}_a$ | Implícito em $\mathcal{C}_a$ |
+| **R1. Alocação única de cada aula** | Alocação única de evento [[Daskalaki et al., 2004](#14-referências-bibliográficas)] | — | [`L195–L203`](src/solver/CpSatSolver.cpp#L195-L203) | [`L216–L225`](src/solver/MilpSolver.cpp#L216-L225) |
+| **R2. Não sobreposição de professores** | Cliques de não sobreposição [[Sousa & Wolsey, 1992](#14-referências-bibliográficas); [Santos et al., 2012](#14-referências-bibliográficas)] | — | [`L205–L234`](src/solver/CpSatSolver.cpp#L205-L234) (`AddNoOverlap`) | [`L227–L274`](src/solver/MilpSolver.cpp#L227-L274) (Cliques em $\mathcal{T}^{ini}$) |
+| **R3. Não sobreposição de turmas** | Prevenção de conflitos [[Santos et al., 2012](#14-referências-bibliográficas)] | — | [`L265–L292`](src/solver/CpSatSolver.cpp#L265-L292) (`AddNoOverlap`) | [`L227–L274`](src/solver/MilpSolver.cpp#L227-L274) (Cliques em $\mathcal{T}^{ini}$) |
+| **R4. Não sobreposição de salas** | Prevenção de conflitos de salas [[Daskalaki et al., 2004](#14-referências-bibliográficas)] | — | [`L236–L263`](src/solver/CpSatSolver.cpp#L236-L263) (`AddNoOverlap`) | [`L227–L274`](src/solver/MilpSolver.cpp#L227-L274) (Cliques em $\mathcal{T}^{ini}$) |
+| **R5. Sala teórica fixa ($z_{g,r}$)** | *Room Stability* [[Daskalaki et al., 2004](#14-referências-bibliográficas)] | [`Preprocessor.cpp` (L266–L291)](src/solver/Preprocessor.cpp#L266-L291) | [`L153–L191`](src/solver/CpSatSolver.cpp#L153-L191) | [`L176–L214`](src/solver/MilpSolver.cpp#L176-L214) |
+| **R6. Carga máxima diária ($M_{p,d}$)** | Limite diário de carga [[Santos et al., 2012](#14-referências-bibliográficas); [Daskalaki et al., 2004](#14-referências-bibliográficas)] | — | [`L294–L321`](src/solver/CpSatSolver.cpp#L294-L321) | [`L276–L306`](src/solver/MilpSolver.cpp#L276-L306) |
+| **R7. Aulas fixadas (*Pinned*)** | Pré-alocações (*preassignments*) [[Daskalaki et al., 2004](#14-referências-bibliográficas)] | [`Preprocessor.cpp` (L293–L317)](src/solver/Preprocessor.cpp#L293-L317) | Garantido por $\lvert\mathcal{C}_a\rvert = 1$ + R1 | Garantido por $\lvert\mathcal{C}_a\rvert = 1$ + R1 |
+| **R8. Sincronização anual** | Acoplamento multi-período [[Daskalaki et al., 2004](#14-referências-bibliográficas)] | — | [`L87–L151`](src/solver/CpSatSolver.cpp#L87-L151) | [`L96–L174`](src/solver/MilpSolver.cpp#L96-L174) |
+| **R9. Preenchimento integral dos slots** | *Compact Class Schedules* [[Santos et al., 2012](#14-referências-bibliográficas)] | [`Preprocessor.cpp` (L124–L202)](src/solver/Preprocessor.cpp#L124-L202) | [`L323–L366`](src/solver/CpSatSolver.cpp#L323-L366) | [`L308–L351`](src/solver/MilpSolver.cpp#L308-L351) |
+| **R10. Limite diário ($U_{q,g}$)** | Distribuição semanal [[Santos et al., 2012](#14-referências-bibliográficas)] | — | [`L368–L404`](src/solver/CpSatSolver.cpp#L368-L404) | [`L353–L387`](src/solver/MilpSolver.cpp#L353-L387) |
+| **R11. Agrupamento em bloco ($w_{q,d}$)** | *Double Lessons* [[Santos et al., 2012](#14-referências-bibliográficas); [Daskalaki et al., 2004](#14-referências-bibliográficas)] | — | [`L406–L468`](src/solver/CpSatSolver.cpp#L406-L468) | [`L389–L453`](src/solver/MilpSolver.cpp#L389-L453) |
+| **Seção 8 & 10.1. Dias ($y_{p,d}, D_{prof}$)** | Concentração de dias [[Santos et al., 2012](#14-referências-bibliográficas)] | — | [`L482–L517`](src/solver/CpSatSolver.cpp#L482-L517) | [`L457–L493`](src/solver/MilpSolver.cpp#L457-L493) |
+| **Seção 10.2. Preferência horária ($P_{hora}$)** | Preferência horária (Soft) [[Santos et al., 2012](#14-referências-bibliográficas)] | [`Preprocessor.cpp` (L379–L385)](src/solver/Preprocessor.cpp#L379-L385) | [`L519–L524`](src/solver/CpSatSolver.cpp#L519-L524) | [`L135–L156`](src/solver/MilpSolver.cpp#L135-L156) |
+| **Seção 10.3. Preferência de dias ($W$)** | Preferências docentes [[Santos et al., 2012](#14-referências-bibliográficas)] | — | [`L503–L514`](src/solver/CpSatSolver.cpp#L503-L514) | [`L139–L147, L467–L469`](src/solver/MilpSolver.cpp#L139-L147) |
+| **Seção 10.4. Turnos ($v_{p,d,h}, T_{prof}$)** | Preferência por turno [[Santos et al., 2012](#14-referências-bibliográficas)] | — | [`L526–L560`](src/solver/CpSatSolver.cpp#L526-L560) | [`L495–L532`](src/solver/MilpSolver.cpp#L495-L532) |
+| **Seção 9 & 10.5. Janelas ($J_{min}, J_{G,min}$)** | Linearização de janelas [[Santos et al., 2012](#14-referências-bibliográficas)] | — | [`L562–L655`](src/solver/CpSatSolver.cpp#L562-L655) | [`L534–L728`](src/solver/MilpSolver.cpp#L534-L728) |
+| **Warm Start (grade atual em tela)** | Solução inicial primal | — | [`L668–L735`](src/solver/CpSatSolver.cpp#L668-L735) (`AddHint`) | [`L730–L855`](src/solver/MilpSolver.cpp#L730-L855) (`warm_start_vals`) |
 
 ---
 

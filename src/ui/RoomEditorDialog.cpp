@@ -5,6 +5,7 @@
 
 #include "ui/RoomEditorDialog.h"
 #include "ui/ModernTheme.h"
+#include "ui/ResponsiveUi.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -44,33 +45,44 @@ RoomEditorDialog::RoomEditorDialog(QWidget* parent, const model::Room* room, con
  */
 void RoomEditorDialog::setupUi() {
     setWindowIcon(ModernTheme::icon("room"));
-    setMinimumWidth(450);
-    auto* main_layout = new QVBoxLayout(this);
-    main_layout->setSpacing(14);
+    setMinimumSize(380, 260);
+
+    auto* root_layout = new QVBoxLayout(this);
+    root_layout->setContentsMargins(12, 12, 12, 12);
+    root_layout->setSpacing(10);
+
+    auto* body_widget = new QWidget(this);
+    auto* body_layout = new QVBoxLayout(body_widget);
+    body_layout->setContentsMargins(2, 2, 2, 2);
 
     auto* form_layout = new QFormLayout();
+    form_layout->setSpacing(10);
+    form_layout->setFieldGrowthPolicy(QFormLayout::ExpandingFieldsGrow);
 
-    txt_nome_ = new QLineEdit(this);
+    txt_nome_ = new QLineEdit(body_widget);
     txt_nome_->setPlaceholderText("Ex: Sala Teórica 101");
     form_layout->addRow("Nome:", txt_nome_);
 
-    combo_tipo_ = new QComboBox(this);
+    combo_tipo_ = new QComboBox(body_widget);
     combo_tipo_->addItem("Sala Teórica (TEORICA)", "TEORICA");
     combo_tipo_->addItem("Laboratório (LABORATORIO)", "LABORATORIO");
     combo_tipo_->addItem("Ambiente Especial (ESPECIAL)", "ESPECIAL");
+    makeComboResponsive(combo_tipo_, 18, 180);
     form_layout->addRow("Tipo de Ambiente:", combo_tipo_);
 
-    spin_capacidade_ = new QSpinBox(this);
+    spin_capacidade_ = new QSpinBox(body_widget);
     spin_capacidade_->setRange(1, 500);
     spin_capacidade_->setValue(40);
     spin_capacidade_->setSuffix(" alunos");
     form_layout->addRow("Capacidade:", spin_capacidade_);
 
-    txt_recursos_ = new QLineEdit(this);
+    txt_recursos_ = new QLineEdit(body_widget);
     txt_recursos_->setPlaceholderText("Ex: Projetor, Ar Condicionado, Lousa");
     form_layout->addRow("Recursos Adicionais:", txt_recursos_);
 
-    main_layout->addLayout(form_layout);
+    body_layout->addLayout(form_layout);
+    body_layout->addStretch();
+    root_layout->addWidget(wrapInScrollArea(body_widget, this), 1);
 
     auto* btn_box = new QHBoxLayout();
     btn_box->addStretch();
@@ -79,7 +91,7 @@ void RoomEditorDialog::setupUi() {
     auto* btn_save = new QPushButton(ModernTheme::icon("save_file"), "Salvar Sala", this);
     btn_box->addWidget(btn_cancel);
     btn_box->addWidget(btn_save);
-    main_layout->addLayout(btn_box);
+    root_layout->addLayout(btn_box);
 
     connect(btn_cancel, &QPushButton::clicked, this, &QDialog::reject);
     connect(btn_save, &QPushButton::clicked, [this]() {
@@ -89,6 +101,8 @@ void RoomEditorDialog::setupUi() {
         }
         accept();
     });
+
+    fitWindowToScreen(this, QSize(460, 320));
 }
 
 /**

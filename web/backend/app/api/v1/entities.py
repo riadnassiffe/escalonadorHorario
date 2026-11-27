@@ -5,6 +5,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.deps import get_project_for_user
@@ -13,6 +14,7 @@ from app.core.security import require_roles
 from app.models.academic import DisciplinaModel, ProfessorModel, RoomModel, TurmaModel
 from app.models.auth import User
 from app.models.project import Project
+from app.models.timetable import AllocatedLessonModel, TimetableVersion
 from app.schemas.academic import (
     BatchProvisionRequest,
     BatchProvisionResponse,
@@ -146,6 +148,59 @@ async def _apply_professor_email_change(
         row.email = normalized
 
 
+def _validate_professor_code(raw_code: str) -> str:
+    code = raw_code.strip()
+    if not code:
+        raise HTTPException(status_code=400, detail="ID do professor é obrigatório.")
+    if len(code) > 64:
+        raise HTTPException(status_code=400, detail="ID do professor deve ter no máximo 64 caracteres.")
+    if "/" in code or "\\" in code:
+        raise HTTPException(status_code=400, detail="ID do professor não pode conter '/' ou '\\'.")
+    return code
+
+
+def _replace_code_in_list(items: list[str] | None, old_code: str, new_code: str) -> tuple[list[str], bool]:
+    if not items or old_code not in items:
+        return list(items or []), False
+    updated: list[str] = []
+    for item in items:
+        mapped = new_code if item == old_code else item
+        if mapped not in updated:
+            updated.append(mapped)
+    return updated, True
+
+
+async def _propagate_professor_code_rename(
+    db: AsyncSession,
+    project_id: uuid.UUID,
+    old_code: str,
+    new_code: str,
+) -> None:
+    disciplinas = (
+        await db.execute(select(DisciplinaModel).where(DisciplinaModel.project_id == project_id))
+    ).scalars().all()
+    for disc in disciplinas:
+        updated, changed = _replace_code_in_list(disc.professores, old_code, new_code)
+        if changed:
+            disc.professores = updated
+
+    version_ids = list(
+        (
+            await db.execute(select(TimetableVersion.id).where(TimetableVersion.project_id == project_id))
+        ).scalars().all()
+    )
+    if version_ids:
+        alocacoes = (
+            await db.execute(
+                select(AllocatedLessonModel).where(AllocatedLessonModel.version_id.in_(version_ids))
+            )
+        ).scalars().all()
+        for aloc in alocacoes:
+            updated, changed = _replace_code_in_list(aloc.professores, old_code, new_code)
+            if changed:
+                aloc.professores = updated
+
+
 # --- Professores ---
 @router.get("/professores", response_model=list[ProfessorResponse])
 async def list_professores(project: Project = Depends(get_project_for_user), db: AsyncSession = Depends(get_db)):
@@ -170,7 +225,11 @@ async def create_professor(
     db: AsyncSession = Depends(get_db),
 ):
     codes = list((await db.execute(select(ProfessorModel.code).where(ProfessorModel.project_id == project.id))).scalars().all())
-    code = req.code.strip() if req.code else next_sequential_code(codes, "P")
+    code = (
+        _validate_professor_code(req.code)
+        if (req.code is not None and req.code.strip())
+        else next_sequential_code(codes, "P")
+    )
     if code in codes:
         raise HTTPException(status_code=400, detail=f"Professor '{code}' já existe.")
     model = ProfessorModel(
@@ -309,6 +368,24 @@ async def update_professor(
     if row is None:
         raise HTTPException(status_code=404, detail="Professor não encontrado.")
 
+    old_code = row.code
+    if req.code is not None:
+        new_code = _validate_professor_code(req.code)
+        if new_code != old_code:
+            existing_id = (
+                await db.execute(
+                    select(ProfessorModel.id).where(
+                        ProfessorModel.project_id == project.id,
+                        ProfessorModel.code == new_code,
+                        ProfessorModel.id != row.id,
+                    )
+                )
+            ).scalar_one_or_none()
+            if existing_id is not None:
+                raise HTTPException(status_code=400, detail=f"Professor '{new_code}' já existe.")
+            row.code = new_code
+            await _propagate_professor_code_rename(db, project.id, old_code, new_code)
+
     if req.email is not None:
         await _apply_professor_email_change(db, project, row, req.email)
     elif row.user_id is None:
@@ -326,7 +403,11 @@ async def update_professor(
     row.carga_maxima_diaria_minutos = req.carga_maxima_diaria_minutos
     row.max_aulas_por_dia = req.max_aulas_por_dia
     row.peso_janela = req.peso_janela
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=f"Professor '{row.code}' já existe.") from exc
     await db.refresh(row)
     user_map = await _load_user_map(db, [row])
     return _prof_resp(row, user_map)
@@ -534,6 +615,37 @@ async def copy_turma(
         else:
             salas_permitidas = list(source.salas_teoricas_permitidas or [])
 
+    all_discs: list[DisciplinaModel] = []
+    discs_to_copy: list[DisciplinaModel] = []
+    if req.copy_disciplinas:
+        all_discs = list(
+            (
+                await db.execute(
+                    select(DisciplinaModel)
+                    .where(DisciplinaModel.project_id == project.id)
+                    .order_by(DisciplinaModel.code)
+                )
+            ).scalars().all()
+        )
+        linked_discs = [d for d in all_discs if source.code in (d.turmas or [])]
+        if req.disciplina_codes is not None:
+            requested_codes: list[str] = []
+            for raw_code in req.disciplina_codes:
+                cleaned = raw_code.strip()
+                if cleaned and cleaned not in requested_codes:
+                    requested_codes.append(cleaned)
+            linked_code_set = {d.code for d in linked_discs}
+            invalid_codes = [c for c in requested_codes if c not in linked_code_set]
+            if invalid_codes:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Disciplina(s) inválida(s) ou não vinculada(s) à turma '{source.code}': {', '.join(invalid_codes)}",
+                )
+            requested_set = set(requested_codes)
+            discs_to_copy = [d for d in linked_discs if d.code in requested_set]
+        else:
+            discs_to_copy = linked_discs
+
     new_turma = TurmaModel(
         project_id=project.id,
         code=new_code,
@@ -548,20 +660,12 @@ async def copy_turma(
     db.add(new_turma)
 
     copied_models: list[DisciplinaModel] = []
-    if req.copy_disciplinas:
-        all_discs = (
-            await db.execute(
-                select(DisciplinaModel)
-                .where(DisciplinaModel.project_id == project.id)
-                .order_by(DisciplinaModel.code)
-            )
-        ).scalars().all()
+    if req.copy_disciplinas and discs_to_copy:
         used_disc_codes = [d.code for d in all_discs]
         used_disc_set = set(used_disc_codes)
-        linked_discs = [d for d in all_discs if source.code in (d.turmas or [])]
 
         source_prefix = f"{source.code}_"
-        for d in linked_discs:
+        for d in discs_to_copy:
             if d.code.startswith(source_prefix):
                 candidate = f"{new_code}_{d.code[len(source_prefix):]}"
                 if len(candidate) <= 64 and candidate not in used_disc_set:
