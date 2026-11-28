@@ -10,6 +10,7 @@ interface Props {
   roomNames: string;
   conflicts?: SlotConflictInfo[];
   isSelected?: boolean;
+  canSwap?: boolean;
   isSearchMatch?: boolean;
   dimmed?: boolean;
   onSelect: () => void;
@@ -24,6 +25,7 @@ export function DraggableLessonCard({
   roomNames,
   conflicts = [],
   isSelected = false,
+  canSwap = false,
   isSearchMatch = false,
   dimmed = false,
   onSelect,
@@ -39,12 +41,15 @@ export function DraggableLessonCard({
     transform: CSS.Translate.toString(transform),
   };
 
-  const borderColor =
-    lesson.tipo === "LABORATORIO"
-      ? "border-l-pink-600 bg-pink-50/90 dark:bg-pink-950/40"
-      : lesson.tipo === "ESPECIAL"
-      ? "border-l-violet-600 bg-violet-50/90 dark:bg-violet-950/40"
-      : "border-l-blue-600 bg-blue-50/90 dark:bg-blue-950/40";
+  const showSwapHighlight = canSwap && !isSelected;
+
+  const cardColorClass = showSwapHighlight
+    ? "border-emerald-400 border-l-emerald-600 bg-emerald-100/95 hover:bg-emerald-200/80 dark:border-emerald-700 dark:border-l-emerald-500 dark:bg-emerald-950/70 dark:hover:bg-emerald-900/70"
+    : lesson.tipo === "LABORATORIO"
+    ? "border-slate-200 border-l-pink-600 bg-pink-50/90 dark:border-slate-700 dark:bg-pink-950/40"
+    : lesson.tipo === "ESPECIAL"
+    ? "border-slate-200 border-l-violet-600 bg-violet-50/90 dark:border-slate-700 dark:bg-violet-950/40"
+    : "border-slate-200 border-l-blue-600 bg-blue-50/90 dark:border-slate-700 dark:bg-blue-950/40";
 
   const regimeBadge =
     lesson.regime === "ANUAL"
@@ -59,6 +64,8 @@ export function DraggableLessonCard({
       style={style}
       {...listeners}
       {...attributes}
+      data-swap-eligible={showSwapHighlight ? "true" : undefined}
+      title={showSwapHighlight ? "Troca (swap) sem conflitos disponível com a aula selecionada" : undefined}
       onClick={(e) => {
         e.stopPropagation();
         onSelect();
@@ -73,7 +80,7 @@ export function DraggableLessonCard({
         onSelect();
         onContextMenu(e);
       }}
-      className={`group relative cursor-grab select-none rounded-md border border-slate-200 border-l-4 p-1.5 text-xs shadow-xs transition active:cursor-grabbing dark:border-slate-700 ${borderColor} ${
+      className={`group relative cursor-grab select-none rounded-md border border-l-4 p-1.5 text-xs shadow-xs transition active:cursor-grabbing ${cardColorClass} ${
         isDragging ? "opacity-30" : ""
       } ${isSelected ? "ring-2 ring-amber-500 dark:ring-amber-400" : ""} ${
         isSearchMatch ? "ring-2 ring-cyan-500" : ""
@@ -85,7 +92,13 @@ export function DraggableLessonCard({
         </span>
         <div className="flex shrink-0 items-center gap-1">
           {lesson.is_pinned && <Pin className="h-3 w-3 text-amber-600 dark:text-amber-400" />}
-          {conflicts.length > 0 && (
+          {showSwapHighlight && (
+        <div className="mt-1 rounded bg-emerald-200/80 px-1 py-0.5 text-[10px] font-semibold text-emerald-900 dark:bg-emerald-900/80 dark:text-emerald-200 truncate">
+          ⇄ Troca livre
+        </div>
+      )}
+
+      {conflicts.length > 0 && (
             <span title={conflicts.map((c) => c.detail).join("\n")}>
               <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
             </span>
@@ -108,6 +121,12 @@ export function DraggableLessonCard({
           {lesson.end_min - lesson.start_min}m
         </span>
       </div>
+
+      {showSwapHighlight && (
+        <div className="mt-1 rounded bg-emerald-200/80 px-1 py-0.5 text-[10px] font-semibold text-emerald-900 dark:bg-emerald-900/80 dark:text-emerald-200 truncate">
+          ⇄ Troca livre
+        </div>
+      )}
 
       {conflicts.length > 0 && (
         <div className="mt-1 rounded bg-rose-100 px-1 py-0.5 text-[10px] font-medium text-rose-700 dark:bg-rose-950 dark:text-rose-300 truncate">

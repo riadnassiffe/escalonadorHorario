@@ -189,7 +189,7 @@ const mockSnapshot: DomainSnapshot = {
       max_aulas_por_dia_turma: 2,
     },
   },
-  config: { distribuir_disciplinas_na_semana: true, max_aulas_disciplina_dia_turma: 2 },
+  config: { distribuir_disciplinas_na_semana: true },
   alocacoes: [],
 };
 

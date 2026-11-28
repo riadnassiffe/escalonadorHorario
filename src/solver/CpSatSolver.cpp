@@ -13,8 +13,11 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <map>
+#include <set>
 #include <string>
+#include <tuple>
 #include <vector>
 
 namespace scheduler::solver {
@@ -370,7 +373,7 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
     if (data.config().distribuir_disciplinas_na_semana) {
         for (const auto& disc : data.disciplinas()) {
             if (vars_por_aula.find(disc.id() + "_1") == vars_por_aula.end()) continue;
-            int max_por_dia = disc.maxAulasPorDiaTurma() > 0 ? disc.maxAulasPorDiaTurma() : data.config().max_aulas_disciplina_dia_turma;
+            int max_por_dia = disc.maxAulasPorDiaTurma();
             if (max_por_dia > 0) {
                 for (const auto& t_id : disc.turmas()) {
                     (void)t_id;
@@ -403,12 +406,19 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
         }
     }
 
-    // 5.8 Disciplinas com aulas consecutivas em bloco (seção 7 / R12):
+    // 5.8 Disciplinas com aulas consecutivas em bloco (seção 7 / R11):
+    struct ConsecDayHint {
+        std::vector<BoolVar> day_vars;
+        BoolVar w_d;
+    };
+    std::vector<ConsecDayHint> consec_day_hints;
+
+    if (data.config().exigir_aulas_consecutivas_rigido) {
     for (const auto& disc : data.disciplinas()) {
         if (!disc.exigirAulasConsecutivas()) continue;
         if (vars_por_aula.find(disc.id() + "_1") == vars_por_aula.end()) continue;
         int n_aulas = disc.aulasSemanais();
-        int max_por_dia = disc.maxAulasPorDiaTurma() > 0 ? disc.maxAulasPorDiaTurma() : data.config().max_aulas_disciplina_dia_turma;
+        int max_por_dia = disc.maxAulasPorDiaTurma();
         int teto_bloco = (data.config().distribuir_disciplinas_na_semana && max_por_dia > 0)
                              ? std::min(4, max_por_dia)
                              : 4;
@@ -450,6 +460,7 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
             dias_ativas.push_back(w_d);
 
             LinearExpr aulas_disc_dia;
+            std::vector<BoolVar> day_vars;
             for (int i = 1; i <= n_aulas; ++i) {
                 std::string aula_id = disc.id() + "_" + std::to_string(i);
                 auto it_v = vars_por_aula.find(aula_id);
@@ -457,14 +468,17 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
                 for (const auto& item : it_v->second) {
                     if (item.cand->dia == dia) {
                         aulas_disc_dia += item.var;
+                        day_vars.push_back(item.var);
                     }
                 }
             }
             cp_model.AddEquality(aulas_disc_dia, block_size * w_d);
+            consec_day_hints.push_back(ConsecDayHint{std::move(day_vars), w_d});
         }
         LinearExpr sum_dias;
         for (auto w : dias_ativas) sum_dias += w;
         cp_model.AddEquality(sum_dias, num_days);
+    }
     }
 
     if (callback) callback("Configurando função objetivo e preferências...", 0.40);
@@ -478,6 +492,30 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
     LinearExpr expr_J;   // Janelas de professores (calculadas por turno e ponderadas pelo peso do professor)
     LinearExpr expr_T;   // Penalidades por turnos não pretendidos pelos professores
     LinearExpr expr_JG;  // Lacunas de turmas
+    LinearExpr expr_C;   // Benefício de pares de aulas consecutivas
+
+    struct ConsecPairHint {
+        std::string disc_id;
+        model::DayOfWeek dia;
+        model::TimeInterval slot_a;
+        model::TimeInterval slot_b;
+        BoolVar var;
+    };
+    struct ShiftHint {
+        std::vector<BoolVar> shift_vars;
+        BoolVar y_shift;
+    };
+    struct GapHint {
+        std::vector<BoolVar> before_vars;
+        std::vector<BoolVar> after_vars;
+        std::vector<BoolVar> cover_vars;
+        BoolVar u;
+        BoolVar v;
+        BoolVar g;
+    };
+    std::vector<ConsecPairHint> consec_pair_hints;
+    std::vector<ShiftHint> shift_hints;
+    std::vector<GapHint> gap_hints;
 
     // 6.1 Variáveis y_{p,d}: indica se professor p trabalha no dia d (seção 4.2 & 4.4)
     std::map<std::pair<std::string, model::DayOfWeek>, BoolVar> y_prof_dia;
@@ -550,13 +588,16 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
                         std::to_string(static_cast<int>(shift)) + "_" + std::to_string(shift_var_idx++));
 
                     LinearExpr sum_shift;
+                    std::vector<BoolVar> shift_vars;
                     for (const auto& item : items_shift) {
                         cp_model.AddLessOrEqual(item.var, y_shift);
                         sum_shift += item.var;
+                        shift_vars.push_back(item.var);
                     }
                     cp_model.AddLessOrEqual(y_shift, sum_shift);
 
                     expr_T += y_shift;
+                    shift_hints.push_back(ShiftHint{std::move(shift_vars), y_shift});
                 }
 
                 // Cálculo de janelas em minutos dentro deste turno via segmentos elementares (Termo J)
@@ -579,11 +620,13 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
 
                     std::vector<BoolVar> cands_before;
                     std::vector<BoolVar> cands_after;
+                    std::vector<BoolVar> cands_cover;
                     LinearExpr w_m;
 
                     for (const auto& item : items_shift) {
                         if (item.cand->start_min <= seg_s && seg_e <= item.cand->end_min()) {
                             w_m += item.var;
+                            cands_cover.push_back(item.var);
                         }
                         if (item.cand->end_min() <= seg_s) {
                             cands_before.push_back(item.var);
@@ -604,6 +647,8 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
                         cp_model.AddGreaterOrEqual(g, u + v - 1 - w_m);
 
                         expr_J += (prof.pesoJanela() * dur) * g;
+                        gap_hints.push_back(GapHint{
+                            std::move(cands_before), std::move(cands_after), std::move(cands_cover), u, v, g});
                     }
                 }
             }
@@ -624,11 +669,13 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
 
                     std::vector<BoolVar> cands_before;
                     std::vector<BoolVar> cands_after;
+                    std::vector<BoolVar> cands_cover;
                     LinearExpr w_k;
 
                     for (const auto& item : items) {
                         if (item.cand->start_min < slot.end_min && slot.start_min < item.cand->end_min()) {
                             w_k += item.var;
+                            cands_cover.push_back(item.var);
                         }
                         if (item.cand->end_min() <= slot.start_min) {
                             cands_before.push_back(item.var);
@@ -648,7 +695,53 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
 
                         cp_model.AddGreaterOrEqual(q, u + v - 1 - w_k);
                         expr_JG += dur * q;
+                        gap_hints.push_back(GapHint{
+                            std::move(cands_before), std::move(cands_after), std::move(cands_cover), u, v, q});
                     }
+                }
+            }
+        }
+    }
+
+    // 6.4b Termo C: Benefício para pares de aulas consecutivas no mesmo turno
+    if (data.config().lambda_aulas_consecutivas > 0) {
+        for (const auto& disc : data.disciplinas()) {
+            if (!disc.exigirAulasConsecutivas() || disc.aulasSemanais() < 2 || disc.turmas().empty()) continue;
+            if (vars_por_aula.find(disc.id() + "_1") == vars_por_aula.end()) continue;
+
+            const auto* turma = data.findTurma(disc.turmas().front());
+            if (!turma) continue;
+
+            std::map<std::tuple<model::DayOfWeek, int, int>, std::vector<BoolVar>> slot_vars;
+            for (int i = 1; i <= disc.aulasSemanais(); ++i) {
+                auto it_v = vars_por_aula.find(disc.id() + "_" + std::to_string(i));
+                if (it_v == vars_por_aula.end()) continue;
+                for (const auto& item : it_v->second) {
+                    slot_vars[{item.cand->dia, item.cand->start_min, item.cand->end_min()}].push_back(item.var);
+                }
+            }
+
+            for (auto dia : turma->diasLetivos()) {
+                auto slots = turma->jornadaParaDia(dia).slots_letivos;
+                std::sort(slots.begin(), slots.end());
+                for (size_t k = 0; k + 1 < slots.size(); ++k) {
+                    if (model::timeToShift(slots[k].start_min) != model::timeToShift(slots[k + 1].start_min)) {
+                        continue;
+                    }
+                    auto it_a = slot_vars.find({dia, slots[k].start_min, slots[k].end_min});
+                    auto it_b = slot_vars.find({dia, slots[k + 1].start_min, slots[k + 1].end_min});
+                    if (it_a == slot_vars.end() || it_b == slot_vars.end()) continue;
+
+                    BoolVar p = cp_model.NewBoolVar().WithName(
+                        "c_" + disc.id() + "_" + std::to_string(static_cast<int>(dia)) + "_" + std::to_string(k));
+                    LinearExpr sum_a, sum_b;
+                    for (const auto& v : it_a->second) sum_a += v;
+                    for (const auto& v : it_b->second) sum_b += v;
+                    cp_model.AddLessOrEqual(p, sum_a);
+                    cp_model.AddLessOrEqual(p, sum_b);
+
+                    expr_C += p;
+                    consec_pair_hints.push_back(ConsecPairHint{disc.id(), dia, slots[k], slots[k + 1], p});
                 }
             }
         }
@@ -662,6 +755,9 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
     funcao_objetivo += data.config().lambda_preferencia_dias * expr_W;
     funcao_objetivo += data.config().lambda_preferencia_turnos * 10 * expr_T;
     funcao_objetivo += data.config().lambda_lacunas_turma * expr_JG;
+    if (data.config().lambda_aulas_consecutivas > 0) {
+        funcao_objetivo -= static_cast<int64_t>(data.config().lambda_aulas_consecutivas) * 50 * expr_C;
+    }
 
     cp_model.Minimize(funcao_objetivo);
 
@@ -669,6 +765,7 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
     if (data.config().usar_distribuicao_como_entrada && !data.grade().alocacoes().empty()) {
         if (callback) callback("Aplicando distribuição atual em tela como solução inicial (Warm Start)...", 0.55);
         int hints_aplicados = 0;
+        std::set<int> hinted_true_idx;
 
         std::map<std::string, const model::AllocatedLesson*> aloc_map;
         for (const auto& a : data.grade().alocacoes()) {
@@ -694,6 +791,7 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
 
             if (matching_item) {
                 cp_model.AddHint(matching_item->var, true);
+                hinted_true_idx.insert(matching_item->var.index());
                 hints_aplicados++;
                 for (const auto& item : items) {
                     if (&item != matching_item) {
@@ -703,11 +801,21 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
             }
         }
 
-        // Hints para salas teóricas designadas
-        for (const auto& [turma_id, sala_id] : data.grade().salasTeoricasDesignadas()) {
-            auto it = z_turma_sala.find({turma_id, sala_id});
-            if (it != z_turma_sala.end()) {
-                cp_model.AddHint(it->second, true);
+        // Hints completos para salas teóricas designadas (z_{g,r})
+        for (const auto& turma : data.turmas()) {
+            std::string chosen_r;
+            auto it_des = data.grade().salasTeoricasDesignadas().find(turma.id());
+            if (it_des != data.grade().salasTeoricasDesignadas().end()) {
+                chosen_r = it_des->second;
+            } else if (turma.temSalaTeoricaPredefinida()) {
+                chosen_r = turma.salaTeoricaId();
+            } else if (!turma.salasTeoricasPermitidas().empty()) {
+                chosen_r = turma.salasTeoricasPermitidas().front();
+            }
+            for (const auto& [par, z_var] : z_turma_sala) {
+                if (par.first == turma.id()) {
+                    cp_model.AddHint(z_var, par.second == chosen_r);
+                }
             }
         }
 
@@ -728,6 +836,52 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
                     cp_model.AddHint(it->second, trabalha);
                 }
             }
+        }
+
+        if (!consec_pair_hints.empty()) {
+            std::set<std::tuple<std::string, model::DayOfWeek, int, int>> aloc_set;
+            for (const auto& aloc : data.grade().alocacoes()) {
+                aloc_set.insert({aloc.disciplina_id, aloc.dia, aloc.intervalo.start_min, aloc.intervalo.end_min});
+            }
+            for (const auto& h : consec_pair_hints) {
+                bool has_a = aloc_set.count({h.disc_id, h.dia, h.slot_a.start_min, h.slot_a.end_min}) > 0;
+                bool has_b = aloc_set.count({h.disc_id, h.dia, h.slot_b.start_min, h.slot_b.end_min}) > 0;
+                cp_model.AddHint(h.var, has_a && has_b);
+            }
+        }
+
+        for (const auto& h : consec_day_hints) {
+            bool active = false;
+            for (const auto& v : h.day_vars) {
+                if (hinted_true_idx.count(v.index()) > 0) { active = true; break; }
+            }
+            cp_model.AddHint(h.w_d, active);
+        }
+
+        for (const auto& h : shift_hints) {
+            bool active = false;
+            for (const auto& v : h.shift_vars) {
+                if (hinted_true_idx.count(v.index()) > 0) { active = true; break; }
+            }
+            cp_model.AddHint(h.y_shift, active);
+        }
+
+        for (const auto& h : gap_hints) {
+            bool u_val = false;
+            for (const auto& b : h.before_vars) {
+                if (hinted_true_idx.count(b.index()) > 0) { u_val = true; break; }
+            }
+            bool v_val = false;
+            for (const auto& a : h.after_vars) {
+                if (hinted_true_idx.count(a.index()) > 0) { v_val = true; break; }
+            }
+            bool cov_val = false;
+            for (const auto& c : h.cover_vars) {
+                if (hinted_true_idx.count(c.index()) > 0) { cov_val = true; break; }
+            }
+            cp_model.AddHint(h.u, u_val);
+            cp_model.AddHint(h.v, v_val);
+            cp_model.AddHint(h.g, u_val && v_val && !cov_val);
         }
 
         timetable.addMensagemDiagnostico("[WARM-START] " + std::to_string(hints_aplicados) +
@@ -879,6 +1033,8 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
 
         stats.penalidade_preferencias_P = static_cast<int>(SolutionIntegerValue(response, expr_P));
 
+        stats.beneficio_consecutivas_C = detail::calcularBeneficioConsecutivas(data, timetable);
+
         timetable.setEstatisticas(stats);
         if (stop_requested_.load() && stats.status == "FEASIBLE") {
             timetable.addMensagemDiagnostico("[INTERROMPIDO] Otimização interrompida pelo usuário. Aplicada a melhor solução viável encontrada até o momento.");
@@ -933,8 +1089,8 @@ model::Timetable ScheduleSolver::solveCpSat(const model::InstitutionData& data,
         } else if (data.config().tempo_limite_segundos > 0.0 &&
                    tempo_ms < data.config().tempo_limite_segundos * 1000.0 * 0.85) {
             std::string msg = "[LIMITE_MEMORIA_OU_BUSCA] O solver CP-SAT encerrou antes do tempo limite configurado (" +
-                              std::to_string(static_cast<int>(std::llround(tempo_ms / 1000.0))) + "s de " +
-                              std::to_string(static_cast<int>(std::llround(data.config().tempo_limite_segundos))) + "s) sem solução viável.";
+                              model::formatDurationMs(tempo_ms) + " de " +
+                              model::formatDurationSeconds(data.config().tempo_limite_segundos) + ") sem solução viável.";
             if (has_mem_limit) {
                 msg += " Limite de memória configurado: " + std::to_string(data.config().max_memoria_mb) + " MB.";
             }

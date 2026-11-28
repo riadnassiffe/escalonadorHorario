@@ -7,7 +7,14 @@ from typing import Any
 from jinja2 import Template
 
 from app.services.conflict_engine import ProjectSnapshot
-from app.services.time_utils import ALL_DAYS, DAY_LONG_NAMES, compute_implicit_breaks, minutes_to_time_str, time_str_to_minutes
+from app.services.time_utils import (
+    ALL_DAYS,
+    DAY_LONG_NAMES,
+    compute_implicit_breaks,
+    format_duration_ms,
+    minutes_to_time_str,
+    time_str_to_minutes,
+)
 
 
 def _regime_semestre_label(aloc: dict[str, Any]) -> str:
@@ -108,7 +115,7 @@ HTML_TEMPLATE = Template("""<!DOCTYPE html>
   </div>
   <div class="kpis">
     <div class="kpi"><div class="kpi-label">Status</div><div class="kpi-val">{{ stats.get("status", "NAO_EXECUTADO") }}</div></div>
-    <div class="kpi"><div class="kpi-label">Tempo</div><div class="kpi-val">{{ "%.1f"|format(stats.get("tempo_execucao_ms", 0)) }} ms</div></div>
+    <div class="kpi"><div class="kpi-label">Tempo</div><div class="kpi-val">{{ tempo_execucao_formatado }}</div></div>
     <div class="kpi"><div class="kpi-label">Aulas Alocadas</div><div class="kpi-val">{{ stats.get("total_aulas_alocadas", 0) }} / {{ stats.get("total_aulas_esperadas", 0) }}</div></div>
     <div class="kpi"><div class="kpi-label">Janelas Profs (J)</div><div class="kpi-val">{{ stats.get("penalidade_janelas_J", 0) }} min</div></div>
     <div class="kpi"><div class="kpi-label">Dias Trabalhados (D)</div><div class="kpi-val">{{ stats.get("penalidade_dias_D", 0) }}</div></div>
@@ -272,6 +279,7 @@ def export_html_report(
     return HTML_TEMPLATE.render(
         project_name=project_name,
         stats=stats or {},
+        tempo_execucao_formatado=format_duration_ms(float((stats or {}).get("tempo_execucao_ms", 0) or 0)),
         sections=sections,
         days=ALL_DAYS,
         day_names=DAY_LONG_NAMES,

@@ -1,3 +1,4 @@
+import { formatDurationMs } from "../../domain/time";
 import type { TimetableResponse } from "../../types";
 
 interface Props {
@@ -28,7 +29,12 @@ export function KpiBanner({ timetable }: Props) {
 
       <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
         <div className="text-[11px] font-medium uppercase text-slate-500">Tempo</div>
-        <div className="mt-1 text-lg font-bold">{Number(stats.tempo_execucao_ms || 0).toFixed(1)} ms</div>
+        <div
+          className="mt-1 text-base font-bold whitespace-nowrap"
+          title={`${Number(stats.tempo_execucao_ms || 0).toFixed(1)} ms`}
+        >
+          {formatDurationMs(Number(stats.tempo_execucao_ms || 0))}
+        </div>
       </div>
 
       <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">

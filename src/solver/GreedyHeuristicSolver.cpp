@@ -158,23 +158,55 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
                 }
                 if (!aula->isPinned() && data.config().distribuir_disciplinas_na_semana) {
                     const auto* disc = data.findDisciplina(aula->disciplinaId());
-                    int max_lim = (disc && disc->maxAulasPorDiaTurma() > 0) ? disc->maxAulasPorDiaTurma() : data.config().max_aulas_disciplina_dia_turma;
-                    int cnt = turma_disc_dia_count[{t_id, aula->disciplinaId(), c.dia}];
-                    if (cnt >= max_lim) {
-                        conflict = true;
-                        break;
+                    int max_lim = disc ? disc->maxAulasPorDiaTurma() : 0;
+                    if (max_lim > 0) {
+                        int cnt = turma_disc_dia_count[{t_id, aula->disciplinaId(), c.dia}];
+                        if (cnt >= max_lim) {
+                            conflict = true;
+                            break;
+                        }
                     }
                 }
             }
             if (conflict) continue;
 
             const auto* disc_ptr = data.findDisciplina(aula->disciplinaId());
-            if (disc_ptr && disc_ptr->exigirAulasConsecutivas()) {
-                for (const auto& t_id : aula->turmas()) {
-                    int cnt = turma_disc_dia_count[{t_id, aula->disciplinaId(), c.dia}];
-                    if (cnt > 0) {
-                        penalty -= 400.0; // Bônus forte para agrupar as aulas no mesmo dia
+            if (disc_ptr && disc_ptr->exigirAulasConsecutivas() && data.config().lambda_aulas_consecutivas > 0 && !aula->turmas().empty()) {
+                const auto* t0 = data.findTurma(aula->turmas().front());
+                int adj_neighbors = 0;
+                if (t0) {
+                    auto slots = t0->jornadaParaDia(c.dia).slots_letivos;
+                    std::sort(slots.begin(), slots.end());
+                    int cand_idx = -1;
+                    for (int k = 0; k < static_cast<int>(slots.size()); ++k) {
+                        if (slots[k].start_min == s && slots[k].end_min == e) {
+                            cand_idx = k;
+                            break;
+                        }
                     }
+                    if (cand_idx >= 0) {
+                        const auto cand_shift = model::timeToShift(s);
+                        const auto& placed = turma_disc_dia_aulas[{t0->id(), aula->disciplinaId(), c.dia}];
+                        auto has_placed_slot = [&](int slot_idx) {
+                            if (slot_idx < 0 || slot_idx >= static_cast<int>(slots.size())) return false;
+                            if (model::timeToShift(slots[slot_idx].start_min) != cand_shift) return false;
+                            for (const auto& r : placed) {
+                                if (semestres_conflitam(r.semester, aula_sem) &&
+                                    r.start == slots[slot_idx].start_min && r.end == slots[slot_idx].end_min) {
+                                    return true;
+                                }
+                            }
+                            return false;
+                        };
+                        if (has_placed_slot(cand_idx - 1)) adj_neighbors++;
+                        if (has_placed_slot(cand_idx + 1)) adj_neighbors++;
+                    }
+                }
+                if (adj_neighbors > 0) {
+                    penalty -= 50.0 * data.config().lambda_aulas_consecutivas * adj_neighbors;
+                } else if (data.config().exigir_aulas_consecutivas_rigido &&
+                           turma_disc_dia_count[{aula->turmas().front(), aula->disciplinaId(), c.dia}] > 0) {
+                    penalty -= 10.0 * data.config().lambda_aulas_consecutivas;
                 }
             }
 
@@ -399,18 +431,20 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
                         }
                         if (data.config().distribuir_disciplinas_na_semana) {
                             const auto* disc = data.findDisciplina(aula->disciplinaId());
-                            int max_lim = (disc && disc->maxAulasPorDiaTurma() > 0) ? disc->maxAulasPorDiaTurma() : data.config().max_aulas_disciplina_dia_turma;
-                            int cnt = turma_disc_dia_count[{t_id, aula->disciplinaId(), c.dia}];
-                            if (cnt >= max_lim) {
-                                const auto* t = data.findTurma(t_id);
-                                std::string t_name = (t && !t->nome().empty() ? t->nome() : t_id);
-                                std::string aulas_alocadas_str;
-                                for (const auto& occ : turma_disc_dia_aulas[{t_id, aula->disciplinaId(), c.dia}]) {
-                                    if (!aulas_alocadas_str.empty()) aulas_alocadas_str += ", ";
-                                    aulas_alocadas_str += "'" + occ.disciplina_nome + "' (" + occ.aula_id + " às " + model::TimeInterval(occ.start, occ.end).toString() + ")";
+                            int max_lim = disc ? disc->maxAulasPorDiaTurma() : 0;
+                            if (max_lim > 0) {
+                                int cnt = turma_disc_dia_count[{t_id, aula->disciplinaId(), c.dia}];
+                                if (cnt >= max_lim) {
+                                    const auto* t = data.findTurma(t_id);
+                                    std::string t_name = (t && !t->nome().empty() ? t->nome() : t_id);
+                                    std::string aulas_alocadas_str;
+                                    for (const auto& occ : turma_disc_dia_aulas[{t_id, aula->disciplinaId(), c.dia}]) {
+                                        if (!aulas_alocadas_str.empty()) aulas_alocadas_str += ", ";
+                                        aulas_alocadas_str += "'" + occ.disciplina_nome + "' (" + occ.aula_id + " às " + model::TimeInterval(occ.start, occ.end).toString() + ")";
+                                    }
+                                    choques_limite.insert("A aula '" + aula->disciplinaNome() + "' (" + aula->id() + ") excede o limite diário (" + std::to_string(max_lim) + " aulas/dia) na Turma " + t_name +
+                                        " na " + model::dayToLongString(c.dia) + " (aulas já alocadas hoje: " + aulas_alocadas_str + ")");
                                 }
-                                choques_limite.insert("A aula '" + aula->disciplinaNome() + "' (" + aula->id() + ") excede o limite diário (" + std::to_string(max_lim) + " aulas/dia) na Turma " + t_name +
-                                    " na " + model::dayToLongString(c.dia) + " (aulas já alocadas hoje: " + aulas_alocadas_str + ")");
                             }
                         }
                     }
@@ -479,6 +513,7 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
     }
     stats.penalidade_dias_D = total_D;
     stats.penalidade_preferencia_dias_W = total_W;
+    stats.beneficio_consecutivas_C = detail::calcularBeneficioConsecutivas(data, timetable);
 
     if (stop_requested_.load()) {
         if (alocadas_count == 0) {
@@ -494,7 +529,7 @@ model::Timetable ScheduleSolver::solveGreedyHeuristic(const model::InstitutionDa
         }
     } else if (alocadas_count == total_aulas) {
         stats.status = "FEASIBLE";
-        timetable.addMensagemDiagnostico("[HEURÍSTICA] Todas as " + std::to_string(total_aulas) + " aulas foram alocadas com sucesso em " + std::to_string(static_cast<int>(elapsed)) + " ms.");
+        timetable.addMensagemDiagnostico("[HEURÍSTICA] Todas as " + std::to_string(total_aulas) + " aulas foram alocadas com sucesso em " + model::formatDurationMs(elapsed) + ".");
         if (callback) callback("Grade gerada via Heurística Construtiva Gulosa!", 1.0);
     } else {
         stats.status = (alocadas_count > 0 ? "FEASIBLE" : "INFEASIBLE");

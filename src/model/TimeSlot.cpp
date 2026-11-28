@@ -4,6 +4,8 @@
  */
 
 #include "model/TimeSlot.h"
+#include <algorithm>
+#include <cmath>
 #include <cstdio>
 
 namespace scheduler::model {
@@ -126,6 +128,49 @@ std::string TimeInterval::endString() const {
 
 std::string TimeInterval::toString() const {
     return startString() + " - " + endString();
+}
+
+std::string formatDurationSeconds(double total_seconds) {
+    long long total = (!std::isfinite(total_seconds) || total_seconds <= 0.0)
+        ? 0LL
+        : static_cast<long long>(std::llround(total_seconds));
+    if (total < 0) total = 0;
+    long long h = total / 3600;
+    long long m = (total % 3600) / 60;
+    long long s = total % 60;
+    char buf[48];
+    std::snprintf(buf, sizeof(buf), "%02lldh %02lldm %02llds", h, m, s);
+    return std::string(buf);
+}
+
+std::string formatDurationMs(double duration_ms) {
+    if (!std::isfinite(duration_ms) || duration_ms <= 0.0) {
+        return "00h 00m 00s";
+    }
+    if (duration_ms < 995.0) {
+        long long hundredths = std::clamp(static_cast<long long>(std::llround(duration_ms / 10.0)), 1LL, 99LL);
+        char buf[48];
+        std::snprintf(buf, sizeof(buf), "00h 00m 00.%02llds", hundredths);
+        return std::string(buf);
+    }
+    return formatDurationSeconds(std::round(duration_ms / 1000.0));
+}
+
+void secondsToHms(double total_seconds, int& hours, int& minutes, int& seconds) {
+    long long total = (!std::isfinite(total_seconds) || total_seconds <= 0.0)
+        ? 0LL
+        : static_cast<long long>(std::llround(total_seconds));
+    if (total < 0) total = 0;
+    hours = static_cast<int>(total / 3600);
+    minutes = static_cast<int>((total % 3600) / 60);
+    seconds = static_cast<int>(total % 60);
+}
+
+double hmsToSeconds(int hours, int minutes, int seconds) {
+    long long total = static_cast<long long>(std::max(0, hours)) * 3600LL +
+                      static_cast<long long>(std::max(0, minutes)) * 60LL +
+                      static_cast<long long>(std::max(0, seconds));
+    return static_cast<double>(std::max(1LL, total));
 }
 
 } // namespace scheduler::model

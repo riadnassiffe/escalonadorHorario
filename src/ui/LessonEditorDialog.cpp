@@ -13,8 +13,24 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QMessageBox>
+#include <QSignalBlocker>
+#include <algorithm>
 
 namespace scheduler::ui {
+
+namespace {
+QString normalizeSearchText(const QString& s) {
+    QString decomp = s.normalized(QString::NormalizationForm_KD);
+    QString clean;
+    clean.reserve(decomp.size());
+    for (QChar ch : decomp) {
+        if (ch.category() != QChar::Mark_NonSpacing) {
+            clean.append(ch);
+        }
+    }
+    return clean.toLower();
+}
+} // namespace
 
 /**
  * @brief Construtor da janela de edição/criação de disciplina.
@@ -107,13 +123,41 @@ void LessonEditorDialog::setupUi() {
     spin_aulas_semanais_->setSuffix(" aulas por semana");
     form_layout->addRow("Carga Semanal:", spin_aulas_semanais_);
 
-    combo_prof_ = new QComboBox(body_widget);
+    auto* widget_profs = new QWidget(body_widget);
+    auto* lay_profs = new QVBoxLayout(widget_profs);
+    lay_profs->setContentsMargins(0, 0, 0, 0);
+    lay_profs->setSpacing(4);
+
+    lbl_profs_resumo_ = new QLabel(widget_profs);
+    lbl_profs_resumo_->setWordWrap(true);
+    lbl_profs_resumo_->setStyleSheet("font-size: 11px; color: palette(highlight); font-weight: 500;");
+    lay_profs->addWidget(lbl_profs_resumo_);
+
+    txt_search_prof_ = new QLineEdit(widget_profs);
+    txt_search_prof_->setPlaceholderText("Filtrar professores por nome ou ID...");
+    txt_search_prof_->setClearButtonEnabled(true);
+    lay_profs->addWidget(txt_search_prof_);
+
+    list_professores_ = new QListWidget(widget_profs);
+    list_professores_->setMinimumHeight(100);
+    list_professores_->setMaximumHeight(150);
     for (const auto& p : profs_) {
-        combo_prof_->addItem(QString::fromStdString(p.nome()),
-                             QString::fromStdString(p.id()));
+        auto* item = new QListWidgetItem(
+            QString::fromStdString(p.nome() + " (" + p.id() + ")"),
+            list_professores_);
+        item->setData(Qt::UserRole, QString::fromStdString(p.id()));
+        item->setData(Qt::UserRole + 1, QString::fromStdString(p.nome()));
+        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+        item->setCheckState(Qt::Unchecked);
     }
-    makeComboResponsive(combo_prof_, 20, 180);
-    form_layout->addRow("Professor Responsável:", combo_prof_);
+    lay_profs->addWidget(list_professores_);
+
+    connect(txt_search_prof_, &QLineEdit::textChanged, this, &LessonEditorDialog::filterProfessores);
+    connect(list_professores_, &QListWidget::itemChanged, this, [this](QListWidgetItem*) {
+        updateProfessoresSummary();
+    });
+    updateProfessoresSummary();
+    form_layout->addRow("Professores Responsáveis:", widget_profs);
 
     combo_turma_ = new QComboBox(body_widget);
     for (const auto& t : turmas_) {
@@ -124,9 +168,11 @@ void LessonEditorDialog::setupUi() {
     form_layout->addRow("Turma:", combo_turma_);
 
     spin_max_dia_ = new QSpinBox(body_widget);
-    spin_max_dia_->setRange(1, 10);
+    spin_max_dia_->setRange(0, 10);
+    spin_max_dia_->setSpecialValueText("Sem limite");
     spin_max_dia_->setValue(2);
     spin_max_dia_->setSuffix(" aulas por dia");
+    spin_max_dia_->setToolTip("Limite máximo de aulas desta disciplina no mesmo dia para a turma (0 = sem limite).");
     form_layout->addRow("Máximo por Dia:", spin_max_dia_);
 
     check_consecutivas_ = new QCheckBox("Aulas devem ser ministradas em blocos consecutivos", body_widget);
@@ -174,7 +220,7 @@ void LessonEditorDialog::setupUi() {
     btn_box->addWidget(btn_save);
     root_layout->addLayout(btn_box);
 
-    fitWindowToScreen(this, QSize(560, 540));
+    fitWindowToScreen(this, QSize(580, 620));
 
     connect(btn_cancel, &QPushButton::clicked, this, &QDialog::reject);
     connect(btn_save, &QPushButton::clicked, [this]() {
@@ -182,8 +228,14 @@ void LessonEditorDialog::setupUi() {
             QMessageBox::warning(this, "Atenção", "Preencha o Nome da Disciplina.");
             return;
         }
-        if (combo_prof_->currentIndex() < 0) {
-            QMessageBox::warning(this, "Atenção", "Selecione o Professor responsável.");
+        int prof_count = 0;
+        for (int i = 0; i < list_professores_->count(); ++i) {
+            if (list_professores_->item(i)->checkState() == Qt::Checked) {
+                prof_count++;
+            }
+        }
+        if (prof_count == 0) {
+            QMessageBox::warning(this, "Atenção", "Selecione ao menos um Professor responsável.");
             return;
         }
         if (combo_turma_->currentIndex() < 0) {
@@ -251,10 +303,39 @@ void LessonEditorDialog::loadDisciplina(const model::Disciplina& disc) {
     spin_max_dia_->setValue(disc.maxAulasPorDiaTurma());
     check_consecutivas_->setChecked(disc.exigirAulasConsecutivas());
 
-    if (!disc.professores().empty()) {
-        int idx_p = combo_prof_->findData(QString::fromStdString(disc.professores().front()));
-        if (idx_p >= 0) combo_prof_->setCurrentIndex(idx_p);
+    {
+        const QSignalBlocker blocker(list_professores_);
+        std::vector<std::string> matched_ids;
+        for (int i = 0; i < list_professores_->count(); ++i) {
+            auto* item = list_professores_->item(i);
+            std::string p_id = item->data(Qt::UserRole).toString().toStdString();
+            bool selected = std::find(disc.professores().begin(), disc.professores().end(), p_id) != disc.professores().end();
+            item->setCheckState(selected ? Qt::Checked : Qt::Unchecked);
+            if (selected) {
+                matched_ids.push_back(p_id);
+            }
+        }
+        for (const auto& p_id : disc.professores()) {
+            if (std::find(matched_ids.begin(), matched_ids.end(), p_id) == matched_ids.end()) {
+                auto* item = new QListWidgetItem(QString::fromStdString(p_id), list_professores_);
+                item->setData(Qt::UserRole, QString::fromStdString(p_id));
+                item->setData(Qt::UserRole + 1, QString::fromStdString(p_id));
+                item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+                item->setCheckState(Qt::Checked);
+            }
+        }
+        int insert_pos = 0;
+        for (int i = 0; i < list_professores_->count(); ++i) {
+            if (list_professores_->item(i)->checkState() == Qt::Checked) {
+                if (i != insert_pos) {
+                    auto* taken = list_professores_->takeItem(i);
+                    list_professores_->insertItem(insert_pos, taken);
+                }
+                insert_pos++;
+            }
+        }
     }
+    updateProfessoresSummary();
 
     if (!disc.turmas().empty()) {
         int idx_t = combo_turma_->findData(QString::fromStdString(disc.turmas().front()));
@@ -293,7 +374,12 @@ model::Disciplina LessonEditorDialog::getDisciplina() const {
                         spin_aulas_semanais_->value(),
                         regime, semestre);
 
-    d.addProfessor(combo_prof_->currentData().toString().toStdString());
+    for (int i = 0; i < list_professores_->count(); ++i) {
+        auto* item = list_professores_->item(i);
+        if (item->checkState() == Qt::Checked) {
+            d.addProfessor(item->data(Qt::UserRole).toString().toStdString());
+        }
+    }
     d.addTurma(combo_turma_->currentData().toString().toStdString());
 
     d.setMaxAulasPorDiaTurma(spin_max_dia_->value());
@@ -306,6 +392,34 @@ model::Disciplina LessonEditorDialog::getDisciplina() const {
     }
 
     return d;
+}
+
+void LessonEditorDialog::filterProfessores(const QString& query) {
+    if (!list_professores_) return;
+    const QString needle = normalizeSearchText(query.trimmed());
+    for (int i = 0; i < list_professores_->count(); ++i) {
+        auto* item = list_professores_->item(i);
+        const bool match = needle.isEmpty() || normalizeSearchText(item->text()).contains(needle);
+        item->setHidden(!match);
+    }
+}
+
+void LessonEditorDialog::updateProfessoresSummary() {
+    if (!lbl_profs_resumo_ || !list_professores_) return;
+    QStringList selected_names;
+    for (int i = 0; i < list_professores_->count(); ++i) {
+        auto* item = list_professores_->item(i);
+        if (item->checkState() == Qt::Checked) {
+            QString nome = item->data(Qt::UserRole + 1).toString();
+            selected_names << (nome.isEmpty() ? item->text() : nome);
+        }
+    }
+    if (selected_names.isEmpty()) {
+        lbl_profs_resumo_->setText("Nenhum professor selecionado");
+    } else {
+        lbl_profs_resumo_->setText(
+            QString("%1 selecionado(s): %2").arg(selected_names.size()).arg(selected_names.join(", ")));
+    }
 }
 
 } // namespace scheduler::ui

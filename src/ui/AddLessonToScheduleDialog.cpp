@@ -606,18 +606,20 @@ std::vector<std::string> AddLessonToScheduleDialog::verificarConflitos() const {
 
         // Limite diário de aulas da disciplina na turma
         if (data_.config().distribuir_disciplinas_na_semana) {
-            int count_dia = 0;
-            for (const auto& a : data_.grade().alocacoes()) {
-                if (a.aula_id != cur_aid && a.dia == dia && a.disciplina_id == disc->id() && semestres_conflitam(a)) {
-                    if (std::find(a.turmas.begin(), a.turmas.end(), t_id) != a.turmas.end()) {
-                        count_dia++;
+            int max_lim = disc->maxAulasPorDiaTurma();
+            if (max_lim > 0) {
+                int count_dia = 0;
+                for (const auto& a : data_.grade().alocacoes()) {
+                    if (a.aula_id != cur_aid && a.dia == dia && a.disciplina_id == disc->id() && semestres_conflitam(a)) {
+                        if (std::find(a.turmas.begin(), a.turmas.end(), t_id) != a.turmas.end()) {
+                            count_dia++;
+                        }
                     }
                 }
-            }
-            int max_lim = (disc->maxAulasPorDiaTurma() > 0) ? disc->maxAulasPorDiaTurma() : data_.config().max_aulas_disciplina_dia_turma;
-            if (count_dia + 1 > max_lim) {
-                conflitos.push_back("Limite diário: Excederá o limite de " + std::to_string(max_lim) +
-                                    " aulas diárias desta disciplina para a Turma " + (t ? t->nome() : t_id) + ".");
+                if (count_dia + 1 > max_lim) {
+                    conflitos.push_back("Limite diário: Excederá o limite de " + std::to_string(max_lim) +
+                                        " aulas diárias desta disciplina para a Turma " + (t ? t->nome() : t_id) + ".");
+                }
             }
         }
     }

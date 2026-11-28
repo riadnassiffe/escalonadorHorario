@@ -84,10 +84,10 @@ Cada candidato $c \in \mathcal{C}_a$ representa uma tupla admissível $(d_c, t^{
 | $\alpha_p$ | $\{0, \ldots, 10\}$ | Sensibilidade individual do professor $p$ a janelas entre aulas (`pesoJanela`) |
 | $\pi_{p,d,h}$ | $\{0, 1\}$ | Vale $1$ se o professor $p$ pretende trabalhar no turno $h$ do dia $d$ |
 | $\bar{r}_g \in \mathcal{R}$ | Sala | Sala teórica fixa predefinida no cadastro da turma $g$ (quando houver) |
-| $U_{q,g}$ | $\mathbb{Z}_{>0}$ | Limite diário de aulas da disciplina $q$ para a turma $g$ (padrão global: $2$) |
+| $U_{q,g}$ | $\mathbb{Z}_{\ge 0}$ | Limite diário de aulas da disciplina $q$ para a turma $g$ (configurado por disciplina; $0$ = sem limite; padrão: $2$) |
 | $B_q,\ N_q$ | $\mathbb{Z}_{>0}$ | Tamanho do bloco diário ($B_q \in \{2, 3, 4\}$, respeitando $B_q \le U_{q,g}$) e nº de dias ativos ($N_q = |\mathcal{A}_q| / B_q$) para $q \in \mathcal{Q}^{consec}$ |
 | $c^{hora}_{a,c}$ | $\mathbb{Z}_{\ge 0}$ | Penalidade de horário do candidato $c$ ($1$ se $t^{ini}_c < 07\text{h}30$ ou $t^{ini}_c > 11\text{h}00$; $0$ caso contrário) |
-| $\lambda_J, \lambda_D, \lambda_P, \lambda_W, \lambda_T, \lambda_G$ | $\mathbb{Z}_{\ge 0}$ | Pesos da função objetivo (padrões: $8, 5, 3, 7, 8, 2$) |
+| $\lambda_J, \lambda_D, \lambda_P, \lambda_W, \lambda_T, \lambda_G, \lambda_C$ | $\mathbb{Z}_{\ge 0}$ | Pesos da função objetivo (padrões: $8, 5, 3, 7, 8, 2, 8$) |
 
 > **Importante:** Preferência baixa ($\omega_{p,d} = 0$ ou $\pi_{p,d,h} = 0$) gera apenas **penalidade** na função objetivo, não proibindo a alocação. Horários estritamente proibidos para o docente permanecem fora de $\mathcal{V}_{p,d}$.
 
@@ -121,6 +121,7 @@ $$
 | $u^-_{i,m},\ u^+_{i,m}$ | $\{0,1\}$ | Indicam se há aula **antes** ($u^-$) e **depois** ($u^+$) do elemento $m$ na sequência $i$ |
 | $j_{i,m}$ | $[0,1]$ | Vale $1$ se o elemento $m$ for uma **janela/lacuna** (vago entre aulas) na sequência $i$ |
 | $w_{q,d}$ | $\{0,1\}$ | Vale $1$ se a disciplina $q \in \mathcal{Q}^{consec}$ tiver seu bloco alocado no dia $d$ |
+| $p_{q,d,k}$ | $\{0,1\}$ | Vale $1$ se a disciplina $q \in \mathcal{Q}^{consec}$ ocupar o par de slots adjacentes $(k, k+1)$ no mesmo turno do dia $d$ |
 
 ---
 
@@ -228,7 +229,7 @@ Turmas cujas aulas no semestre estejam integralmente fixadas manualmente são di
 - **Código:** Validação por duração [`Preprocessor.cpp` (L124–L202)](src/solver/Preprocessor.cpp#L124-L202); CP-SAT [`CpSatSolver.cpp` (L323–L366)](src/solver/CpSatSolver.cpp#L323-L366); MILP [`MilpSolver.cpp` (L308–L351)](src/solver/MilpSolver.cpp#L308-L351).
 
 ### R10. Limite máximo de aulas da mesma disciplina por dia *(opcional)*
-Quando `distribuir_disciplinas_na_semana` está ativo, seja $P^{fix}_{q,d} = \left|\{a \in \mathcal{A}_q \cap \mathcal{A}^{fix} : d^{fix}_a = d\}\right|$ o número de ocorrências da disciplina $q$ fixadas manualmente no dia $d$:
+Quando `distribuir_disciplinas_na_semana` está ativo, para toda disciplina $q \in \mathcal{Q}$ com limite diário individual $U_{q,g} > 0$ (onde $0$ indica sem limite diário), seja $P^{fix}_{q,d} = \left|\{a \in \mathcal{A}_q \cap \mathcal{A}^{fix} : d^{fix}_a = d\}\right|$ o número de ocorrências da disciplina $q$ fixadas manualmente no dia $d$:
 $$
 \sum_{a \in \mathcal{A}_q} \sum_{c \in \mathcal{C}_a:\, d_c = d} x_{a,c} \le \max\!\left(U_{q,g},\, P^{fix}_{q,d}\right) \qquad \forall q \in \mathcal{Q},\ g \in \mathcal{G}_q,\ d \in \mathcal{D}.
 $$
@@ -236,12 +237,13 @@ Quando as fixações manuais de $q$ no dia $d$ já superam $U_{q,g}$, o limite e
 - **Literatura:** Distribuição semanal de aulas da mesma disciplina [[Santos et al., 2012](#14-referências-bibliográficas)].
 - **Código:** CP-SAT [`CpSatSolver.cpp` (L368–L404)](src/solver/CpSatSolver.cpp#L368-L404); MILP [`MilpSolver.cpp` (L353–L387)](src/solver/MilpSolver.cpp#L353-L387); Gulosa [`GreedyHeuristicSolver.cpp` (L159–L167)](src/solver/GreedyHeuristicSolver.cpp#L159-L167).
 
-### R11. Agrupamento de aulas em bloco *(opcional)*
-Para disciplinas com `exigirAulasConsecutivas = true`, define-se o tamanho do bloco diário como o maior divisor $B_q \in \{2, 3, 4\}$ de $|\mathcal{A}_q|$ compatível com o limite diário $U_{q,g}$ ($B_q \le U_{q,g}$ quando R10 está ativa) e com a quantidade de dias letivos ($N_q = |\mathcal{A}_q| / B_q \le |\mathcal{D}|$) — por exemplo, $(B_q, N_q) = (2,1)$ para $2$ aulas, $(2,2)$ para $4$ aulas com $U_{q,g}=2$, $(4,1)$ para $4$ aulas com $U_{q,g}\ge 4$, e $(4,2)$ para $8$ aulas com $U_{q,g}\ge 4$. Seja $\mathcal{Q}^{consec}_{ativ} \subseteq \mathcal{Q}^{consec}$ o subconjunto de disciplinas com $B_q \ge 2$ cujas aulas fixadas manualmente não violam nem esgotam a estrutura de blocos — isto é, omite-se a restrição caso todas as ocorrências estejam fixadas ($|\mathcal{A}_q \cap \mathcal{A}^{fix}| = |\mathcal{A}_q|$), haja aulas fixadas em mais de $N_q$ dias distintos ($|\{d \in \mathcal{D} : P^{fix}_{q,d} > 0\}| > N_q$) ou algum dia possua mais de $B_q$ aulas fixadas ($\exists d \in \mathcal{D}$ com $P^{fix}_{q,d} > B_q$). Para $q \in \mathcal{Q}^{consec}_{ativ}$, impõe-se o agrupamento em $N_q$ dias com exatamente $B_q$ aulas no mesmo dia:
+### R11. Agrupamento de aulas em bloco *(opcional — controlada por `exigir_aulas_consecutivas_rigido`)*
+Quando `exigir_aulas_consecutivas_rigido = true` (padrão), para disciplinas com `exigirAulasConsecutivas = true`, define-se o tamanho do bloco diário como o maior divisor $B_q \in \{2, 3, 4\}$ de $|\mathcal{A}_q|$ compatível com o limite diário $U_{q,g}$ ($B_q \le U_{q,g}$ quando R10 está ativa) e com a quantidade de dias letivos ($N_q = |\mathcal{A}_q| / B_q \le |\mathcal{D}|$) — por exemplo, $(B_q, N_q) = (2,1)$ para $2$ aulas, $(2,2)$ para $4$ aulas com $U_{q,g}=2$, $(4,1)$ para $4$ aulas com $U_{q,g}\ge 4$, e $(4,2)$ para $8$ aulas com $U_{q,g}\ge 4$. Seja $\mathcal{Q}^{consec}_{ativ} \subseteq \mathcal{Q}^{consec}$ o subconjunto de disciplinas com $B_q \ge 2$ cujas aulas fixadas manualmente não violam nem esgotam a estrutura de blocos — isto é, omite-se a restrição caso todas as ocorrências estejam fixadas ($|\mathcal{A}_q \cap \mathcal{A}^{fix}| = |\mathcal{A}_q|$), haja aulas fixadas em mais de $N_q$ dias distintos ($|\{d \in \mathcal{D} : P^{fix}_{q,d} > 0\}| > N_q$) ou algum dia possua mais de $B_q$ aulas fixadas ($\exists d \in \mathcal{D}$ com $P^{fix}_{q,d} > B_q$). Para $q \in \mathcal{Q}^{consec}_{ativ}$, impõe-se o agrupamento em $N_q$ dias com exatamente $B_q$ aulas no mesmo dia:
 $$
 \sum_{a \in \mathcal{A}_q} \sum_{c \in \mathcal{C}_a:\, d_c = d} x_{a,c} = B_q\, w_{q,d} \quad \forall d \in \mathcal{D}, \qquad
 \sum_{d \in \mathcal{D}} w_{q,d} = N_q \qquad \forall q \in \mathcal{Q}^{consec}_{ativ}.
 $$
+Quando `exigir_aulas_consecutivas_rigido = false`, essa restrição rígida é desativada e o agrupamento em slots adjacentes passa a atuar exclusivamente via função benefício ($C_{consec}$, Seção 10.6), evitando inviabilidades e rejeição de *Warm Start*.
 - **Literatura:** *Double Lessons* e agrupamento diário [[Santos et al., 2012](#14-referências-bibliográficas); [Daskalaki et al., 2004](#14-referências-bibliográficas)].
 - **Código:** CP-SAT [`CpSatSolver.cpp` (L406–L468)](src/solver/CpSatSolver.cpp#L406-L468); MILP [`MilpSolver.cpp` (L389–L453)](src/solver/MilpSolver.cpp#L389-L453); Gulosa [`GreedyHeuristicSolver.cpp` (L171–L179)](src/solver/GreedyHeuristicSolver.cpp#L171-L179).
 
@@ -328,13 +330,24 @@ J_{min} = \sum_{p \in \mathcal{P}} \sum_{d \in \mathcal{D}} \sum_{h \in \mathcal
 J_{G,min} = \sum_{g \in \mathcal{G}} \sum_{d \in \mathcal{D}_g} \sum_{k \in \mathcal{K}_{g,d}} \Delta_{g,d,k}\, j_{(g,d),k}.
 $$
 
-### 10.6. Expressão Global da Função Objetivo
+### 10.6. Benefício de Aulas Consecutivas em Slots Adjacentes ($C_{consec}$)
 
-Implementada identicamente em CP-SAT ([`CpSatSolver.cpp` (L657–L666)](src/solver/CpSatSolver.cpp#L657-L666)) e nos motores MILP — SCIP, HiGHS e cuOpt ([`MilpSolver.cpp` (L135–L728)](src/solver/MilpSolver.cpp#L135-L728)):
+Para cada disciplina $q \in \mathcal{Q}^{consec}$ com $|\mathcal{A}_q| \ge 2$ e turma primária $g$, seja $\mathcal{P}^{adj}_{q,d}$ o conjunto de pares de índices $(k, k+1)$ de slots letivos adjacentes em $\mathcal{K}_{g,d}$ pertencentes ao **mesmo turno** ($\text{turno}(t^{ini}_{g,d,k}) = \text{turno}(t^{ini}_{g,d,k+1})$). Definindo a ocupação de $q$ no slot $k$ como $o_{q,d,k} = \sum_{a \in \mathcal{A}_q} \sum_{c \in \mathcal{C}_a : d_c = d,\, [t^{ini}_c, t^{fim}_c) = s_{g,d,k}} x_{a,c} \in \{0,1\}$, a variável $p_{q,d,k} \in \{0,1\}$ satisfaz:
 $$
-\boxed{\min Z = \lambda_J\, J_{min} + \lambda_D\, D_{prof} + \lambda_P\, P_{hora} + \lambda_W\, W + 10\,\lambda_T\, T_{prof} + \lambda_G\, J_{G,min}}
+p_{q,d,k} \le o_{q,d,k}, \qquad p_{q,d,k} \le o_{q,d,k+1} \qquad \forall (k, k+1) \in \mathcal{P}^{adj}_{q,d},
 $$
-onde tanto $J_{min}$ quanto $J_{G,min}$ já são expressos diretamente em **minutos reais**. A preservação da grade atual em tela (`usar_distribuicao_como_entrada`) atua como solução inicial (*Warm Start*) sem alterar os pesos de $Z$.
+contabilizando o total de pares consecutivos realizados:
+$$
+C_{consec} = \sum_{q \in \mathcal{Q}^{consec}} \sum_{d \in \mathcal{D}_g} \sum_{(k,k+1) \in \mathcal{P}^{adj}_{q,d}} p_{q,d,k}.
+$$
+
+### 10.7. Expressão Global da Função Objetivo
+
+Implementada identicamente em CP-SAT ([`CpSatSolver.cpp`](src/solver/CpSatSolver.cpp)) e nos motores MILP — SCIP, HiGHS e cuOpt ([`MilpSolver.cpp`](src/solver/MilpSolver.cpp)):
+$$
+\boxed{\min Z = \lambda_J\, J_{min} + \lambda_D\, D_{prof} + \lambda_P\, P_{hora} + \lambda_W\, W + 10\,\lambda_T\, T_{prof} + \lambda_G\, J_{G,min} - 50\,\lambda_C\, C_{consec}}
+$$
+onde tanto $J_{min}$ quanto $J_{G,min}$ já são expressos diretamente em **minutos reais**, e $-50\,\lambda_C\,C_{consec}$ atua como termo de benefício (subtrativo em $\min Z$) que recompensa aulas consecutivas no mesmo turno. A preservação da grade atual em tela (`usar_distribuicao_como_entrada`) atua como solução inicial (*Warm Start*) sem alterar os pesos de $Z$.
 
 ---
 
@@ -358,6 +371,7 @@ $$
 + \lambda_W W
 + 10\,\lambda_T \sum_{p \in \mathcal{P}} \sum_{d \in \mathcal{D}} \sum_{h \in \mathcal{H}} (1 - \pi_{p,d,h})\, v_{p,d,h}
 + \lambda_G \sum_{g \in \mathcal{G}} \sum_{d \in \mathcal{D}_g} \sum_{k \in \mathcal{K}_{g,d}} \Delta_{g,d,k}\, j_{(g,d),k}
+- 50\,\lambda_C \sum_{q \in \mathcal{Q}^{consec}} \sum_{d \in \mathcal{D}_g} \sum_{(k,k+1) \in \mathcal{P}^{adj}_{q,d}} p_{q,d,k}
 $$
 
 sujeito a:
@@ -376,11 +390,12 @@ z_{g,\bar{r}_g} &= 1 && \forall g \in \mathcal{G} \text{ com sala predefinida } 
 m_{p,d,s} &\le \max\!\left(M_{p,d},\, M^{fix}_{p,d,s}\right) && \forall p \text{ com } M_{p,d}>0,\ d, s \\[6pt]
 \tilde{o}^G_{g,d,k,s} &= 1 && \forall g \in \mathcal{G}^{livre}_s, d \in \mathcal{D}_g, k \in \mathcal{K}_{g,d}, s \quad \text{(se R9 ativa)} \\
 \sum_{a \in \mathcal{A}_q} \sum_{c \in \mathcal{C}_a:\, d_c = d} x_{a,c} &\le \max\!\left(U_{q,g},\, P^{fix}_{q,d}\right) && \forall q, g \in \mathcal{G}_q, d \quad \text{(se R10 ativa)} \\
-\sum_{a \in \mathcal{A}_q} \sum_{c \in \mathcal{C}_a:\, d_c = d} x_{a,c} &= B_q\, w_{q,d},\quad \sum_{d \in \mathcal{D}} w_{q,d} = N_q && \forall q \in \mathcal{Q}^{consec}_{ativ},\ d \in \mathcal{D} \quad \text{(se R11 ativa)} \\[6pt]
+\sum_{a \in \mathcal{A}_q} \sum_{c \in \mathcal{C}_a:\, d_c = d} x_{a,c} &= B_q\, w_{q,d},\quad \sum_{d \in \mathcal{D}} w_{q,d} = N_q && \forall q \in \mathcal{Q}^{consec}_{ativ},\ d \in \mathcal{D} \quad \text{(se R11 ativa)} \\
+p_{q,d,k} \le o_{q,d,k}, \quad p_{q,d,k} &\le o_{q,d,k+1} && \forall q \in \mathcal{Q}^{consec},\ d \in \mathcal{D}_g,\ (k,k+1) \in \mathcal{P}^{adj}_{q,d} \\[6pt]
 x_{a,c} \le y_{p,d}, \quad y_{p,d} &\le \sum_{(a',c') \in \mathcal{X}_{p,d}} x_{a',c'} && \forall p, d,\ \forall (a,c) \in \mathcal{X}_{p,d} \\
 x_{a,c} \le v_{p,d,h}, \quad v_{p,d,h} &\le \sum_{(a',c') \in \mathcal{X}_{p,d,h}} x_{a',c'} && \forall p, d, h,\ \forall (a,c) \in \mathcal{X}_{p,d,h} \\
 u^-_{i,m} \ge o_{i,l}\ (\forall l < m), \quad u^+_{i,m} &\ge o_{i,l}\ (\forall l > m), \quad j_{i,m} \ge u^-_{i,m} + u^+_{i,m} - o_{i,m} - 1 && \forall i,\ \forall m \in \mathcal{E}_i \\[6pt]
-x_{a,c}, z_{g,r}, y_{p,d}, v_{p,d,h}, w_{q,d}, u^-_{i,m}, u^+_{i,m} &\in \{0, 1\}, \qquad j_{i,m}, o^P_{p,d,t,s}, o^G_{g,d,t,s} \in [0, 1], \qquad m_{p,d,s} \ge 0.
+x_{a,c}, z_{g,r}, y_{p,d}, v_{p,d,h}, w_{q,d}, p_{q,d,k}, u^-_{i,m}, u^+_{i,m} &\in \{0, 1\}, \qquad j_{i,m}, o^P_{p,d,t,s}, o^G_{g,d,t,s} \in [0, 1], \qquad m_{p,d,s} \ge 0.
 \end{aligned}
 $$
 
@@ -404,7 +419,8 @@ $$
 | **R8. Sincronização anual** | Acoplamento multi-período [[Daskalaki et al., 2004](#14-referências-bibliográficas)] | — | [`L87–L151`](src/solver/CpSatSolver.cpp#L87-L151) | [`L96–L174`](src/solver/MilpSolver.cpp#L96-L174) |
 | **R9. Preenchimento integral dos slots** | *Compact Class Schedules* [[Santos et al., 2012](#14-referências-bibliográficas)] | [`Preprocessor.cpp` (L124–L202)](src/solver/Preprocessor.cpp#L124-L202) | [`L323–L366`](src/solver/CpSatSolver.cpp#L323-L366) | [`L308–L351`](src/solver/MilpSolver.cpp#L308-L351) |
 | **R10. Limite diário ($U_{q,g}$)** | Distribuição semanal [[Santos et al., 2012](#14-referências-bibliográficas)] | — | [`L368–L404`](src/solver/CpSatSolver.cpp#L368-L404) | [`L353–L387`](src/solver/MilpSolver.cpp#L353-L387) |
-| **R11. Agrupamento em bloco ($w_{q,d}$)** | *Double Lessons* [[Santos et al., 2012](#14-referências-bibliográficas); [Daskalaki et al., 2004](#14-referências-bibliográficas)] | — | [`L406–L468`](src/solver/CpSatSolver.cpp#L406-L468) | [`L389–L453`](src/solver/MilpSolver.cpp#L389-L453) |
+| **R11. Agrupamento em bloco ($w_{q,d}$, opcional)** | *Double Lessons* [[Santos et al., 2012](#14-referências-bibliográficas); [Daskalaki et al., 2004](#14-referências-bibliográficas)] | — | `CpSatSolver.cpp` (seção 5.8) | `MilpSolver.cpp` (seção 5.8) |
+| **Seção 10.6. Benefício consecutivas ($p_{q,d,k}, C_{consec}$)** | *Consecutive Lessons* (Soft) [[Santos et al., 2012](#14-referências-bibliográficas)] | — | `CpSatSolver.cpp` (seção 6.4b) | `MilpSolver.cpp` (seção 6.4b) |
 | **Seção 8 & 10.1. Dias ($y_{p,d}, D_{prof}$)** | Concentração de dias [[Santos et al., 2012](#14-referências-bibliográficas)] | — | [`L482–L517`](src/solver/CpSatSolver.cpp#L482-L517) | [`L457–L493`](src/solver/MilpSolver.cpp#L457-L493) |
 | **Seção 10.2. Preferência horária ($P_{hora}$)** | Preferência horária (Soft) [[Santos et al., 2012](#14-referências-bibliográficas)] | [`Preprocessor.cpp` (L379–L385)](src/solver/Preprocessor.cpp#L379-L385) | [`L519–L524`](src/solver/CpSatSolver.cpp#L519-L524) | [`L135–L156`](src/solver/MilpSolver.cpp#L135-L156) |
 | **Seção 10.3. Preferência de dias ($W$)** | Preferências docentes [[Santos et al., 2012](#14-referências-bibliográficas)] | — | [`L503–L514`](src/solver/CpSatSolver.cpp#L503-L514) | [`L139–L147, L467–L469`](src/solver/MilpSolver.cpp#L139-L147) |

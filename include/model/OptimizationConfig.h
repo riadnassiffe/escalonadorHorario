@@ -172,13 +172,14 @@ struct OptimizationConfig {
     int lambda_preferencia_dias{7};   ///< Peso para priorizar dias preferidos dos professores (W).
     int lambda_preferencia_turnos{8}; ///< Peso para priorizar turnos pretendidos dos professores (T).
     int lambda_lacunas_turma{2};      ///< Peso para reduzir lacunas ou buracos na grade das turmas (JG).
+    int lambda_aulas_consecutivas{8}; ///< Peso do benefício para agrupar aulas consecutivas (C).
 
     ModeloPreferenciaDias modelo_preferencia_dias{ModeloPreferenciaDias::POR_DIA_TRABALHADO}; ///< Modelo de cálculo do peso W.
 
     // Restrições adicionais
     bool preenchimento_integral_jornada{false}; ///< Exige que todo horário da jornada da turma tenha aula alocada.
-    bool distribuir_disciplinas_na_semana{true}; ///< Tenta espalhar aulas da mesma matéria em dias distintos.
-    int max_aulas_disciplina_dia_turma{2};      ///< Teto diário de aulas da mesma matéria para uma turma.
+    bool distribuir_disciplinas_na_semana{true}; ///< Impõe R10 usando o limite diário individual de cada disciplina (Disciplina::maxAulasPorDiaTurma).
+    bool exigir_aulas_consecutivas_rigido{true}; ///< Impõe R11 como restrição rígida; se false, atua apenas via função benefício.
 
     // Parâmetros de execução do solver
     double tempo_limite_segundos{30.0}; ///< Tempo limite máximo de execução da busca em segundos.

@@ -85,10 +85,11 @@ def _config_to_json(cfg: OptimizationConfigModel) -> dict[str, Any]:
         "lambda_lacunas_turma": cfg.lambda_lacunas_turma,
         "lambda_preferencia_dias": cfg.lambda_preferencia_dias,
         "lambda_preferencia_turnos": cfg.lambda_preferencia_turnos,
+        "lambda_aulas_consecutivas": cfg.lambda_aulas_consecutivas,
         "modelo_preferencia_dias": cfg.modelo_preferencia_dias,
         "preenchimento_integral_jornada": cfg.preenchimento_integral_jornada,
         "distribuir_disciplinas_na_semana": cfg.distribuir_disciplinas_na_semana,
-        "max_aulas_disciplina_dia_turma": cfg.max_aulas_disciplina_dia_turma,
+        "exigir_aulas_consecutivas_rigido": cfg.exigir_aulas_consecutivas_rigido,
         "escopo_semestre": cfg.escopo_semestre,
         "sincronizar_anuais_entre_semestres": cfg.sincronizar_anuais_entre_semestres,
         "algoritmo": cfg.algoritmo,
@@ -118,6 +119,7 @@ def _timetable_to_json(
                 "penalidade_preferencias_P": 0,
                 "penalidade_preferencia_dias_W": 0,
                 "penalidade_lacunas_turma_JG": 0,
+                "beneficio_consecutivas_C": 0,
                 "total_aulas_alocadas": 0,
                 "total_aulas_esperadas": 0,
             },
@@ -342,7 +344,12 @@ async def import_project_json(
             )
         )
 
+    cfg_in = data.get("config", {})
+    legacy_max_por_dia = cfg_in.get("max_aulas_disciplina_dia_turma")
+    default_max_dia = int(legacy_max_por_dia) if legacy_max_por_dia is not None else 2
+
     for d in data.get("disciplinas", []):
+        max_dia = int(d["max_aulas_por_dia_turma"]) if "max_aulas_por_dia_turma" in d else default_max_dia
         db.add(
             DisciplinaModel(
                 project_id=project_id,
@@ -357,7 +364,7 @@ async def import_project_json(
                 turmas=d.get("turmas", []),
                 salas_alternativas=d.get("salas_alternativas", []),
                 exigir_aulas_consecutivas=bool(d.get("exigir_aulas_consecutivas", False)),
-                max_aulas_por_dia_turma=int(d.get("max_aulas_por_dia_turma", 2)),
+                max_aulas_por_dia_turma=max_dia,
             )
         )
 
@@ -366,7 +373,6 @@ async def import_project_json(
         cfg_model = OptimizationConfigModel(project_id=project_id)
         db.add(cfg_model)
 
-    cfg_in = data.get("config", {})
     for field_name in [
         "algoritmo",
         "escopo_semestre",
@@ -377,10 +383,11 @@ async def import_project_json(
         "lambda_preferencia_dias",
         "lambda_preferencia_turnos",
         "lambda_lacunas_turma",
+        "lambda_aulas_consecutivas",
         "modelo_preferencia_dias",
         "preenchimento_integral_jornada",
         "distribuir_disciplinas_na_semana",
-        "max_aulas_disciplina_dia_turma",
+        "exigir_aulas_consecutivas_rigido",
         "tempo_limite_segundos",
         "sem_limite_tempo",
         "max_memoria_mb",

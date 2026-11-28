@@ -329,13 +329,13 @@ public:
 
     /**
      * @brief Obtém o limite máximo de aulas diárias desta disciplina para uma mesma turma.
-     * @return Número máximo de aulas por dia.
+     * @return Número máximo de aulas por dia (0 = sem limite diário).
      */
     int maxAulasPorDiaTurma() const noexcept { return max_aulas_por_dia_turma_; }
 
     /**
      * @brief Define o limite máximo de aulas diárias desta disciplina para uma mesma turma.
-     * @param max_aulas Quantidade máxima de aulas no mesmo dia.
+     * @param max_aulas Quantidade máxima de aulas no mesmo dia (0 = sem limite diário).
      */
     void setMaxAulasPorDiaTurma(int max_aulas) noexcept { max_aulas_por_dia_turma_ = max_aulas; }
 
@@ -357,7 +357,7 @@ private:
     std::vector<std::string> turmas_;
     std::vector<std::vector<std::string>> salas_alternativas_;
     bool exigir_aulas_consecutivas_{false};
-    int max_aulas_por_dia_turma_{2};
+    int max_aulas_por_dia_turma_{2}; // 0 = sem limite diário
 };
 
 /**

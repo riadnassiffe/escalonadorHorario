@@ -336,3 +336,81 @@ async def test_pinned_turma_multiple_theoretical_rooms_and_no_r9_first_slot(
             assert actual["inicio"] == spec["inicio"]
             assert actual["fim"] == spec["fim"]
             assert actual["salas"] == spec["salas"]
+
+
+@pytest.mark.asyncio
+async def test_consecutive_lessons_config_roundtrip(client: AsyncClient):
+    auth = await register_and_login(client, email="consec_cfg@inst.br")
+    headers = {"Authorization": f"Bearer {auth['access_token']}"}
+
+    proj = (
+        await client.post(
+            "/api/v1/projects",
+            headers=headers,
+            json={"name": "Consec Config Test", "load_default_example": True},
+        )
+    ).json()
+    pid = proj["id"]
+
+    cfg_get = await client.get(f"/api/v1/projects/{pid}/config", headers=headers)
+    assert cfg_get.status_code == 200
+    cfg = cfg_get.json()
+    assert cfg["exigir_aulas_consecutivas_rigido"] is True
+    assert cfg["lambda_aulas_consecutivas"] == 8
+
+    cfg["exigir_aulas_consecutivas_rigido"] = False
+    cfg["lambda_aulas_consecutivas"] = 14
+    cfg_put = await client.put(f"/api/v1/projects/{pid}/config", headers=headers, json=cfg)
+    assert cfg_put.status_code == 200
+    assert cfg_put.json()["exigir_aulas_consecutivas_rigido"] is False
+    assert cfg_put.json()["lambda_aulas_consecutivas"] == 14
+
+    exported = await client.get(f"/api/v1/projects/{pid}/export-json", headers=headers)
+    assert exported.status_code == 200
+    exp_json = exported.json()
+    assert exp_json["config"]["exigir_aulas_consecutivas_rigido"] is False
+    assert exp_json["config"]["lambda_aulas_consecutivas"] == 14
+
+    proj2 = (
+        await client.post(
+            "/api/v1/projects",
+            headers=headers,
+            json={"name": "Consec Config Import", "load_default_example": False},
+        )
+    ).json()
+    imp_resp = await client.post(
+        f"/api/v1/projects/{proj2['id']}/import-json",
+        headers=headers,
+        json={"data": exp_json},
+    )
+    assert imp_resp.status_code == 200
+
+    cfg2 = (await client.get(f"/api/v1/projects/{proj2['id']}/config", headers=headers)).json()
+    assert cfg2["exigir_aulas_consecutivas_rigido"] is False
+    assert cfg2["lambda_aulas_consecutivas"] == 14
+
+
+def test_duration_formatting_and_html_export_hms():
+    from app.services.conflict_engine import ProjectSnapshot
+    from app.services.report_exporter import export_html_report
+    from app.services.time_utils import format_duration_ms, format_duration_seconds
+
+    assert format_duration_seconds(0) == "00h 00m 00s"
+    assert format_duration_seconds(30) == "00h 00m 30s"
+    assert format_duration_seconds(90) == "00h 01m 30s"
+    assert format_duration_seconds(3723) == "01h 02m 03s"
+
+    assert format_duration_ms(0) == "00h 00m 00s"
+    assert format_duration_ms(450) == "00h 00m 00.45s"
+    assert format_duration_ms(5) == "00h 00m 00.01s"
+    assert format_duration_ms(995) == "00h 00m 01s"
+    assert format_duration_ms(3723000) == "01h 02m 03s"
+
+    html = export_html_report(
+        "Projeto HMS",
+        ProjectSnapshot(),
+        {"status": "OPTIMAL", "tempo_execucao_ms": 3723000},
+        {},
+    )
+    assert "01h 02m 03s" in html
+    assert "3723000.0 ms" not in html

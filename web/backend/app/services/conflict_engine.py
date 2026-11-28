@@ -181,9 +181,7 @@ def evaluate_lesson_placement(
 
         if snap.config.get("distribuir_disciplinas_na_semana", True):
             disc = snap.disciplinas.get(target.get("disciplina_id", ""))
-            disc_max = int(disc.get("max_aulas_por_dia_turma", 0)) if disc else 0
-            cfg_max = int(snap.config.get("max_aulas_disciplina_dia_turma", 2))
-            max_lim = disc_max if disc_max > 0 else cfg_max
+            max_lim = int(disc.get("max_aulas_por_dia_turma", 0)) if disc else 0
             if max_lim > 0:
                 other_count = 0
                 for other in snap.alocacoes:

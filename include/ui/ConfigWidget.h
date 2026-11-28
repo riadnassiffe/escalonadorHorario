@@ -10,7 +10,6 @@
 #include <QSlider>
 #include <QLabel>
 #include <QSpinBox>
-#include <QDoubleSpinBox>
 #include <QComboBox>
 #include <QCheckBox>
 
@@ -76,15 +75,20 @@ private:
     QSlider* slider_lacunas_turma_{nullptr};
     QLabel* lbl_val_lacunas_turma_{nullptr};
 
+    QSlider* slider_aulas_consecutivas_{nullptr};
+    QLabel* lbl_val_aulas_consecutivas_{nullptr};
+
     QComboBox* combo_modelo_dias_{nullptr};
     QCheckBox* chk_preenchimento_integral_{nullptr};
     QCheckBox* chk_distribuir_semana_{nullptr};
-    QSpinBox* spin_max_aulas_dia_{nullptr};
+    QCheckBox* chk_consecutivas_rigido_{nullptr};
 
     QComboBox* combo_algoritmo_{nullptr};
     QComboBox* combo_escopo_semestre_{nullptr};
     QCheckBox* chk_sincronizar_anuais_{nullptr};
-    QDoubleSpinBox* spin_tempo_limite_{nullptr};
+    QSpinBox* spin_tempo_horas_{nullptr};
+    QSpinBox* spin_tempo_minutos_{nullptr};
+    QSpinBox* spin_tempo_segundos_{nullptr};
     QCheckBox* chk_sem_limite_tempo_{nullptr};
     QSpinBox* spin_max_memoria_{nullptr};
     QCheckBox* chk_sem_limite_memoria_{nullptr};

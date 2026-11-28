@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Play, X } from "lucide-react";
 import type { OptimizationConfig } from "../../types";
+import { DurationHmsInput } from "../common/DurationHmsInput";
 
 const ALGO_INFO: Record<string, { label: string; desc: string }> = {
   CP_SAT: {
@@ -70,14 +71,24 @@ export function OptimizeModal({ config, onClose, onLaunch }: Props) {
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-3">
             <div>
-              <label className="text-xs font-medium text-slate-500">Tempo Limite (s)</label>
-              <input type="number" min={1} value={timeLimit} onChange={(e) => setTimeLimit(Number(e.target.value))} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-800" />
+              <label className="text-xs font-medium text-slate-500">Tempo Limite (h / min / s)</label>
+              <DurationHmsInput
+                valueSeconds={timeLimit}
+                onChangeSeconds={setTimeLimit}
+                idPrefix="optimize-time-limit"
+              />
             </div>
             <div>
               <label className="text-xs font-medium text-slate-500">Memória Máx (MB)</label>
-              <input type="number" min={256} value={maxMem} onChange={(e) => setMaxMem(Number(e.target.value))} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-800" />
+              <input
+                type="number"
+                min={256}
+                value={maxMem}
+                onChange={(e) => setMaxMem(Number(e.target.value))}
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-800"
+              />
             </div>
           </div>
 

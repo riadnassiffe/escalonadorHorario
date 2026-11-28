@@ -399,7 +399,7 @@ bool ScheduleReportExporter::exportarHtml(const std::string& filepath,
             << "    <p style='color:var(--text-muted); margin-bottom:0;'>Otimização com Google OR-Tools CP-SAT | Granularidade de 5 minutos</p>\n"
             << "    <div class='kpi-grid'>\n"
             << "      <div class='kpi-card'><div class='kpi-val'>" << stats.status << "</div><div class='kpi-lbl'>Status do Solver</div></div>\n"
-            << "      <div class='kpi-card'><div class='kpi-val'>" << std::fixed << std::setprecision(1) << stats.tempo_execucao_ms << " ms</div><div class='kpi-lbl'>Tempo de Execução</div></div>\n"
+            << "      <div class='kpi-card'><div class='kpi-val'>" << model::formatDurationMs(stats.tempo_execucao_ms) << "</div><div class='kpi-lbl'>Tempo de Execução</div></div>\n"
             << "      <div class='kpi-card'><div class='kpi-val'>" << stats.total_aulas_alocadas << " / " << stats.total_aulas_esperadas << "</div><div class='kpi-lbl'>Aulas Alocadas</div></div>\n"
             << "      <div class='kpi-card'><div class='kpi-val'>" << stats.penalidade_janelas_J << " min</div><div class='kpi-lbl'>Janelas Professores (J)</div></div>\n"
             << "      <div class='kpi-card'><div class='kpi-val'>" << stats.penalidade_dias_D << "</div><div class='kpi-lbl'>Dias Trabalhados (D)</div></div>\n"

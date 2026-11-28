@@ -349,10 +349,11 @@ nlohmann::json JsonSerialization::configToJson(const model::OptimizationConfig& 
     j["lambda_lacunas_turma"] = cfg.lambda_lacunas_turma;
     j["lambda_preferencia_dias"] = cfg.lambda_preferencia_dias;
     j["lambda_preferencia_turnos"] = cfg.lambda_preferencia_turnos;
+    j["lambda_aulas_consecutivas"] = cfg.lambda_aulas_consecutivas;
     j["modelo_preferencia_dias"] = model::modeloPreferenciaDiasToString(cfg.modelo_preferencia_dias);
     j["preenchimento_integral_jornada"] = cfg.preenchimento_integral_jornada;
     j["distribuir_disciplinas_na_semana"] = cfg.distribuir_disciplinas_na_semana;
-    j["max_aulas_disciplina_dia_turma"] = cfg.max_aulas_disciplina_dia_turma;
+    j["exigir_aulas_consecutivas_rigido"] = cfg.exigir_aulas_consecutivas_rigido;
     j["escopo_semestre"] = model::escopoSemestreToString(cfg.escopo_semestre);
     j["sincronizar_anuais_entre_semestres"] = cfg.sincronizar_anuais_entre_semestres;
     j["algoritmo"] = model::solverAlgorithmToString(cfg.algoritmo);
@@ -387,6 +388,7 @@ model::OptimizationConfig JsonSerialization::configFromJson(const nlohmann::json
     if (j.contains("lambda_lacunas_turma")) cfg.lambda_lacunas_turma = j["lambda_lacunas_turma"].get<int>();
     if (j.contains("lambda_preferencia_dias")) cfg.lambda_preferencia_dias = j["lambda_preferencia_dias"].get<int>();
     if (j.contains("lambda_preferencia_turnos")) cfg.lambda_preferencia_turnos = j["lambda_preferencia_turnos"].get<int>();
+    if (j.contains("lambda_aulas_consecutivas")) cfg.lambda_aulas_consecutivas = j["lambda_aulas_consecutivas"].get<int>();
     if (j.contains("modelo_preferencia_dias")) {
         cfg.modelo_preferencia_dias = model::stringToModeloPreferenciaDias(j["modelo_preferencia_dias"].get<std::string>());
     }
@@ -396,8 +398,8 @@ model::OptimizationConfig JsonSerialization::configFromJson(const nlohmann::json
     if (j.contains("distribuir_disciplinas_na_semana")) {
         cfg.distribuir_disciplinas_na_semana = j["distribuir_disciplinas_na_semana"].get<bool>();
     }
-    if (j.contains("max_aulas_disciplina_dia_turma")) {
-        cfg.max_aulas_disciplina_dia_turma = j["max_aulas_disciplina_dia_turma"].get<int>();
+    if (j.contains("exigir_aulas_consecutivas_rigido")) {
+        cfg.exigir_aulas_consecutivas_rigido = j["exigir_aulas_consecutivas_rigido"].get<bool>();
     }
     if (j.contains("tempo_limite_segundos")) {
         cfg.tempo_limite_segundos = j["tempo_limite_segundos"].get<double>();
@@ -459,6 +461,7 @@ nlohmann::json JsonSerialization::timetableToJson(const model::Timetable& tt) {
         {"penalidade_preferencias_P", s.penalidade_preferencias_P},
         {"penalidade_preferencia_dias_W", s.penalidade_preferencia_dias_W},
         {"penalidade_lacunas_turma_JG", s.penalidade_lacunas_turma_JG},
+        {"beneficio_consecutivas_C", s.beneficio_consecutivas_C},
         {"total_aulas_alocadas", s.total_aulas_alocadas},
         {"total_aulas_esperadas", s.total_aulas_esperadas}
     };
@@ -522,6 +525,7 @@ model::Timetable JsonSerialization::timetableFromJson(const nlohmann::json& j) {
         s.penalidade_preferencias_P = s_json.value("penalidade_preferencias_P", 0);
         s.penalidade_preferencia_dias_W = s_json.value("penalidade_preferencia_dias_W", 0);
         s.penalidade_lacunas_turma_JG = s_json.value("penalidade_lacunas_turma_JG", 0);
+        s.beneficio_consecutivas_C = s_json.value("beneficio_consecutivas_C", 0);
         s.total_aulas_alocadas = s_json.value("total_aulas_alocadas", 0);
         s.total_aulas_esperadas = s_json.value("total_aulas_esperadas", 0);
         tt.setEstatisticas(s);
@@ -620,9 +624,19 @@ model::InstitutionData JsonSerialization::fromJson(const nlohmann::json& j) {
             data.addTurma(turmaFromJson(item));
         }
     }
+    std::optional<int> legacy_max_por_dia;
+    if (j.contains("config") && j["config"].is_object() &&
+        j["config"].contains("max_aulas_disciplina_dia_turma") &&
+        j["config"]["max_aulas_disciplina_dia_turma"].is_number_integer()) {
+        legacy_max_por_dia = j["config"]["max_aulas_disciplina_dia_turma"].get<int>();
+    }
     if (j.contains("disciplinas") && j["disciplinas"].is_array()) {
         for (const auto& item : j["disciplinas"]) {
-            data.addDisciplina(disciplinaFromJson(item));
+            auto d = disciplinaFromJson(item);
+            if (!item.contains("max_aulas_por_dia_turma") && legacy_max_por_dia.has_value()) {
+                d.setMaxAulasPorDiaTurma(*legacy_max_por_dia);
+            }
+            data.addDisciplina(std::move(d));
         }
     }
     if (j.contains("config") && j["config"].is_object()) {

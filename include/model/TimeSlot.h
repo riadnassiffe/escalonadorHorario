@@ -205,4 +205,24 @@ struct TimeInterval {
     static std::string minutesToTimeString(int minutes);
 };
 
+/**
+ * @brief Formata uma duração em segundos no formato "HHh MMm SSs".
+ */
+std::string formatDurationSeconds(double total_seconds);
+
+/**
+ * @brief Formata uma duração em milissegundos em horas, minutos e segundos ("HHh MMm SSs" ou "00h 00m 00.XXs" para < 995 ms).
+ */
+std::string formatDurationMs(double duration_ms);
+
+/**
+ * @brief Converte uma duração em segundos para componentes inteiros de horas, minutos e segundos.
+ */
+void secondsToHms(double total_seconds, int& hours, int& minutes, int& seconds);
+
+/**
+ * @brief Converte horas, minutos e segundos para total em segundos (mínimo 1.0 s).
+ */
+double hmsToSeconds(int hours, int minutes, int seconds);
+
 } // namespace scheduler::model

@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { computeImplicitBreaks, timeToMin, minToTime } from "../time";
+import {
+  computeImplicitBreaks,
+  formatDurationMs,
+  formatDurationSeconds,
+  hmsToSeconds,
+  minToTime,
+  secondsToHms,
+  timeToMin,
+} from "../time";
 import { filterAndSortItems, normalizeText } from "../searchSort";
 import { evaluateLessonAtSlot, evaluateLessonSwap, type DomainSnapshot } from "../conflictEngine";
 
@@ -19,6 +27,21 @@ describe("domain time & searchSort", () => {
     const items = [{ nome: "Sala 10" }, { nome: "Sala 2" }, { nome: "Sala 1" }];
     const sorted = filterAndSortItems(items, "", (x) => x.nome, (x) => x.nome, true);
     expect(sorted.map((x) => x.nome)).toEqual(["Sala 1", "Sala 2", "Sala 10"]);
+  });
+  it("formats durations and converts seconds to/from H/M/S", () => {
+    expect(formatDurationSeconds(0)).toBe("00h 00m 00s");
+    expect(formatDurationSeconds(30)).toBe("00h 00m 30s");
+    expect(formatDurationSeconds(3723)).toBe("01h 02m 03s");
+
+    expect(formatDurationMs(0)).toBe("00h 00m 00s");
+    expect(formatDurationMs(450)).toBe("00h 00m 00.45s");
+    expect(formatDurationMs(5)).toBe("00h 00m 00.01s");
+    expect(formatDurationMs(995)).toBe("00h 00m 01s");
+    expect(formatDurationMs(3723000)).toBe("01h 02m 03s");
+
+    expect(secondsToHms(3665)).toEqual({ hours: 1, minutes: 1, seconds: 5 });
+    expect(hmsToSeconds(1, 15, 20)).toBe(4520);
+    expect(hmsToSeconds(0, 0, 0)).toBe(1);
   });
 });
 
@@ -77,7 +100,7 @@ describe("domain conflictEngine", () => {
         max_aulas_por_dia_turma: 2,
       },
     },
-    config: { distribuir_disciplinas_na_semana: true, max_aulas_disciplina_dia_turma: 2 },
+    config: { distribuir_disciplinas_na_semana: true },
     alocacoes: [
       {
         aula_id: "MAT_1",
@@ -127,5 +150,32 @@ describe("domain conflictEngine", () => {
 
     const swap = evaluateLessonSwap(snap, "MAT_1", "MAT_2");
     expect(swap.some((c) => c.type === "DURACAO_INCOMPATIVEL")).toBe(true);
+  });
+
+  it("enforces per-discipline max_aulas_por_dia_turma, treats 0 as unlimited, and respects R10 toggle", () => {
+    const snapLimit1: DomainSnapshot = {
+      ...snap,
+      disciplinas: {
+        MAT: { ...snap.disciplinas.MAT, max_aulas_por_dia_turma: 1 },
+      },
+    };
+    const c1 = evaluateLessonAtSlot(snapLimit1, "MAT_2", "SEG", 530, 580);
+    expect(c1.some((c) => c.type === "LIMITE_DIARIO_DISCIPLINA")).toBe(true);
+
+    const snapUnlimited: DomainSnapshot = {
+      ...snap,
+      disciplinas: {
+        MAT: { ...snap.disciplinas.MAT, max_aulas_por_dia_turma: 0 },
+      },
+    };
+    const c0 = evaluateLessonAtSlot(snapUnlimited, "MAT_2", "SEG", 530, 580);
+    expect(c0.some((c) => c.type === "LIMITE_DIARIO_DISCIPLINA")).toBe(false);
+
+    const snapDisabled: DomainSnapshot = {
+      ...snapLimit1,
+      config: { distribuir_disciplinas_na_semana: false },
+    };
+    const cOff = evaluateLessonAtSlot(snapDisabled, "MAT_2", "SEG", 530, 580);
+    expect(cOff.some((c) => c.type === "LIMITE_DIARIO_DISCIPLINA")).toBe(false);
   });
 });

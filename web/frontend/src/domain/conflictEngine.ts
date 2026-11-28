@@ -131,10 +131,7 @@ export function evaluateLessonPlacement(
 
     if (snap.config.distribuir_disciplinas_na_semana ?? true) {
       const disc = snap.disciplinas[target.disciplina_id];
-      const maxLim =
-        disc && disc.max_aulas_por_dia_turma > 0
-          ? disc.max_aulas_por_dia_turma
-          : (snap.config.max_aulas_disciplina_dia_turma ?? 2);
+      const maxLim = disc?.max_aulas_por_dia_turma ?? 0;
       if (maxLim > 0) {
         let otherCount = 0;
         for (const other of snap.alocacoes) {

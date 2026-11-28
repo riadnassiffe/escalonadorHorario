@@ -9,7 +9,7 @@ import {
 } from "@dnd-kit/core";
 import { useMemo, useState } from "react";
 import { ALL_DAYS, DAY_LABELS, formatInterval, minToTime } from "../../domain/time";
-import { evaluateLessonAtSlot, type DomainSnapshot } from "../../domain/conflictEngine";
+import { evaluateLessonAtSlot, evaluateLessonSwap, type DomainSnapshot } from "../../domain/conflictEngine";
 import { normalizeText } from "../../domain/searchSort";
 import type { AllocatedLesson, DayOfWeek, SlotConflictInfo } from "../../types";
 import { DraggableLessonCard } from "./DraggableLessonCard";
@@ -79,6 +79,19 @@ export function TimetableGrid({
     }
     return map;
   }, [alocacoes]);
+
+  const swappableAulaIds = useMemo(() => {
+    const eligible = new Set<string>();
+    if (!selectedAulaId) return eligible;
+    if (!snapshot.alocacoes.some((a) => a.aula_id === selectedAulaId)) return eligible;
+    for (const lesson of alocacoes) {
+      if (lesson.aula_id === selectedAulaId) continue;
+      if (evaluateLessonSwap(snapshot, selectedAulaId, lesson.aula_id).length === 0) {
+        eligible.add(lesson.aula_id);
+      }
+    }
+    return eligible;
+  }, [alocacoes, selectedAulaId, snapshot]);
 
   const handleDragStart = (event: DragStartEvent) => {
     const lesson = event.active.data.current?.lesson as AllocatedLesson | undefined;
@@ -155,6 +168,7 @@ export function TimetableGrid({
               roomNames={roomNames}
               conflicts={conflitos[lesson.aula_id] || []}
               isSelected={selectedAulaId === lesson.aula_id}
+              canSwap={swappableAulaIds.has(lesson.aula_id)}
               isSearchMatch={isMatch}
               dimmed={dimmed}
               onSelect={() => onSelectLesson(lesson.aula_id)}

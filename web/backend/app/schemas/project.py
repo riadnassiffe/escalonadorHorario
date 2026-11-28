@@ -19,10 +19,11 @@ class OptimizationConfigSchema(BaseModel):
     lambda_preferencia_dias: int = Field(default=7, ge=0)
     lambda_preferencia_turnos: int = Field(default=8, ge=0)
     lambda_lacunas_turma: int = Field(default=2, ge=0)
+    lambda_aulas_consecutivas: int = Field(default=8, ge=0)
     modelo_preferencia_dias: str = "POR_DIA_TRABALHADO"
     preenchimento_integral_jornada: bool = False
     distribuir_disciplinas_na_semana: bool = True
-    max_aulas_disciplina_dia_turma: int = Field(default=2, ge=0)
+    exigir_aulas_consecutivas_rigido: bool = True
     tempo_limite_segundos: float = Field(default=30.0, gt=0)
     sem_limite_tempo: bool = False
     max_memoria_mb: int = Field(default=2048, ge=0)

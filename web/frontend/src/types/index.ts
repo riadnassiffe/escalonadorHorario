@@ -172,10 +172,11 @@ export interface OptimizationConfig {
   lambda_preferencia_dias: number;
   lambda_preferencia_turnos: number;
   lambda_lacunas_turma: number;
+  lambda_aulas_consecutivas: number;
   modelo_preferencia_dias: string;
   preenchimento_integral_jornada: boolean;
   distribuir_disciplinas_na_semana: boolean;
-  max_aulas_disciplina_dia_turma: number;
+  exigir_aulas_consecutivas_rigido: boolean;
   tempo_limite_segundos: number;
   sem_limite_tempo: boolean;
   max_memoria_mb: number;

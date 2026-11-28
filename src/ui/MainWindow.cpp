@@ -380,7 +380,7 @@ void MainWindow::setupKpiBanner() {
     };
 
     layout->addWidget(make_kpi("Status do Solver", lbl_kpi_status_, "NÃO EXECUTADO", "#64748b"));
-    layout->addWidget(make_kpi("Tempo de Resolução", lbl_kpi_tempo_, "0.0 ms"));
+    layout->addWidget(make_kpi("Tempo de Resolução", lbl_kpi_tempo_, "00h 00m 00s"));
     layout->addWidget(make_kpi("Aulas Alocadas", lbl_kpi_aulas_, "0 / 0", "#16a34a"));
     layout->addWidget(make_kpi("Janelas Professores (J)", lbl_kpi_janelas_, "0 min", "#d97706"));
     layout->addWidget(make_kpi("Dias Trabalhados (D)", lbl_kpi_dias_, "0"));
@@ -424,7 +424,8 @@ void MainWindow::updateKpiBanner() {
         lbl_kpi_status_->setStyleSheet("font-size: 14px; font-weight: bold; color: #64748b;");
     }
 
-    lbl_kpi_tempo_->setText(QString::number(s.tempo_execucao_ms, 'f', 1) + " ms");
+    lbl_kpi_tempo_->setText(QString::fromStdString(model::formatDurationMs(s.tempo_execucao_ms)));
+    lbl_kpi_tempo_->setToolTip(QString("Tempo exato: %1 ms").arg(s.tempo_execucao_ms, 0, 'f', 1));
     lbl_kpi_aulas_->setText(QString("%1 / %2").arg(s.total_aulas_alocadas).arg(s.total_aulas_esperadas));
     lbl_kpi_janelas_->setText(QString::number(s.penalidade_janelas_J) + " min");
     lbl_kpi_dias_->setText(QString::number(s.penalidade_dias_D));
@@ -637,8 +638,8 @@ QWidget* MainWindow::createDisciplinasTab() {
     mutating_widgets_.append(btn_rem);
 
     table_disciplinas_ = new QTableWidget(widget);
-    table_disciplinas_->setColumnCount(8);
-    table_disciplinas_->setHorizontalHeaderLabels({"ID", "Nome", "Regime / Semestre", "Tipo", "Duração", "Aulas/Sem", "Professor", "Turma"});
+    table_disciplinas_->setColumnCount(9);
+    table_disciplinas_->setHorizontalHeaderLabels({"ID", "Nome", "Regime / Semestre", "Tipo", "Duração", "Aulas/Sem", "Máx/Dia", "Professor", "Turma"});
     table_disciplinas_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     table_disciplinas_->horizontalHeader()->setMinimumSectionSize(75);
     table_disciplinas_->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
@@ -849,9 +850,8 @@ void MainWindow::onOptimizationFinished(model::Timetable tt,
 
     const bool had_previous_grade = !data_.grade().alocacoes().empty();
     const auto s = tt.estatisticas();
-    txt_logs_->appendPlainText(QString("[RESULTADO] Status: %1 | Tempo: %2 ms | Objetivo: %3")
-        .arg(QString::fromStdString(s.status))
-        .arg(s.tempo_execucao_ms, 0, 'f', 1)
+    txt_logs_->appendPlainText(QString("[RESULTADO] Status: %1 | Tempo: %2 | Objetivo: %3")
+        .arg(QString::fromStdString(s.status), QString::fromStdString(model::formatDurationMs(s.tempo_execucao_ms)))
         .arg(s.valor_objetivo, 0, 'f', 1));
 
     for (const auto& msg : tt.mensagensDiagnostico()) {
@@ -953,7 +953,8 @@ void MainWindow::onOptimize() {
     if (current_cfg.sem_limite_tempo) {
         txt_logs_->appendPlainText("[PARÂMETRO] Tempo limite: Sem restrição de tempo (ilimitado)");
     } else {
-        txt_logs_->appendPlainText(QString("[PARÂMETRO] Tempo limite: %1 s").arg(current_cfg.tempo_limite_segundos));
+        txt_logs_->appendPlainText(QString("[PARÂMETRO] Tempo limite: %1")
+            .arg(QString::fromStdString(model::formatDurationSeconds(current_cfg.tempo_limite_segundos))));
     }
     if (current_cfg.sem_limite_memoria || current_cfg.max_memoria_mb <= 0) {
         txt_logs_->appendPlainText("[PARÂMETRO] Limite de memória: Sem restrição (ilimitado)");
@@ -1420,6 +1421,8 @@ void MainWindow::refreshDisciplinasTable() {
         table_disciplinas_->setItem(r, 3, new SmartTableWidgetItem(QString::fromStdString(d.tipo())));
         table_disciplinas_->setItem(r, 4, new SmartTableWidgetItem(QString::number(d.duracaoMinutos()) + " min"));
         table_disciplinas_->setItem(r, 5, new SmartTableWidgetItem(QString::number(d.aulasSemanais())));
+        table_disciplinas_->setItem(
+            r, 6, new SmartTableWidgetItem(d.maxAulasPorDiaTurma() > 0 ? QString::number(d.maxAulasPorDiaTurma()) : "Sem limite"));
 
         QString profs;
         for (size_t i = 0; i < d.professores().size(); ++i) {
@@ -1427,7 +1430,7 @@ void MainWindow::refreshDisciplinasTable() {
             const auto* p = data_.findProfessor(d.professores()[i]);
             profs += QString::fromStdString(p ? p->nome() : d.professores()[i]);
         }
-        table_disciplinas_->setItem(r, 6, new SmartTableWidgetItem(profs));
+        table_disciplinas_->setItem(r, 7, new SmartTableWidgetItem(profs));
 
         QString turmas;
         for (size_t i = 0; i < d.turmas().size(); ++i) {
@@ -1435,7 +1438,7 @@ void MainWindow::refreshDisciplinasTable() {
             const auto* t = data_.findTurma(d.turmas()[i]);
             turmas += QString::fromStdString(t ? t->nome() : d.turmas()[i]);
         }
-        table_disciplinas_->setItem(r, 7, new SmartTableWidgetItem(turmas));
+        table_disciplinas_->setItem(r, 8, new SmartTableWidgetItem(turmas));
     }
     table_disciplinas_->setSortingEnabled(true);
     if (search_bar_disciplinas_) {
@@ -1757,9 +1760,21 @@ void MainWindow::onEditDisciplina() {
     if (d) {
         LessonEditorDialog dlg(data_.professores(), data_.turmas(), data_.salas(), this, d);
         if (dlg.exec() == QDialog::Accepted) {
-            data_.addDisciplina(dlg.getDisciplina());
+            auto updated_disc = dlg.getDisciplina();
+            data_.addDisciplina(updated_disc);
+            for (auto& aloc : data_.grade().alocacoes()) {
+                if (aloc.disciplina_id == updated_disc.id()) {
+                    aloc.professores = updated_disc.professores();
+                    aloc.disciplina_nome = updated_disc.nome();
+                    aloc.tipo = updated_disc.tipo();
+                    aloc.regime = updated_disc.regime();
+                    aloc.semestre = updated_disc.semestre();
+                }
+            }
             data_.gerarOcorrenciasAulas(true, model::EscopoSemestreOtimizacao::TODAS_SEM_FILTRO);
             refreshAllTables();
+            timetable_view_->refreshView();
+            updateKpiBanner();
         }
     }
 }

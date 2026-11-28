@@ -76,6 +76,7 @@ struct TimetableStatistics {
     int penalidade_preferencias_P{0};    ///< Penalidade por alocação fora de horários ideais.
     int penalidade_preferencia_dias_W{0};///< Penalidade associada a dias menos desejados pelos docentes.
     int penalidade_lacunas_turma_JG{0};  ///< Penalidade por horários vazios/lacunas na grade dos estudantes.
+    int beneficio_consecutivas_C{0};     ///< Total de pares de aulas consecutivas atendidos (disciplinas com exigir_aulas_consecutivas).
     int total_aulas_alocadas{0};         ///< Quantidade de aulas acomodadas na grade com sucesso.
     int total_aulas_esperadas{0};        ///< Total de aulas que deveriam ser alocadas.
     std::string solver_info;             ///< Informações técnicas e diagnóstico emitidos pelo solver.

@@ -928,7 +928,7 @@ std::vector<scheduler::model::SlotConflictInfo> evaluateLessonPlacement(
         // Limite diário de aulas da mesma disciplina na turma
         if (data.config().distribuir_disciplinas_na_semana) {
             const auto* disc = data.findDisciplina(target.disciplina_id);
-            int max_lim = (disc && disc->maxAulasPorDiaTurma() > 0) ? disc->maxAulasPorDiaTurma() : data.config().max_aulas_disciplina_dia_turma;
+            int max_lim = disc ? disc->maxAulasPorDiaTurma() : 0;
             if (max_lim > 0) {
                 int other_count = 0;
                 for (const auto& other : alocs) {

@@ -8,7 +8,6 @@
 #include "model/OptimizationConfig.h"
 #include <QDialog>
 #include <QComboBox>
-#include <QDoubleSpinBox>
 #include <QSpinBox>
 #include <QCheckBox>
 #include <QLabel>
@@ -66,6 +65,7 @@ private:
      * @param algo Algoritmo de resolução.
      */
     void updateAlgorithmDetails(model::SolverAlgorithm algo);
+    void setTimeLimitInputsEnabled(bool enabled);
 
     model::OptimizationConfig initial_config_;
     int num_aulas_em_tela_{0};
@@ -76,7 +76,9 @@ private:
     QLabel* lbl_algo_guarantee_{nullptr};
     QLabel* lbl_algo_speed_{nullptr};
 
-    QDoubleSpinBox* spin_time_limit_{nullptr};
+    QSpinBox* spin_time_hours_{nullptr};
+    QSpinBox* spin_time_minutes_{nullptr};
+    QSpinBox* spin_time_seconds_{nullptr};
     QCheckBox* chk_sem_limite_tempo_{nullptr};
     QSpinBox* spin_mem_limit_{nullptr};
     QCheckBox* chk_sem_limite_memoria_{nullptr};

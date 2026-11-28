@@ -95,13 +95,14 @@ class OptimizationConfigModel(Base):
     lambda_preferencia_dias: Mapped[int] = mapped_column(Integer, default=7, nullable=False)
     lambda_preferencia_turnos: Mapped[int] = mapped_column(Integer, default=8, nullable=False)
     lambda_lacunas_turma: Mapped[int] = mapped_column(Integer, default=2, nullable=False)
+    lambda_aulas_consecutivas: Mapped[int] = mapped_column(Integer, default=8, nullable=False)
 
     modelo_preferencia_dias: Mapped[str] = mapped_column(
         String(32), default="POR_DIA_TRABALHADO", nullable=False
     )
     preenchimento_integral_jornada: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     distribuir_disciplinas_na_semana: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    max_aulas_disciplina_dia_turma: Mapped[int] = mapped_column(Integer, default=2, nullable=False)
+    exigir_aulas_consecutivas_rigido: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     tempo_limite_segundos: Mapped[float] = mapped_column(Float, default=30.0, nullable=False)
     sem_limite_tempo: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

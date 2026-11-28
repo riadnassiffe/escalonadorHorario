@@ -22,4 +22,17 @@ namespace scheduler::solver::detail {
  */
 void auditarConflitosEntreAulas(const model::InstitutionData& data, model::Timetable& timetable);
 
+/**
+ * @brief Calcula o total de pares de aulas consecutivas realizados na grade para disciplinas
+ *        configuradas com exigir_aulas_consecutivas = true.
+ *
+ * Considera consecutivos dois slots adjacentes na jornada ordenada da turma primária
+ * dentro do mesmo turno (timeToShift(slot[k].start_min) == timeToShift(slot[k+1].start_min)).
+ *
+ * @param data Dados acadêmicos da instituição.
+ * @param timetable Grade horária avaliada.
+ * @return Quantidade total de pares consecutivos atendidos.
+ */
+int calcularBeneficioConsecutivas(const model::InstitutionData& data, const model::Timetable& timetable);
+
 } // namespace scheduler::solver::detail

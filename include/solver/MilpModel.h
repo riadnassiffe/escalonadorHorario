@@ -57,6 +57,12 @@ struct ConsecAuxRecord {
     int w_d_col;
 };
 
+struct ConsecPairAuxRecord {
+    std::vector<int> slot_a_cols;
+    std::vector<int> slot_b_cols;
+    int p_col;
+};
+
 struct MilpProblem {
     std::map<std::string, std::vector<CandidateAllocation>> todos_candidatos;
     std::vector<MilpVar> vars;
@@ -75,6 +81,7 @@ struct MilpProblem {
     std::vector<GapAuxRecord> gap_records;
     std::vector<ShiftAuxRecord> shift_records;
     std::vector<ConsecAuxRecord> consec_records;
+    std::vector<ConsecPairAuxRecord> consec_pair_records;
 
     std::vector<double> warm_start_vals;
     bool has_warm_start{false};

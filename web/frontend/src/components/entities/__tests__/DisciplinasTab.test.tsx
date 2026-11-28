@@ -335,4 +335,50 @@ describe("DisciplinasTab", () => {
     expect(getColWidth("nome")).toBe("250px");
     expect(useUiStore.getState().disciplinasColumnWidths).toEqual({});
   });
+
+  it("displays Máx/Dia column (including Sem limite for 0) and saves updated max_aulas_por_dia_turma", async () => {
+    apiFetchMock.mockResolvedValue({});
+    const list: Disciplina[] = [
+      ...DISCIPLINAS,
+      {
+        id: "T01_ART",
+        code: "T01_ART",
+        nome: "Artes",
+        tipo: "TEORICA",
+        duracao_minutos: 50,
+        aulas_semanais: 2,
+        regime: "ANUAL",
+        semestre: "AMBOS",
+        professores: ["P01"],
+        turmas: ["T01"],
+        salas_alternativas: [],
+        exigir_aulas_consecutivas: false,
+        max_aulas_por_dia_turma: 0,
+      },
+    ];
+    renderTab(list);
+
+    expect(screen.getByText("2/dia")).toBeTruthy();
+    expect(screen.getByText("Sem limite")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /Editar Física/i }));
+    const maxDiaInput = screen.getByLabelText(/Máx\. Aulas\/Dia \(0 = sem limite\)/i) as HTMLInputElement;
+    expect(maxDiaInput.value).toBe("2");
+
+    fireEvent.change(maxDiaInput, { target: { value: "0" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Salvar$/i }));
+
+    await waitFor(() => {
+      expect(apiFetchMock).toHaveBeenCalledWith(
+        "/projects/proj-1/disciplinas/T01_FIS",
+        expect.objectContaining({
+          method: "PUT",
+          body: expect.any(String),
+        })
+      );
+    });
+
+    const callBody = JSON.parse(apiFetchMock.mock.calls[0][1].body as string) as Disciplina;
+    expect(callBody.max_aulas_por_dia_turma).toBe(0);
+  });
 });

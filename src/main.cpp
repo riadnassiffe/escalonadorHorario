@@ -419,7 +419,7 @@ int main(int argc, char* argv[]) {
 
             std::cout << "\n------------------ RESULTADOS DO ENCADINHAMENTO CP-SAT ------------------" << std::endl;
             std::cout << "Status: " << tt2.estatisticas().status << std::endl;
-            std::cout << "Tempo: " << tt2.estatisticas().tempo_execucao_ms << " ms" << std::endl;
+            std::cout << "Tempo: " << scheduler::model::formatDurationMs(tt2.estatisticas().tempo_execucao_ms) << std::endl;
             std::cout << "Aulas alocadas: " << tt2.estatisticas().total_aulas_alocadas << std::endl;
             for (const auto& msg : tt2.mensagensDiagnostico()) {
                 std::cout << "  " << msg << std::endl;
@@ -439,13 +439,14 @@ int main(int argc, char* argv[]) {
         data.aplicarResultadoOtimizacao(std::move(tt), data.config().escopo_semestre);
         std::cout << "\n------------------ RESULTADOS DA OTIMIZAÇÃO ------------------" << std::endl;
         std::cout << "Status: " << stats.status << std::endl;
-        std::cout << "Tempo de resolução: " << stats.tempo_execucao_ms << " ms" << std::endl;
+        std::cout << "Tempo de resolução: " << scheduler::model::formatDurationMs(stats.tempo_execucao_ms) << std::endl;
         std::cout << "Valor da função objetivo (Z): " << stats.valor_objetivo << std::endl;
         std::cout << "Aulas alocadas: " << stats.total_aulas_alocadas << " de " << stats.total_aulas_esperadas << std::endl;
         std::cout << "Penalidade Janelas Professores (J): " << stats.penalidade_janelas_J << " min" << std::endl;
         std::cout << "Penalidade Dias Trabalhados (D): " << stats.penalidade_dias_D << std::endl;
         std::cout << "Penalidade Preferência Semanal Dias (W): " << stats.penalidade_preferencia_dias_W << std::endl;
         std::cout << "Penalidade Lacunas Turmas (JG): " << stats.penalidade_lacunas_turma_JG << " min" << std::endl;
+        std::cout << "Benefício Aulas Consecutivas (C): " << stats.beneficio_consecutivas_C << " pares" << std::endl;
         for (const auto& msg : diags) {
             std::cout << "  " << msg << std::endl;
         }

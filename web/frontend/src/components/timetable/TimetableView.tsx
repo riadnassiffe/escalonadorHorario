@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowLeftRight, Lock, Plus, Search, Trash2, Unlock } from "lucide-react";
 import { useTimetableMutations, useUnallocated } from "../../api/hooks";
-import type { DomainSnapshot } from "../../domain/conflictEngine";
+import { evaluateLessonSwap, type DomainSnapshot } from "../../domain/conflictEngine";
 import { computeImplicitBreaks, minToTime, timeToMin } from "../../domain/time";
 import { useTimetableStore, type ViewPerspective } from "../../store/timetableStore";
 import { useUiStore } from "../../store/uiStore";
@@ -126,6 +126,30 @@ export function TimetableView({ projectId, snapshot, timetable }: Props) {
   const conflictsMap = timetable?.conflitos || {};
   const conflictEntries = Object.entries(conflictsMap);
   const selectedLesson = (timetable?.alocacoes || []).find((a) => a.aula_id === selectedAulaId) || null;
+
+  const swappableCount = useMemo(() => {
+    if (!selectedLesson) return 0;
+    let count = 0;
+    for (const a of filteredAlocs) {
+      if (a.aula_id === selectedLesson.aula_id) continue;
+      if (evaluateLessonSwap(snapshot, selectedLesson.aula_id, a.aula_id).length === 0) {
+        count++;
+      }
+    }
+    return count;
+  }, [filteredAlocs, selectedLesson, snapshot]);
+
+  useEffect(() => {
+    if (!selectedAulaId) return;
+    if (moveModalLesson || swapModalLesson || roomModalLesson || addModalInit || dropDecision) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSelectedAulaId(null);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [addModalInit, dropDecision, moveModalLesson, roomModalLesson, selectedAulaId, setSelectedAulaId, swapModalLesson]);
 
   return (
     <div className="space-y-3" onClick={() => setContextMenu(null)}>
@@ -263,10 +287,21 @@ export function TimetableView({ projectId, snapshot, timetable }: Props) {
       </div>
 
       {selectedLesson && (
-        <div className="flex items-center justify-between rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-          <span>
-            <strong>Selecionada:</strong> {selectedLesson.disciplina_nome} ({selectedLesson.aula_id}) — {selectedLesson.dia} {selectedLesson.inicio}-{selectedLesson.fim}
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+          <div className="flex flex-wrap items-center gap-2">
+            <span>
+              <strong>Selecionada:</strong> {selectedLesson.disciplina_nome} ({selectedLesson.aula_id}) — {selectedLesson.dia} {selectedLesson.inicio}-{selectedLesson.fim}
+            </span>
+            {swappableCount > 0 ? (
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200">
+                • {swappableCount} {swappableCount === 1 ? "aula" : "aulas"} com troca livre (em verde)
+              </span>
+            ) : (
+              <span className="text-amber-800/80 dark:text-amber-300/80">
+                • Nenhuma troca sem conflito nesta visão
+              </span>
+            )}
+          </div>
           <button onClick={() => setSelectedAulaId(null)} className="font-semibold underline">Limpar seleção</button>
         </div>
       )}

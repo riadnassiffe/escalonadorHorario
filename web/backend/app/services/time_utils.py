@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import re
 
 MINUTES_PER_DAY = 1440
@@ -130,3 +131,25 @@ def next_sequential_code(existing_codes: list[str], prefix: str) -> str:
         if cand not in existing_set:
             return cand
         n += 1
+
+
+def format_duration_seconds(total_seconds: float) -> str:
+    if not math.isfinite(total_seconds) or total_seconds <= 0:
+        total = 0
+    else:
+        total = int(round(total_seconds))
+        if total < 0:
+            total = 0
+    h = total // 3600
+    m = (total % 3600) // 60
+    s = total % 60
+    return f"{h:02d}h {m:02d}m {s:02d}s"
+
+
+def format_duration_ms(duration_ms: float) -> str:
+    if not math.isfinite(duration_ms) or duration_ms <= 0:
+        return "00h 00m 00s"
+    if duration_ms < 995.0:
+        hundredths = max(1, min(99, int(round(duration_ms / 10.0))))
+        return f"00h 00m 00.{hundredths:02d}s"
+    return format_duration_seconds(round(duration_ms / 1000.0))

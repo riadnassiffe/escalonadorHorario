@@ -4,12 +4,14 @@
  */
 
 #include "ui/ConfigWidget.h"
+#include "model/TimeSlot.h"
 #include "ui/ResponsiveUi.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QScrollArea>
+#include <algorithm>
 
 namespace scheduler::ui {
 
@@ -97,6 +99,10 @@ void ConfigWidget::setupUi() {
                                          "Compacta os horários das turmas eliminando aulas vagas intermediárias.",
                                          slider_lacunas_turma_, lbl_val_lacunas_turma_, 2));
 
+    lay_pesos->addLayout(make_slider_row("Benefício para aulas consecutivas / geminadas (λ7):",
+                                         "Recompensa na função benefício pares de aulas da mesma disciplina em horários adjacentes no mesmo turno (para disciplinas marcadas como consecutivas).",
+                                         slider_aulas_consecutivas_, lbl_val_aulas_consecutivas_, 8));
+
     main_layout->addWidget(grp_pesos);
 
     // 2. Semântica da Preferência e Regras Acadêmicas
@@ -119,15 +125,13 @@ void ConfigWidget::setupUi() {
 
     chk_distribuir_semana_ = new QCheckBox("Distribuir matérias na semana (evitar aulas em excesso no mesmo dia)", grp_regras);
     chk_distribuir_semana_->setChecked(true);
+    chk_distribuir_semana_->setToolTip("Aplica o limite diário (Máximo por Dia) configurado individualmente em cada disciplina (R10).");
     form_regras->addRow("", chk_distribuir_semana_);
 
-    spin_max_aulas_dia_ = new QSpinBox(grp_regras);
-    spin_max_aulas_dia_->setRange(1, 6);
-    spin_max_aulas_dia_->setValue(2);
-    spin_max_aulas_dia_->setSuffix(" aulas diárias");
-    spin_max_aulas_dia_->setToolTip("Limite de aulas diárias por matéria para a turma");
-    spin_max_aulas_dia_->setFixedWidth(140);
-    form_regras->addRow("Limite Diário por Disciplina:", spin_max_aulas_dia_);
+    chk_consecutivas_rigido_ = new QCheckBox("Exigir aulas consecutivas como restrição rígida (R11)", grp_regras);
+    chk_consecutivas_rigido_->setChecked(true);
+    chk_consecutivas_rigido_->setToolTip("Quando marcado, impõe agrupamento em bloco como restrição obrigatória nos solvers exatos. Quando desmarcado, atua apenas na função benefício (λ7), evitando inviabilidades e rejeição de Warm Start.");
+    form_regras->addRow("", chk_consecutivas_rigido_);
 
     main_layout->addWidget(grp_regras);
 
@@ -164,22 +168,47 @@ void ConfigWidget::setupUi() {
     form_solver->addRow("", chk_sincronizar_anuais_);
 
     auto* lay_tempo = new QHBoxLayout();
-    lay_tempo->setSpacing(10);
+    lay_tempo->setSpacing(6);
 
-    spin_tempo_limite_ = new QDoubleSpinBox(grp_solver);
-    spin_tempo_limite_->setRange(1.0, 3600.0);
-    spin_tempo_limite_->setValue(30.0);
-    spin_tempo_limite_->setSuffix(" segundos");
-    spin_tempo_limite_->setFixedWidth(148);
+    spin_tempo_horas_ = new QSpinBox(grp_solver);
+    spin_tempo_horas_->setRange(0, 99);
+    spin_tempo_horas_->setValue(0);
+    spin_tempo_horas_->setSuffix(" h");
+    spin_tempo_horas_->setFixedWidth(72);
+
+    spin_tempo_minutos_ = new QSpinBox(grp_solver);
+    spin_tempo_minutos_->setRange(0, 59);
+    spin_tempo_minutos_->setValue(0);
+    spin_tempo_minutos_->setSuffix(" min");
+    spin_tempo_minutos_->setFixedWidth(82);
+
+    spin_tempo_segundos_ = new QSpinBox(grp_solver);
+    spin_tempo_segundos_->setRange(0, 59);
+    spin_tempo_segundos_->setValue(30);
+    spin_tempo_segundos_->setSuffix(" s");
+    spin_tempo_segundos_->setFixedWidth(72);
+
+    auto ensure_nonzero_time = [this]() {
+        if (spin_tempo_horas_->value() == 0 && spin_tempo_minutos_->value() == 0 && spin_tempo_segundos_->value() == 0) {
+            spin_tempo_segundos_->setValue(1);
+        }
+    };
+    connect(spin_tempo_horas_, QOverload<int>::of(&QSpinBox::valueChanged), this, ensure_nonzero_time);
+    connect(spin_tempo_minutos_, QOverload<int>::of(&QSpinBox::valueChanged), this, ensure_nonzero_time);
+    connect(spin_tempo_segundos_, QOverload<int>::of(&QSpinBox::valueChanged), this, ensure_nonzero_time);
 
     chk_sem_limite_tempo_ = new QCheckBox("Sem restrição de tempo", grp_solver);
     chk_sem_limite_tempo_->setToolTip("Executa o solver sem tempo limite máximo.");
 
     connect(chk_sem_limite_tempo_, &QCheckBox::toggled, this, [this](bool checked) {
-        spin_tempo_limite_->setEnabled(!checked);
+        spin_tempo_horas_->setEnabled(!checked);
+        spin_tempo_minutos_->setEnabled(!checked);
+        spin_tempo_segundos_->setEnabled(!checked);
     });
 
-    lay_tempo->addWidget(spin_tempo_limite_);
+    lay_tempo->addWidget(spin_tempo_horas_);
+    lay_tempo->addWidget(spin_tempo_minutos_);
+    lay_tempo->addWidget(spin_tempo_segundos_);
     lay_tempo->addWidget(chk_sem_limite_tempo_);
     lay_tempo->addStretch();
     form_solver->addRow("Tempo Limite de Otimização:", lay_tempo);
@@ -239,6 +268,7 @@ void ConfigWidget::updateSliderLabels() {
     lbl_val_pref_dias_->setText(QString::number(slider_pref_dias_->value()));
     lbl_val_pref_turnos_->setText(QString::number(slider_pref_turnos_->value()));
     lbl_val_lacunas_turma_->setText(QString::number(slider_lacunas_turma_->value()));
+    lbl_val_aulas_consecutivas_->setText(QString::number(slider_aulas_consecutivas_->value()));
 }
 
 /**
@@ -252,13 +282,14 @@ void ConfigWidget::loadConfig(const model::OptimizationConfig& cfg) {
     slider_pref_dias_->setValue(cfg.lambda_preferencia_dias);
     slider_pref_turnos_->setValue(cfg.lambda_preferencia_turnos);
     slider_lacunas_turma_->setValue(cfg.lambda_lacunas_turma);
+    slider_aulas_consecutivas_->setValue(cfg.lambda_aulas_consecutivas);
 
     int idx_dias = combo_modelo_dias_->findData(static_cast<int>(cfg.modelo_preferencia_dias));
     if (idx_dias >= 0) combo_modelo_dias_->setCurrentIndex(idx_dias);
 
     chk_preenchimento_integral_->setChecked(cfg.preenchimento_integral_jornada);
     chk_distribuir_semana_->setChecked(cfg.distribuir_disciplinas_na_semana);
-    spin_max_aulas_dia_->setValue(cfg.max_aulas_disciplina_dia_turma);
+    chk_consecutivas_rigido_->setChecked(cfg.exigir_aulas_consecutivas_rigido);
 
     int target_algo = static_cast<int>(cfg.algoritmo);
     if (cfg.algoritmo == model::SolverAlgorithm::MILP) {
@@ -272,10 +303,16 @@ void ConfigWidget::loadConfig(const model::OptimizationConfig& cfg) {
 
     chk_sincronizar_anuais_->setChecked(cfg.sincronizar_anuais_entre_semestres);
 
-    spin_tempo_limite_->setValue(cfg.tempo_limite_segundos);
+    int h = 0, m = 0, s = 0;
+    model::secondsToHms(cfg.tempo_limite_segundos, h, m, s);
+    spin_tempo_horas_->setValue(std::clamp(h, 0, 99));
+    spin_tempo_minutos_->setValue(m);
+    spin_tempo_segundos_->setValue(s);
     if (chk_sem_limite_tempo_) {
         chk_sem_limite_tempo_->setChecked(cfg.sem_limite_tempo);
-        spin_tempo_limite_->setEnabled(!cfg.sem_limite_tempo);
+        spin_tempo_horas_->setEnabled(!cfg.sem_limite_tempo);
+        spin_tempo_minutos_->setEnabled(!cfg.sem_limite_tempo);
+        spin_tempo_segundos_->setEnabled(!cfg.sem_limite_tempo);
     }
     spin_max_memoria_->setValue(cfg.max_memoria_mb > 0 ? cfg.max_memoria_mb : 2048);
     if (chk_sem_limite_memoria_) {
@@ -301,13 +338,14 @@ model::OptimizationConfig ConfigWidget::getConfig() const {
     cfg.lambda_preferencia_dias = slider_pref_dias_->value();
     cfg.lambda_preferencia_turnos = slider_pref_turnos_->value();
     cfg.lambda_lacunas_turma = slider_lacunas_turma_->value();
+    cfg.lambda_aulas_consecutivas = slider_aulas_consecutivas_->value();
 
     cfg.modelo_preferencia_dias = static_cast<model::ModeloPreferenciaDias>(
         combo_modelo_dias_->currentData().toInt());
 
     cfg.preenchimento_integral_jornada = chk_preenchimento_integral_->isChecked();
     cfg.distribuir_disciplinas_na_semana = chk_distribuir_semana_->isChecked();
-    cfg.max_aulas_disciplina_dia_turma = spin_max_aulas_dia_->value();
+    cfg.exigir_aulas_consecutivas_rigido = chk_consecutivas_rigido_->isChecked();
 
     cfg.algoritmo = static_cast<model::SolverAlgorithm>(
         combo_algoritmo_->currentData().toInt());
@@ -316,7 +354,8 @@ model::OptimizationConfig ConfigWidget::getConfig() const {
         combo_escopo_semestre_->currentData().toInt());
     cfg.sincronizar_anuais_entre_semestres = chk_sincronizar_anuais_->isChecked();
 
-    cfg.tempo_limite_segundos = spin_tempo_limite_->value();
+    cfg.tempo_limite_segundos = model::hmsToSeconds(
+        spin_tempo_horas_->value(), spin_tempo_minutos_->value(), spin_tempo_segundos_->value());
     cfg.sem_limite_tempo = chk_sem_limite_tempo_ ? chk_sem_limite_tempo_->isChecked() : false;
     cfg.max_memoria_mb = spin_max_memoria_->value();
     cfg.sem_limite_memoria = chk_sem_limite_memoria_ ? chk_sem_limite_memoria_->isChecked() : false;

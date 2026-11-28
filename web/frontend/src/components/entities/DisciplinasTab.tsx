@@ -19,6 +19,7 @@ type DisciplinaColumnKey =
   | "nome"
   | "regime"
   | "duracao"
+  | "maxDia"
   | "turmasProfs"
   | "salas"
   | "acoes";
@@ -28,6 +29,7 @@ const DISCIPLINA_COLUMNS: readonly ResizableColumnConfig<DisciplinaColumnKey>[] 
   { key: "nome", label: "Nome", defaultWidth: 250, minWidth: 120, maxWidth: 640 },
   { key: "regime", label: "Regime", defaultWidth: 130, minWidth: 88, maxWidth: 280 },
   { key: "duracao", label: "Duração / Semanal", defaultWidth: 165, minWidth: 115, maxWidth: 340 },
+  { key: "maxDia", label: "Máx/Dia", defaultWidth: 100, minWidth: 78, maxWidth: 180 },
   { key: "turmasProfs", label: "Turmas / Profs", defaultWidth: 280, minWidth: 140, maxWidth: 720 },
   { key: "salas", label: "Salas", defaultWidth: 180, minWidth: 100, maxWidth: 480 },
   { key: "acoes", label: "Ações", defaultWidth: 96, minWidth: 88, maxWidth: 180 },
@@ -133,7 +135,7 @@ export function DisciplinasTab({ projectId, disciplinas, professores, turmas, sa
         const roomDesc = describeDisciplinaRooms(d, turmasByCode, salasByCode).label;
         return `${d.code} ${d.nome} ${d.turmas.join(" ")} ${turmaNames} ${d.professores.join(" ")} ${profNames} ${explicitRoomCodes.join(" ")} ${roomNames} ${roomDesc}`;
       },
-      (d) => (sortBy === "nome" ? d.nome : sortBy === "aulas" ? d.aulas_semanais : d.code),
+      (d) => (sortBy === "nome" ? d.nome : sortBy === "aulas" ? d.aulas_semanais : sortBy === "maxDia" ? d.max_aulas_por_dia_turma : d.code),
       asc
     );
   }, [asc, disciplinas, professoresByCode, salasByCode, search, sortBy, turmaFilter, turmasByCode]);
@@ -172,6 +174,7 @@ export function DisciplinasTab({ projectId, disciplinas, professores, turmas, sa
             { value: "code", label: "ID" },
             { value: "nome", label: "Nome" },
             { value: "aulas", label: "Aulas/Sem" },
+            { value: "maxDia", label: "Máx/Dia" },
           ]}
           sortBy={sortBy}
           onSortByChange={setSortBy}
@@ -255,7 +258,7 @@ export function DisciplinasTab({ projectId, disciplinas, professores, turmas, sa
           <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-sm text-slate-500">
+                <td colSpan={8} className="px-4 py-6 text-center text-sm text-slate-500">
                   <span>Nenhuma disciplina encontrada para os filtros aplicados.</span>
                   {(search || turmaFilter) && (
                     <button
@@ -278,6 +281,7 @@ export function DisciplinasTab({ projectId, disciplinas, professores, turmas, sa
               const duracaoLabel = `${d.duracao_minutos}m • ${d.aulas_semanais} aulas/sem`;
               const profNames = d.professores.map((c) => professoresByCode[c]?.nome || c);
               const turmasProfsLabel = `${d.turmas.join(", ")} | ${profNames.join(", ")}`;
+              const maxDiaLabel = d.max_aulas_por_dia_turma > 0 ? `${d.max_aulas_por_dia_turma}/dia` : "Sem limite";
               return (
                 <tr key={d.code} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                   <td className="truncate px-4 py-2.5 font-mono text-xs font-semibold" title={d.code}>
@@ -291,6 +295,9 @@ export function DisciplinasTab({ projectId, disciplinas, professores, turmas, sa
                   </td>
                   <td className="truncate px-4 py-2.5 text-xs" title={duracaoLabel}>
                     {duracaoLabel}
+                  </td>
+                  <td className="truncate px-4 py-2.5 text-xs text-slate-600 dark:text-slate-300" title={maxDiaLabel}>
+                    {maxDiaLabel}
                   </td>
                   <td className="truncate px-4 py-2.5 text-xs text-slate-500" title={turmasProfsLabel}>
                     {turmasProfsLabel}
@@ -667,8 +674,11 @@ function DisciplinaModal({
               />
             </div>
             <div>
-              <label className="text-xs text-slate-500">Máx. Aulas/Dia Turma</label>
+              <label className="text-xs text-slate-500" htmlFor="disc-max-aulas-dia">
+                Máx. Aulas/Dia (0 = sem limite)
+              </label>
               <input
+                id="disc-max-aulas-dia"
                 type="number"
                 min={0}
                 value={form.max_aulas_por_dia_turma}

@@ -4,6 +4,7 @@
  */
 
 #include "ui/OptimizeDialog.h"
+#include "model/TimeSlot.h"
 #include "ui/ModernTheme.h"
 #include "ui/ResponsiveUi.h"
 #include <QVBoxLayout>
@@ -12,6 +13,7 @@
 #include <QGroupBox>
 #include <QPushButton>
 #include <QFrame>
+#include <algorithm>
 
 namespace scheduler::ui {
 
@@ -178,13 +180,37 @@ void OptimizeDialog::setupUi() {
     form_params->addRow("", chk_sincronizar_anuais_);
 
     auto* lay_time = new QHBoxLayout();
-    lay_time->setSpacing(10);
+    lay_time->setSpacing(6);
 
-    spin_time_limit_ = new QDoubleSpinBox(grp_params);
-    spin_time_limit_->setRange(1.0, 3600.0);
-    spin_time_limit_->setValue(initial_config_.tempo_limite_segundos);
-    spin_time_limit_->setSuffix(" segundos");
-    spin_time_limit_->setFixedWidth(148);
+    int init_h = 0, init_m = 0, init_s = 0;
+    model::secondsToHms(initial_config_.tempo_limite_segundos, init_h, init_m, init_s);
+
+    spin_time_hours_ = new QSpinBox(grp_params);
+    spin_time_hours_->setRange(0, 99);
+    spin_time_hours_->setValue(std::clamp(init_h, 0, 99));
+    spin_time_hours_->setSuffix(" h");
+    spin_time_hours_->setFixedWidth(72);
+
+    spin_time_minutes_ = new QSpinBox(grp_params);
+    spin_time_minutes_->setRange(0, 59);
+    spin_time_minutes_->setValue(init_m);
+    spin_time_minutes_->setSuffix(" min");
+    spin_time_minutes_->setFixedWidth(82);
+
+    spin_time_seconds_ = new QSpinBox(grp_params);
+    spin_time_seconds_->setRange(0, 59);
+    spin_time_seconds_->setValue(init_s);
+    spin_time_seconds_->setSuffix(" s");
+    spin_time_seconds_->setFixedWidth(72);
+
+    auto ensure_nonzero_time = [this]() {
+        if (spin_time_hours_->value() == 0 && spin_time_minutes_->value() == 0 && spin_time_seconds_->value() == 0) {
+            spin_time_seconds_->setValue(1);
+        }
+    };
+    connect(spin_time_hours_, QOverload<int>::of(&QSpinBox::valueChanged), this, ensure_nonzero_time);
+    connect(spin_time_minutes_, QOverload<int>::of(&QSpinBox::valueChanged), this, ensure_nonzero_time);
+    connect(spin_time_seconds_, QOverload<int>::of(&QSpinBox::valueChanged), this, ensure_nonzero_time);
 
     chk_sem_limite_tempo_ = new QCheckBox("Sem restrição de tempo", grp_params);
     chk_sem_limite_tempo_->setChecked(initial_config_.sem_limite_tempo);
@@ -193,11 +219,13 @@ void OptimizeDialog::setupUi() {
     connect(chk_sem_limite_tempo_, &QCheckBox::toggled, this, [this](bool checked) {
         auto algo = getSelectedAlgorithm();
         if (algo != model::SolverAlgorithm::GREEDY_HEURISTIC) {
-            spin_time_limit_->setEnabled(!checked);
+            setTimeLimitInputsEnabled(!checked);
         }
     });
 
-    lay_time->addWidget(spin_time_limit_);
+    lay_time->addWidget(spin_time_hours_);
+    lay_time->addWidget(spin_time_minutes_);
+    lay_time->addWidget(spin_time_seconds_);
     lay_time->addWidget(chk_sem_limite_tempo_);
     lay_time->addStretch();
     form_params->addRow("Tempo Limite:", lay_time);
@@ -298,6 +326,12 @@ void OptimizeDialog::onAlgorithmChanged(int index) {
  * @brief Atualiza a ficha técnica informativa do algoritmo (tipo, garantia, velocidade e limites).
  * @param algo Algoritmo de resolução selecionado.
  */
+void OptimizeDialog::setTimeLimitInputsEnabled(bool enabled) {
+    if (spin_time_hours_) spin_time_hours_->setEnabled(enabled);
+    if (spin_time_minutes_) spin_time_minutes_->setEnabled(enabled);
+    if (spin_time_seconds_) spin_time_seconds_->setEnabled(enabled);
+}
+
 void OptimizeDialog::updateAlgorithmDetails(model::SolverAlgorithm algo) {
     switch (algo) {
         case model::SolverAlgorithm::CP_SAT:
@@ -310,7 +344,7 @@ void OptimizeDialog::updateAlgorithmDetails(model::SolverAlgorithm algo) {
             lbl_algo_guarantee_->setText("Ótimo Global");
             lbl_algo_speed_->setText("Médio / Equilibrado");
             chk_sem_limite_tempo_->setEnabled(true);
-            spin_time_limit_->setEnabled(!chk_sem_limite_tempo_->isChecked());
+            setTimeLimitInputsEnabled(!chk_sem_limite_tempo_->isChecked());
             chk_sem_limite_memoria_->setEnabled(true);
             spin_mem_limit_->setEnabled(!chk_sem_limite_memoria_->isChecked());
             spin_threads_->setEnabled(true);
@@ -327,7 +361,7 @@ void OptimizeDialog::updateAlgorithmDetails(model::SolverAlgorithm algo) {
             lbl_algo_guarantee_->setText("Subótimo / Rápido");
             lbl_algo_speed_->setText("Instantâneo (< 0.1s)");
             chk_sem_limite_tempo_->setEnabled(false);
-            spin_time_limit_->setEnabled(false);
+            setTimeLimitInputsEnabled(false);
             chk_sem_limite_memoria_->setEnabled(false);
             spin_mem_limit_->setEnabled(false);
             spin_threads_->setEnabled(false);
@@ -344,7 +378,7 @@ void OptimizeDialog::updateAlgorithmDetails(model::SolverAlgorithm algo) {
             lbl_algo_guarantee_->setText("Ótimo Global");
             lbl_algo_speed_->setText("Moderado / Forte");
             chk_sem_limite_tempo_->setEnabled(true);
-            spin_time_limit_->setEnabled(!chk_sem_limite_tempo_->isChecked());
+            setTimeLimitInputsEnabled(!chk_sem_limite_tempo_->isChecked());
             chk_sem_limite_memoria_->setEnabled(true);
             spin_mem_limit_->setEnabled(!chk_sem_limite_memoria_->isChecked());
             spin_threads_->setEnabled(true);
@@ -362,7 +396,7 @@ void OptimizeDialog::updateAlgorithmDetails(model::SolverAlgorithm algo) {
             lbl_algo_guarantee_->setText("Ótimo Global");
             lbl_algo_speed_->setText("Rápido / Paralelo");
             chk_sem_limite_tempo_->setEnabled(true);
-            spin_time_limit_->setEnabled(!chk_sem_limite_tempo_->isChecked());
+            setTimeLimitInputsEnabled(!chk_sem_limite_tempo_->isChecked());
             chk_sem_limite_memoria_->setEnabled(true);
             spin_mem_limit_->setEnabled(!chk_sem_limite_memoria_->isChecked());
             spin_threads_->setEnabled(true);
@@ -379,7 +413,7 @@ void OptimizeDialog::updateAlgorithmDetails(model::SolverAlgorithm algo) {
             lbl_algo_guarantee_->setText("Ótimo / Heurística GPU");
             lbl_algo_speed_->setText("Massivo / GPU CUDA");
             chk_sem_limite_tempo_->setEnabled(true);
-            spin_time_limit_->setEnabled(!chk_sem_limite_tempo_->isChecked());
+            setTimeLimitInputsEnabled(!chk_sem_limite_tempo_->isChecked());
             chk_sem_limite_memoria_->setEnabled(true);
             spin_mem_limit_->setEnabled(!chk_sem_limite_memoria_->isChecked());
             spin_threads_->setEnabled(true);
@@ -408,7 +442,8 @@ void OptimizeDialog::updateConfig(model::OptimizationConfig& cfg) const {
     if (chk_sincronizar_anuais_) {
         cfg.sincronizar_anuais_entre_semestres = chk_sincronizar_anuais_->isChecked();
     }
-    cfg.tempo_limite_segundos = spin_time_limit_->value();
+    cfg.tempo_limite_segundos = model::hmsToSeconds(
+        spin_time_hours_->value(), spin_time_minutes_->value(), spin_time_seconds_->value());
     if (chk_sem_limite_tempo_) {
         cfg.sem_limite_tempo = chk_sem_limite_tempo_->isChecked();
     }

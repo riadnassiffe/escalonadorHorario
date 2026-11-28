@@ -498,9 +498,10 @@ void TimetableView::renderTimetable() {
             t_name = QString::fromStdString(t ? t->nome() : sel_aloc->turmas.front());
         }
         QString p_name;
-        if (!sel_aloc->professores.empty()) {
-            const auto* p = data_.findProfessor(sel_aloc->professores.front());
-            p_name = QString::fromStdString(p ? p->nome() : sel_aloc->professores.front());
+        for (size_t i = 0; i < sel_aloc->professores.size(); ++i) {
+            if (i > 0) p_name += ", ";
+            const auto* p = data_.findProfessor(sel_aloc->professores[i]);
+            p_name += QString::fromStdString(p ? p->nome() : sel_aloc->professores[i]);
         }
         QString sel_tag = QString(" | 🎯 <b>Aula Selecionada:</b> [%1] %2 — Prof. %3 (%4 às %5)")
             .arg(t_name.isEmpty() ? "Turma" : t_name)
@@ -930,6 +931,7 @@ void TimetableView::renderTimetable() {
             bool cell_has_selected = (!selected_aula_id_.isEmpty() &&
                 std::find(all_aulas_ids.begin(), all_aulas_ids.end(), selected_aula_id_) != all_aulas_ids.end());
 
+            bool cell_has_swap_ok = false;
             bool cell_has_swap_conflict = false;
             QString sel_status_footer;
             QString sel_status_tooltip;
@@ -937,6 +939,7 @@ void TimetableView::renderTimetable() {
                 if (found_aulas.size() == 1) {
                     auto swap_confs = data_.avaliarTrocaAulas(sel_aloc->aula_id, found_aulas.front()->aula_id);
                     if (swap_confs.empty()) {
+                        cell_has_swap_ok = true;
                         sel_status_footer = "🟢 Troca livre";
                         sel_status_tooltip = QString("<b>🎯 Simulação de troca com [%1]:</b><br>"
                                                      "✅ Troca livre (professor, sala e turma compatíveis nos dois horários).")
@@ -954,25 +957,51 @@ void TimetableView::renderTimetable() {
                                                       dets.join("<br>• "));
                     }
                 } else {
-                    model::TimeInterval cand_interval(start_s, start_s + sel_aloc->intervalo.durationMinutes());
-                    auto move_confs = data_.avaliarAulaNoHorario(
-                        sel_aloc->aula_id, dia, cand_interval, {sel_aloc->aula_id});
-                    if (move_confs.empty()) {
-                        sel_status_footer = "🟢 Prof./Sala livres";
-                        sel_status_tooltip = QString("<b>🎯 Disponibilidade para [%1] neste horário:</b><br>"
-                                                     "✅ Professor, sala e turma da aula selecionada estão livres.")
-                                                 .arg(QString::fromStdString(sel_aloc->disciplina_nome));
-                    } else {
-                        cell_has_swap_conflict = true;
-                        sel_status_footer = "🔴 " + formatShortConflictTags(move_confs, 2);
-                        QStringList dets;
-                        for (const auto& c : move_confs) {
-                            QString d = QString::fromStdString(c.detail);
-                            if (!dets.contains(d)) dets << d;
+                    QStringList swappable_labels;
+                    for (const auto* aula : found_aulas) {
+                        auto swap_confs = data_.avaliarTrocaAulas(sel_aloc->aula_id, aula->aula_id);
+                        if (swap_confs.empty()) {
+                            QString t_name;
+                            if (!aula->turmas.empty()) {
+                                const auto* t = data_.findTurma(aula->turmas.front());
+                                t_name = QString::fromStdString(t ? t->nome() : aula->turmas.front());
+                            }
+                            swappable_labels << QString("[%1] %2")
+                                .arg(t_name.isEmpty() ? "Turma" : t_name,
+                                     QString::fromStdString(aula->disciplina_nome));
                         }
-                        sel_status_tooltip = QString("<b>🎯 Ocupação para [%1] neste horário:</b><br>• %2")
+                    }
+
+                    if (!swappable_labels.isEmpty()) {
+                        cell_has_swap_ok = true;
+                        sel_status_footer = (swappable_labels.size() == 1)
+                            ? QString("🟢 Troca livre: %1").arg(swappable_labels.front())
+                            : QString("🟢 Troca livre (%1 aulas)").arg(swappable_labels.size());
+                        sel_status_tooltip = QString("<b>🎯 Simulação de troca com [%1]:</b><br>"
+                                                     "✅ Troca livre com:<br>• %2")
                                                  .arg(QString::fromStdString(sel_aloc->disciplina_nome),
-                                                      dets.join("<br>• "));
+                                                      swappable_labels.join("<br>• "));
+                    } else {
+                        model::TimeInterval cand_interval(start_s, start_s + sel_aloc->intervalo.durationMinutes());
+                        auto move_confs = data_.avaliarAulaNoHorario(
+                            sel_aloc->aula_id, dia, cand_interval, {sel_aloc->aula_id});
+                        if (move_confs.empty()) {
+                            sel_status_footer = "🟢 Prof./Sala livres";
+                            sel_status_tooltip = QString("<b>🎯 Disponibilidade para [%1] neste horário:</b><br>"
+                                                         "✅ Professor, sala e turma da aula selecionada estão livres.")
+                                                     .arg(QString::fromStdString(sel_aloc->disciplina_nome));
+                        } else {
+                            cell_has_swap_conflict = true;
+                            sel_status_footer = "🔴 " + formatShortConflictTags(move_confs, 2);
+                            QStringList dets;
+                            for (const auto& c : move_confs) {
+                                QString d = QString::fromStdString(c.detail);
+                                if (!dets.contains(d)) dets << d;
+                            }
+                            sel_status_tooltip = QString("<b>🎯 Ocupação para [%1] neste horário:</b><br>• %2")
+                                                     .arg(QString::fromStdString(sel_aloc->disciplina_nome),
+                                                          dets.join("<br>• "));
+                        }
                     }
                 }
             }
@@ -985,7 +1014,32 @@ void TimetableView::renderTimetable() {
             item->setData(Qt::UserRole, main_aula_id);
             item->setData(Qt::UserRole + 3, all_aulas_ids);
 
-            if (cell_has_conflict) {
+            if (cell_has_selected) {
+                // Destaque visual suave para a célula contendo a aula selecionada
+                item->setBackground(is_dark ? QColor(30, 64, 175, 140) : QColor(191, 219, 254, 220));
+                item->setForeground(is_dark ? QColor("#bfdbfe") : QColor("#1e3a8a"));
+                QFont font = item->font();
+                font.setBold(true);
+                item->setFont(font);
+                if (cell_has_conflict) {
+                    cell_conflict_tooltips.removeDuplicates();
+                    item->setToolTip(QString("⚠️ <b>AULA COM CONFLITO DE RESTRIÇÕES:</b><br>%1")
+                        .arg(cell_conflict_tooltips.join("<br>")));
+                }
+            } else if (cell_has_swap_ok) {
+                // Destaque em verde para aulas em que é possível realizar swap sem conflitos
+                item->setBackground(is_dark ? QColor(22, 163, 74, 70) : QColor(220, 252, 231, 225));
+                item->setForeground(is_dark ? QColor("#86efac") : QColor("#166534"));
+                if (cell_has_conflict) {
+                    cell_conflict_tooltips.removeDuplicates();
+                    QString tooltip = QString("⚠️ <b>AULA COM CONFLITO DE RESTRIÇÕES:</b><br>%1")
+                        .arg(cell_conflict_tooltips.join("<br>"));
+                    if (!sel_status_tooltip.isEmpty()) {
+                        tooltip += "<br><br>" + sel_status_tooltip;
+                    }
+                    item->setToolTip(tooltip);
+                }
+            } else if (cell_has_conflict) {
                 // Destaque em cor vermelha para aulas que geraram conflito
                 item->setBackground(is_dark ? QColor(153, 27, 27, 180) : QColor(254, 202, 202, 230));
                 item->setForeground(is_dark ? QColor("#fca5a5") : QColor("#991b1b"));
@@ -1000,13 +1054,6 @@ void TimetableView::renderTimetable() {
                     tooltip += "<br><br>" + sel_status_tooltip;
                 }
                 item->setToolTip(tooltip);
-            } else if (cell_has_selected) {
-                // Destaque visual suave para a célula contendo a aula selecionada
-                item->setBackground(is_dark ? QColor(30, 64, 175, 140) : QColor(191, 219, 254, 220));
-                item->setForeground(is_dark ? QColor("#bfdbfe") : QColor("#1e3a8a"));
-                QFont font = item->font();
-                font.setBold(true);
-                item->setFont(font);
             } else if (cell_has_swap_conflict) {
                 item->setBackground(is_dark ? QColor(217, 119, 6, 55) : QColor(254, 243, 199, 220));
                 item->setForeground(is_dark ? QColor("#fcd34d") : QColor("#92400e"));

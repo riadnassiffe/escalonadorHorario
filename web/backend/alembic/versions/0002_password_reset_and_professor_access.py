@@ -17,6 +17,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    if op.get_context().dialect.name == "postgresql":
+        op.execute("ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(128)")
+
     op.add_column(
         "users",
         sa.Column("must_change_password", sa.Boolean(), nullable=False, server_default=sa.false()),

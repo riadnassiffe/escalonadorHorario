@@ -15,6 +15,7 @@
 #include <QSpinBox>
 #include <QListWidget>
 #include <QCheckBox>
+#include <QLabel>
 #include <vector>
 
 namespace scheduler::ui {
@@ -78,6 +79,16 @@ private:
      */
     void loadDisciplina(const model::Disciplina& disc);
 
+    /**
+     * @brief Filtra a lista de professores pelo texto digitado sem alterar as seleções.
+     */
+    void filterProfessores(const QString& query);
+
+    /**
+     * @brief Atualiza o rótulo de resumo com a quantidade e nomes dos professores selecionados.
+     */
+    void updateProfessoresSummary();
+
     const std::vector<model::Professor>& profs_;
     const std::vector<model::Turma>& turmas_;
     const std::vector<model::Room>& salas_;
@@ -89,7 +100,9 @@ private:
     QComboBox* combo_semestre_{nullptr};
     QComboBox* combo_duracao_{nullptr};
     QSpinBox* spin_aulas_semanais_{nullptr};
-    QComboBox* combo_prof_{nullptr};
+    QLabel* lbl_profs_resumo_{nullptr};
+    QLineEdit* txt_search_prof_{nullptr};
+    QListWidget* list_professores_{nullptr};
     QComboBox* combo_turma_{nullptr};
     QListWidget* list_salas_alternativas_{nullptr};
     QWidget* widget_salas_alternativas_{nullptr};

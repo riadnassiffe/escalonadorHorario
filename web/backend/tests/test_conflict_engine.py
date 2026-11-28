@@ -55,7 +55,7 @@ def _make_snapshot() -> ProjectSnapshot:
             "D_MAT": {"id": "D_MAT", "nome": "Matemática", "max_aulas_por_dia_turma": 1},
             "D_QUI": {"id": "D_QUI", "nome": "Química Lab", "max_aulas_por_dia_turma": 2},
         },
-        config={"distribuir_disciplinas_na_semana": True, "max_aulas_disciplina_dia_turma": 2},
+        config={"distribuir_disciplinas_na_semana": True},
         alocacoes=[
             {
                 "aula_id": "D_MAT_1",
@@ -215,3 +215,74 @@ async def test_timetable_mutations_api(client: AsyncClient):
     assert by_id["T01_PORT_1"]["dia"] == "TER"
     assert by_id["T01_PORT_1"]["is_pinned"] is True
     assert by_id["T01_FIS_1"]["dia"] == "SEG"
+
+
+def test_per_discipline_max_aulas_zero_and_global_toggle():
+    snap = _make_snapshot()
+    # D_MAT_2 on SEG with max_aulas_por_dia_turma=0 -> no LIMITE_DIARIO_DISCIPLINA conflict
+    snap.disciplinas["D_MAT"]["max_aulas_por_dia_turma"] = 0
+    snap.alocacoes.append({
+        **snap.alocacoes[0],
+        "aula_id": "D_MAT_2",
+        "dia": "TER",
+    })
+    c_zero = evaluate_lesson_at_slot(snap, "D_MAT_2", "SEG", 530, 580)
+    assert SlotConflictType.LIMITE_DIARIO_DISCIPLINA not in {c.type for c in c_zero}
+
+    # With max_aulas_por_dia_turma=1 and distribuir_disciplinas_na_semana=False -> no conflict
+    snap.disciplinas["D_MAT"]["max_aulas_por_dia_turma"] = 1
+    snap.config["distribuir_disciplinas_na_semana"] = False
+    c_disabled = evaluate_lesson_at_slot(snap, "D_MAT_2", "SEG", 530, 580)
+    assert SlotConflictType.LIMITE_DIARIO_DISCIPLINA not in {c.type for c in c_disabled}
+
+
+@pytest.mark.asyncio
+async def test_legacy_import_migrates_global_max_aulas_per_discipline(client: AsyncClient):
+    auth = await register_and_login(client, email="legacy-import@inst.br")
+    headers = {"Authorization": f"Bearer {auth['access_token']}"}
+    p = (await client.post("/api/v1/projects", headers=headers, json={"name": "Legacy", "load_default_example": False})).json()
+    pid = p["id"]
+
+    payload = {
+        "data": {
+            "config": {
+                "distribuir_disciplinas_na_semana": True,
+                "max_aulas_disciplina_dia_turma": 3,
+            },
+            "disciplinas": [
+                {
+                    "id": "D_LEGACY",
+                    "nome": "Sem campo proprio",
+                    "tipo": "TEORICA",
+                    "duracao_minutos": 50,
+                    "aulas_semanais": 4,
+                    "regime": "ANUAL",
+                    "semestre": "AMBOS",
+                    "professores": [],
+                    "turmas": [],
+                },
+                {
+                    "id": "D_ZERO",
+                    "nome": "Sem limite explicito",
+                    "tipo": "TEORICA",
+                    "duracao_minutos": 50,
+                    "aulas_semanais": 4,
+                    "regime": "ANUAL",
+                    "semestre": "AMBOS",
+                    "professores": [],
+                    "turmas": [],
+                    "max_aulas_por_dia_turma": 0,
+                },
+            ],
+        }
+    }
+    imp = await client.post(f"/api/v1/projects/{pid}/import-json", headers=headers, json=payload)
+    assert imp.status_code == 200
+
+    discs = (await client.get(f"/api/v1/projects/{pid}/disciplinas", headers=headers)).json()
+    by_code = {d["code"]: d for d in discs}
+    assert by_code["D_LEGACY"]["max_aulas_por_dia_turma"] == 3
+    assert by_code["D_ZERO"]["max_aulas_por_dia_turma"] == 0
+
+    exported = (await client.get(f"/api/v1/projects/{pid}/export-json", headers=headers)).json()
+    assert "max_aulas_disciplina_dia_turma" not in exported["config"]

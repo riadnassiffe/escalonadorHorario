@@ -51,6 +51,39 @@ export function totalClassMinutes(slots: TimeSlot[]): number {
   return slots.reduce((acc, s) => acc + Math.max(0, timeToMin(s.fim) - timeToMin(s.inicio)), 0);
 }
 
+export function secondsToHms(totalSeconds: number): { hours: number; minutes: number; seconds: number } {
+  const total = !Number.isFinite(totalSeconds) || totalSeconds <= 0 ? 0 : Math.round(totalSeconds);
+  const clamped = Math.max(0, total);
+  return {
+    hours: Math.floor(clamped / 3600),
+    minutes: Math.floor((clamped % 3600) / 60),
+    seconds: clamped % 60,
+  };
+}
+
+export function hmsToSeconds(hours: number, minutes: number, seconds: number): number {
+  const h = Number.isFinite(hours) ? Math.max(0, Math.trunc(hours)) : 0;
+  const m = Number.isFinite(minutes) ? Math.max(0, Math.trunc(minutes)) : 0;
+  const s = Number.isFinite(seconds) ? Math.max(0, Math.trunc(seconds)) : 0;
+  return Math.max(1, h * 3600 + m * 60 + s);
+}
+
+export function formatDurationSeconds(totalSeconds: number): string {
+  const { hours, minutes, seconds } = secondsToHms(totalSeconds);
+  return `${String(hours).padStart(2, "0")}h ${String(minutes).padStart(2, "0")}m ${String(seconds).padStart(2, "0")}s`;
+}
+
+export function formatDurationMs(durationMs: number): string {
+  if (!Number.isFinite(durationMs) || durationMs <= 0) {
+    return "00h 00m 00s";
+  }
+  if (durationMs < 995) {
+    const hundredths = Math.max(1, Math.min(99, Math.round(durationMs / 10)));
+    return `00h 00m 00.${String(hundredths).padStart(2, "0")}s`;
+  }
+  return formatDurationSeconds(Math.round(durationMs / 1000));
+}
+
 export const DEFAULT_SHIFT_SLOTS: Record<string, TimeSlot[]> = {
   MANHA: [
     { inicio: "08:00", fim: "08:45" },

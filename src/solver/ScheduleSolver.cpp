@@ -6,7 +6,10 @@
 #include "solver/ScheduleSolver.h"
 #include "solver/SolverCommon.h"
 #include <algorithm>
+#include <map>
+#include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace scheduler::solver {
@@ -102,6 +105,41 @@ void auditarConflitosEntreAulas(const model::InstitutionData& data, model::Timet
             timetable.addMensagemDiagnostico("  ⚠️ " + c);
         }
     }
+}
+
+int calcularBeneficioConsecutivas(const model::InstitutionData& data, const model::Timetable& timetable) {
+    std::map<std::pair<std::string, model::DayOfWeek>, std::set<std::pair<int, int>>> aloc_slots;
+    for (const auto& a : timetable.alocacoes()) {
+        aloc_slots[{a.disciplina_id, a.dia}].insert({a.intervalo.start_min, a.intervalo.end_min});
+    }
+
+    int total_pairs = 0;
+    for (const auto& disc : data.disciplinas()) {
+        if (!disc.exigirAulasConsecutivas() || disc.aulasSemanais() < 2 || disc.turmas().empty()) {
+            continue;
+        }
+        const auto* turma = data.findTurma(disc.turmas().front());
+        if (!turma) continue;
+
+        for (auto dia : turma->diasLetivos()) {
+            auto it = aloc_slots.find({disc.id(), dia});
+            if (it == aloc_slots.end() || it->second.size() < 2) continue;
+
+            auto slots = turma->jornadaParaDia(dia).slots_letivos;
+            std::sort(slots.begin(), slots.end());
+
+            for (size_t k = 0; k + 1 < slots.size(); ++k) {
+                if (model::timeToShift(slots[k].start_min) != model::timeToShift(slots[k + 1].start_min)) {
+                    continue;
+                }
+                if (it->second.count({slots[k].start_min, slots[k].end_min}) &&
+                    it->second.count({slots[k + 1].start_min, slots[k + 1].end_min})) {
+                    total_pairs++;
+                }
+            }
+        }
+    }
+    return total_pairs;
 }
 
 } // namespace detail

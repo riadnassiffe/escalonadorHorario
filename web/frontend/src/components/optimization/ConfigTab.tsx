@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Save } from "lucide-react";
 import { apiFetch } from "../../api/client";
 import type { OptimizationConfig } from "../../types";
+import { DurationHmsInput } from "../common/DurationHmsInput";
 
 interface Props {
   projectId: string;
@@ -40,6 +41,7 @@ export function ConfigTab({ projectId, config }: Props) {
     { key: "lambda_preferencia_dias", label: "λ4 — Dias Preferidos dos Professores (W)" },
     { key: "lambda_preferencia_turnos", label: "λ5 — Turnos Pretendidos (T)" },
     { key: "lambda_lacunas_turma", label: "λ6 — Reduzir Lacunas nas Turmas (JG)" },
+    { key: "lambda_aulas_consecutivas", label: "λ7 — Benefício Aulas Consecutivas (C)" },
   ];
 
   return (
@@ -95,53 +97,51 @@ export function ConfigTab({ projectId, config }: Props) {
                 checked={form.distribuir_disciplinas_na_semana}
                 onChange={(e) => setForm({ ...form, distribuir_disciplinas_na_semana: e.target.checked })}
               />
-              Limitar aulas da mesma disciplina por dia (R11)
+              Limitar aulas da mesma disciplina por dia (R10 — usa o máximo configurado em cada disciplina)
             </label>
-            <div>
-              <label className="text-xs text-slate-500">Máximo aulas/dia da mesma disciplina</label>
+            <label className="flex items-center gap-2">
               <input
-                type="number"
-                min={1}
-                value={form.max_aulas_disciplina_dia_turma}
-                onChange={(e) => setForm({ ...form, max_aulas_disciplina_dia_turma: Number(e.target.value) })}
-                className="mt-1 w-32 rounded border border-slate-300 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-800"
+                type="checkbox"
+                checked={form.exigir_aulas_consecutivas_rigido ?? true}
+                onChange={(e) => setForm({ ...form, exigir_aulas_consecutivas_rigido: e.target.checked })}
               />
-            </div>
+              Exigir aulas consecutivas como restrição rígida (R11)
+            </label>
           </div>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
           <h3 className="text-sm font-bold uppercase tracking-wide text-slate-500">Recursos & Warm-Start</h3>
-          <div className="mt-3 grid grid-cols-3 gap-3 text-sm">
+          <div className="mt-3 space-y-3 text-sm">
             <div>
-              <label className="text-xs text-slate-500">Tempo Limite (s)</label>
-              <input
-                type="number"
-                min={1}
-                value={form.tempo_limite_segundos}
-                onChange={(e) => setForm({ ...form, tempo_limite_segundos: Number(e.target.value) })}
-                className="mt-1 w-full rounded border border-slate-300 px-2.5 py-1.5 dark:border-slate-700 dark:bg-slate-800"
+              <label className="text-xs text-slate-500">Tempo Limite (h / min / s)</label>
+              <DurationHmsInput
+                valueSeconds={form.tempo_limite_segundos}
+                onChangeSeconds={(sec) => setForm({ ...form, tempo_limite_segundos: sec })}
+                idPrefix="config-time-limit"
               />
             </div>
-            <div>
-              <label className="text-xs text-slate-500">Memória Máx (MB)</label>
-              <input
-                type="number"
-                min={256}
-                value={form.max_memoria_mb}
-                onChange={(e) => setForm({ ...form, max_memoria_mb: Number(e.target.value) })}
-                className="mt-1 w-full rounded border border-slate-300 px-2.5 py-1.5 dark:border-slate-700 dark:bg-slate-800"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-slate-500">Threads CPU</label>
-              <input
-                type="number"
-                min={1}
-                value={form.num_threads}
-                onChange={(e) => setForm({ ...form, num_threads: Number(e.target.value) })}
-                className="mt-1 w-full rounded border border-slate-300 px-2.5 py-1.5 dark:border-slate-700 dark:bg-slate-800"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-slate-500">Memória Máx (MB)</label>
+                <input
+                  type="number"
+                  min={256}
+                  value={form.max_memoria_mb}
+                  onChange={(e) => setForm({ ...form, max_memoria_mb: Number(e.target.value) })}
+                  className="mt-1 w-full rounded border border-slate-300 px-2.5 py-1.5 dark:border-slate-700 dark:bg-slate-800"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500">Threads CPU</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={form.num_threads}
+                  onChange={(e) => setForm({ ...form, num_threads: Number(e.target.value) })}
+                  className="mt-1 w-full rounded border border-slate-300 px-2.5 py-1.5 dark:border-slate-700 dark:bg-slate-800"
+                />
+              </div>
             </div>
           </div>
           <label className="mt-3 flex items-center gap-2 text-sm">

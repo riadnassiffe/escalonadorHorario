@@ -5,11 +5,13 @@
 
 #include "solver/ScheduleSolver.h"
 #include "solver/MilpModel.h"
+#include "solver/SolverCommon.h"
 #include <algorithm>
 #include <cmath>
 #include <map>
 #include <set>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -354,7 +356,7 @@ bool buildMilpProblem(const model::InstitutionData& data,
     if (data.config().distribuir_disciplinas_na_semana) {
         for (const auto& disc : data.disciplinas()) {
             if (milp.vars_por_aula.find(disc.id() + "_1") == milp.vars_por_aula.end()) continue;
-            int max_por_dia = disc.maxAulasPorDiaTurma() > 0 ? disc.maxAulasPorDiaTurma() : data.config().max_aulas_disciplina_dia_turma;
+            int max_por_dia = disc.maxAulasPorDiaTurma();
             if (max_por_dia > 0) {
                 for (const auto& t_id : disc.turmas()) {
                     (void)t_id;
@@ -387,11 +389,12 @@ bool buildMilpProblem(const model::InstitutionData& data,
     }
 
     // 5.8 Disciplinas com aulas consecutivas em bloco
+    if (data.config().exigir_aulas_consecutivas_rigido) {
     for (const auto& disc : data.disciplinas()) {
         if (!disc.exigirAulasConsecutivas()) continue;
         if (milp.vars_por_aula.find(disc.id() + "_1") == milp.vars_por_aula.end()) continue;
         int n_aulas = disc.aulasSemanais();
-        int max_por_dia = disc.maxAulasPorDiaTurma() > 0 ? disc.maxAulasPorDiaTurma() : data.config().max_aulas_disciplina_dia_turma;
+        int max_por_dia = disc.maxAulasPorDiaTurma();
         int teto_bloco = (data.config().distribuir_disciplinas_na_semana && max_por_dia > 0)
                              ? std::min(4, max_por_dia)
                              : 4;
@@ -450,6 +453,7 @@ bool buildMilpProblem(const model::InstitutionData& data,
         }
         milp.addRow("consec_days_" + disc.id(), std::move(sum_dias_terms),
                     static_cast<double>(num_days), static_cast<double>(num_days));
+    }
     }
 
     if (callback) callback(solver_tag + ": Configurando função objetivo e preferências...", 0.40);
@@ -727,6 +731,58 @@ bool buildMilpProblem(const model::InstitutionData& data,
         }
     }
 
+    // 6.4b Termo C: Benefício para pares de aulas consecutivas no mesmo turno
+    if (data.config().lambda_aulas_consecutivas > 0) {
+        double p_obj = -static_cast<double>(data.config().lambda_aulas_consecutivas * 50);
+        for (const auto& disc : data.disciplinas()) {
+            if (!disc.exigirAulasConsecutivas() || disc.aulasSemanais() < 2 || disc.turmas().empty()) continue;
+            if (milp.vars_por_aula.find(disc.id() + "_1") == milp.vars_por_aula.end()) continue;
+
+            const auto* turma = data.findTurma(disc.turmas().front());
+            if (!turma) continue;
+
+            std::map<std::tuple<model::DayOfWeek, int, int>, std::vector<int>> slot_cols;
+            for (int i = 1; i <= disc.aulasSemanais(); ++i) {
+                auto it_v = milp.vars_por_aula.find(disc.id() + "_" + std::to_string(i));
+                if (it_v == milp.vars_por_aula.end()) continue;
+                for (const auto& item : it_v->second) {
+                    slot_cols[{item.cand->dia, item.cand->start_min, item.cand->end_min()}].push_back(item.col);
+                }
+            }
+
+            for (auto dia : turma->diasLetivos()) {
+                auto slots = turma->jornadaParaDia(dia).slots_letivos;
+                std::sort(slots.begin(), slots.end());
+                for (size_t k = 0; k + 1 < slots.size(); ++k) {
+                    if (model::timeToShift(slots[k].start_min) != model::timeToShift(slots[k + 1].start_min)) {
+                        continue;
+                    }
+                    auto it_a = slot_cols.find({dia, slots[k].start_min, slots[k].end_min});
+                    auto it_b = slot_cols.find({dia, slots[k + 1].start_min, slots[k + 1].end_min});
+                    if (it_a == slot_cols.end() || it_b == slot_cols.end()) continue;
+
+                    int p_col = milp.addBinVar(
+                        "cp_" + disc.id() + "_" + std::to_string(static_cast<int>(dia)) + "_" + std::to_string(k),
+                        p_obj);
+
+                    std::vector<std::pair<int, double>> terms_a;
+                    terms_a.reserve(it_a->second.size() + 1);
+                    terms_a.push_back({p_col, 1.0});
+                    for (int c_col : it_a->second) terms_a.push_back({c_col, -1.0});
+                    milp.addRow("cp_a_" + std::to_string(row_id++), std::move(terms_a), -kMilpInf, 0.0);
+
+                    std::vector<std::pair<int, double>> terms_b;
+                    terms_b.reserve(it_b->second.size() + 1);
+                    terms_b.push_back({p_col, 1.0});
+                    for (int c_col : it_b->second) terms_b.push_back({c_col, -1.0});
+                    milp.addRow("cp_b_" + std::to_string(row_id++), std::move(terms_b), -kMilpInf, 0.0);
+
+                    milp.consec_pair_records.push_back(ConsecPairAuxRecord{it_a->second, it_b->second, p_col});
+                }
+            }
+        }
+    }
+
     // 6.5 Solução Inicial (Warm Start da tela ou semente primal inicial)
     const model::Timetable* active_seed = nullptr;
     bool from_screen = false;
@@ -810,6 +866,25 @@ bool buildMilpProblem(const model::InstitutionData& data,
                     }
                 }
                 milp.warm_start_vals[rec.w_d_col] = active;
+            }
+
+            // Preencher p_col de pares de aulas consecutivas
+            for (const auto& rec : milp.consec_pair_records) {
+                bool has_a = false;
+                for (int c_col : rec.slot_a_cols) {
+                    if (milp.warm_start_vals[c_col] > 0.5) {
+                        has_a = true;
+                        break;
+                    }
+                }
+                bool has_b = false;
+                for (int c_col : rec.slot_b_cols) {
+                    if (milp.warm_start_vals[c_col] > 0.5) {
+                        has_b = true;
+                        break;
+                    }
+                }
+                milp.warm_start_vals[rec.p_col] = (has_a && has_b) ? 1.0 : 0.0;
             }
 
             // Preencher y_shift
@@ -957,6 +1032,7 @@ void extractMilpSolution(const model::InstitutionData& data,
         }
     }
     stats.penalidade_preferencias_P = total_P;
+    stats.beneficio_consecutivas_C = calcularBeneficioConsecutivas(data, timetable);
 
     timetable.setEstatisticas(stats);
 }
